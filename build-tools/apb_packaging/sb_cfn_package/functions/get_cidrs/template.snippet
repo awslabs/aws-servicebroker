@@ -1,0 +1,58 @@
+Conditions:
+  AutoCidrs: !Equals
+    - !Select [0, !Ref CidrBlocks ]
+    - "Auto"
+Resources:
+  AWSSBInjectedGetCidrsRole:
+    Condition: AutoCidrs
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "cfn_utility_get_cidrs"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "ec2:DescribeVpcs"
+                  - "ec2:DescribeSubnets"
+                  - "ec2:DescribeAvailabilityZones"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+  AWSSBInjectedGetCidrsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoCidrs
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: "lambda_function.handler"
+      Role:
+        Fn::GetAtt:
+          - "AWSSBInjectedGetCidrsRole"
+          - "Arn"
+      Code:
+        ZipFile: null
+      Runtime: "python2.7"
+      Timeout: "60"
+  AWSSBInjectedGetCidrs:
+    Condition: AutoCidrs
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetCidrsLambda.Arn
+      Qty: !Ref NumberOfAvailabilityZones
+      VpcId: !Ref VpcId
+      CidrSize: !Ref CidrSize

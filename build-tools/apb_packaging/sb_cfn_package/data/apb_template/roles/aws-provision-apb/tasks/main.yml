@@ -1,0 +1,49 @@
+- name: include plan vars
+  include_vars:
+    file: "{{ _apb_plan_id }}.yml"
+- name: generate b62 hash
+  shell: "16to62 {{ params_hash }}"
+  register: command_output
+- name: set fact
+  set_fact:
+    stack_suffix: "{{ command_output.stdout }}"
+- name: Log stack suffix
+  debug:
+    msg: "stack_suffix: {{ stack_suffix }}"
+- name: Create Resources
+  cloudformation:
+   stack_name: "AWSServiceBroker-${SERVICE_NAME}-{{ stack_suffix }}"
+   state: "present"
+   region: "{{ region }}"
+   disable_rollback: false
+   template_url: "https://s3.amazonaws.com/{{ SBArtifactS3Bucket }}/templates/${SERVICE_NAME}/template.yaml"
+   role_arn: "{{ aws_cloudformation_role_arn }}"
+   template_parameters: {}
+   tags:
+     ServiceBrokerId: "{{ application_name }}"
+  register: cfn
+- name: Check for CloudFormation error logs
+  debug:
+    var: cfn.log
+- name: Get IAM user key_id
+  shell: "ssmfetch {{ cfn.stack_outputs.UserKeyId }} {{ region }}"
+  register: command_output
+  when: create_iam_user == true
+- name: set fact
+  set_fact:
+    access_key_id: "{{ command_output.stdout }}"
+  when: create_iam_user == true
+- name: Get IAM user secret_key
+  shell: "ssmfetch {{ cfn.stack_outputs.UserSecretKey }} {{ region }}"
+  register: command_output
+  when: create_iam_user == true
+- name: set fact
+  set_fact:
+    secret_access_key: "{{ command_output.stdout }}"
+  when: create_iam_user == true
+- name: Encode bind credentials
+  asb_encode_binding:
+    fields:
+      ${SERVICE_NAME}_AWS_ACCESS_KEY_ID:     "{{ access_key_id }}"
+      ${SERVICE_NAME}_AWS_SECRET_ACCESS_KEY: "{{ secret_access_key }}"
+  when: cfn.log | length < 1

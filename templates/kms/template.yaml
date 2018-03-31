@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: KMS Key
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - KMS
+      - encryption
+    Name: kms-apb
+    DisplayName: "Amazon KMS"
+    LongDescription: "AWS Key Management Service (KMS) is a managed service that makes it easy for you to create and control the encryption keys used to encrypt your data, and uses FIPS 140-2 validated hardware security modules to protect the security of your keys."
+    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/SecurityIdentityCompliance_AWSKMS_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/kms/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: True
+        Policies:
+          - PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Action:
+                  - 'kms:GenerateDataKey'
+                  - 'kms:ReEncryptFrom'
+                  - 'kms:ReEncryptTo'
+                  Effect: Allow
+                  Resource: "*"
+                - Action:
+                  - 'kms:Decrypt'
+                  - 'kms:Encrypt'
+                  - 'kms:DescribeKey'
+                  Effect: Allow
+                  Resource: !GetAtt KMSKey.Arn
+      CFNOutputs: [ KMSKeyId, KMSKeyArn ]
+    ServicePlans:
+        default:
+          DisplayName: "Standard"
+          Description: 'KMS Key'
+          LongDescription: "Generates a KMS key"
+          Cost: "https://aws.amazon.com/kms/pricing/"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "KMS Configuration"
+        Parameters:
+          - EnableKeyRotation
+    ParameterLabels:
+      EnableKeyRotation:
+        default: "Enable Key Rotation"
+Parameters:
+  EnableKeyRotation:
+    Description: >-
+      AWS KMS generates new cryptographic material for the CMK every year.
+      AWS KMS also saves the CMK's older cryptographic material so it can be used
+      to decrypt data that it encrypted.
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  KeyAdministratorRoleArn:
+    Description: >-
+      To add an additional administrative role, specify the ARN here.
+      By default the root user and the CloudFormation Stack role is granted administrative
+      access to the key. Admins can update, revoke, delete the key, but cannot use it to
+      encrypt or decrypt.
+    Type: String
+    Default: ""
+  CloudformationRoleArn:
+    Description: >-
+      Role used to launch this stack, this is typically configured as an AWS Service Broker Secret.
+    Type: String
+    Default: ""
+Conditions:
+  AddKeyAdminRole:
+    !Not [!Equals [!Ref KeyAdministratorRoleArn, ""]]
+  AddCfnRole:
+    !Not [!Equals [!Ref CloudformationRoleArn, ""]]
+Resources:
+  KMSKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      EnableKeyRotation: !Ref EnableKeyRotation
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: "AWS-ServiceBroker-key=permissions"
+        Statement:
+          - Sid: "Allow use of the key"
+            Effect: "Allow"
+            Principal:
+              AWS: !GetAtt AWSSBInjectedIAMUser.Arn
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:DescribeKey"
+            Resource: "*"
+          - Sid: "Allow management of the key"
+            Effect: "Allow"
+            Principal:
+              AWS:
+               - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+               - !If [ AddKeyAdminRole, !Ref KeyAdministratorRoleArn, !Ref "AWS::NoValue" ]
+               - !If [ AddCfnRole, !Ref CloudformationRoleArn, !Ref "AWS::NoValue" ]
+            Action:
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+            Resource: "*"
+Outputs:
+  KMSKeyId:
+    Description: Id of the KMS key
+    Value: !Ref KMSKey
+  KMSKeyArn:
+    Description: Arn of the KMS key
+    Value: !GetAtt KMSKey.Arn

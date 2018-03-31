@@ -1,0 +1,8 @@
+default: CFN::Parameters[self].Default
+description: CFN::Parameters[self].Description
+display_group: CFN::Interface::ParameterGroups[].self
+enum: CFN::Parameters[self].AllowedValues
+name: CFN::Parameters[self].::UseKey
+required: Function::is_parameter_required
+title: CFN::Interface::ParameterLabels[self]
+type: CFN::Parameters[self].Type

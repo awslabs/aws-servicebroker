@@ -1,0 +1,14 @@
+- name: include plan vars
+  include_vars:
+    file: "{{ _apb_plan_id }}.yml"
+- name: generate b62 hash
+  shell: "16to62 {{ params_hash }}"
+  register: command_output
+- name: set fact
+  set_fact:
+    stack_suffix: "{{ command_output.stdout }}"
+- name: Remove Resources
+  cloudformation:
+    stack_name: "AWSServiceBroker-${SERVICE_NAME}-{{ stack_suffix }}"
+    state: "absent"
+    region: "{{ region }}"

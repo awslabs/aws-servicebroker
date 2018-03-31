@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+import boto3
+import sys
+import random
+
+QTY = int(sys.argv[1])
+REGION = sys.argv[2]
+
+c = boto3.client('ec2', region_name=REGION)
+azs = c.describe_availability_zones(Filters=[{'Name': 'state', 'Values': ['available']}])['AvailabilityZones']
+if len(azs) < QTY:
+    sys.stderr.write('Insufficient availability zones in this region\n')
+    sys.exit(1)
+azs = [az['ZoneName'] for az in azs]
+
+print(','.join(random.sample(azs, QTY)))

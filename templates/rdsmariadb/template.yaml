@@ -1,0 +1,873 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon RDS for MariaDB
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - RDS
+      - MariaDB
+      - database
+    Name: rdsmariadb-apb
+    DisplayName: "Amazon RDS for MariaDB"
+    LongDescription: "MariaDB is a popular open source relational database created by the original developers of MySQL. Amazon RDS makes it easy to set up, operate, and scale MariaDB deployments in the cloud. With Amazon RDS, you can deploy scalable MariaDB databases in minutes with cost-efficient and resizable hardware capacity. Amazon RDS frees you up to focus on your application by managing time-consuming database administration tasks including backups, software patching, monitoring, scaling and replication."
+    ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/rds/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: False
+      CFNOutputs: [EndpointAddress, MasterUsername, MasterPassword, Port, DBName]
+    ServicePlans:
+        production:
+          DisplayName: "Production"
+          Description: 'Configuration designed for production deployments'
+          LongDescription: "Creates an Amazon RDS for MariaDB database optimised for production use"
+          Cost: "https://aws.amazon.com/rds/pricing/"
+          ParameterValues:
+            MultiAZ: "true"
+            NumberOfAvailabilityZones: "2"
+            AvailabilityZones: "Auto"
+            CidrSize: "27"
+            CidrBlocks: "Auto"
+            application_name_alnum: "{{ application_name | regex_replace('[^a-zA-Z0-9]') }}"
+            DBName: "{{ application_name_alnum[0:63] }}"
+            PortNumber: 13306
+            StorageEncrypted: "true"
+            StorageType: io1
+            CopyTagsToSnapshot: "true"
+            BackupRetentionPeriod: 35
+            MonitoringInterval: "1"
+            AllowMajorVersionUpgrade: "false"
+            AutoMinorVersionUpgrade: "true"
+            MasterUsername: "master"
+            MasterUserPassword: "{{ lookup('password', '/tmp/dbpass chars=ascii_letters,digits length=41') }}"
+        dev:
+          DisplayName: "Development"
+          Description: 'Configuration designed for development and testing deployments'
+          LongDescription: "Creates an Amazon RDS for MariaDB database optimised for dev/test use"
+          Cost: "https://aws.amazon.com/rds/pricing/"
+          ParameterValues:
+            MultiAZ: "false"
+            NumberOfAvailabilityZones: "2"
+            AvailabilityZones: "Auto"
+            CidrSize: "28"
+            CidrBlocks: "Auto"
+            application_name_alnum: "{{ application_name | regex_replace('[^a-zA-Z0-9]') }}"
+            DBName: "{{ application_name_alnum[0:63] }}"
+            PortNumber: 13306
+            StorageEncrypted: "true"
+            StorageType: io1
+            CopyTagsToSnapshot: "false"
+            BackupRetentionPeriod: 0
+            MonitoringInterval: "60"
+            AllowMajorVersionUpgrade: "false"
+            AutoMinorVersionUpgrade: "true"
+            MasterUsername: "master"
+            MasterUserPassword: "{{ lookup('password', '/tmp/dbpass chars=ascii_letters,digits length=32') }}"
+            PreferredBackupWindow: "04:00-06:00"
+            PreferredMaintenanceWindowDay: Sat
+            PreferredMaintenanceWindowStartTime: 06:00
+            PreferredMaintenanceWindowEndTime: 07:00
+        custom:
+          DisplayName: "Custom"
+          Description: 'Custom Configuration for Advanced deployments'
+          LongDescription: "Creates an Amazon RDS for MariaDB database with custom configuration"
+          Cost: "https://aws.amazon.com/rds/pricing/"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "Database Instance Specifications"
+        Parameters:
+          - DBInstanceClass
+          - AllocatedStorageAndIops
+      - Label:
+          default: "Database Options"
+        Parameters:
+          - EngineVersion
+          - MysqlServerTimezone
+          - MultiAZ
+          - PortNumber
+          - MasterUsername
+          - MasterUserPassword
+      - Label:
+          default: "Network and Security"
+        Parameters:
+          - VpcId
+          - PubliclyAccessible
+          - AccessCidr
+          - CidrBlocks
+          - CidrSize
+          - AvailabilityZones
+          - NumberOfAvailabilityZones
+      - Label:
+          default: "Backup"
+        Parameters:
+          - PreferredBackupWindow
+      - Label:
+          default: "Maintenance"
+        Parameters:
+          - PreferredMaintenanceWindowDay
+          - PreferredMaintenanceWindowStartTime
+          - PreferredMaintenanceWindowEndTime
+    ParameterLabels:
+      MasterUsername:
+        default: "Master Username"
+      MasterUserPassword:
+        default: "Master User Password"
+      CidrBlocks:
+        default: "CIDR Blocks"
+      CidrSize:
+        default: "CIDR Size"
+      AvailabilityZones:
+        default: "Availability Zones"
+      NumberOfAvailabilityZones:
+        default: "Number Of Availability Zones"
+      MultiAZ:
+        default: "Multi AZ"
+      PortNumber:
+        default: "Port Number"
+      DBInstanceClass:
+        default: "DB Instance Class"
+      AllocatedStorageAndIops:
+        default: "Allocated Storage And IOPS"
+      EngineVersion:
+        default: "Engine Version"
+      MysqlServerTimezone:
+        default: "MariaDB Server Timezone"
+      VpcId:
+        default: "VPC Id"
+      PubliclyAccessible:
+        default: "Publicly Accessible"
+      AccessCidr:
+        default: "Access CIDR"
+      PreferredBackupWindow:
+        default: "Preferred Backup Window"
+      PreferredMaintenanceWindowDay:
+        default: "Preferred Maintenance Window Day"
+      PreferredMaintenanceWindowStartTime:
+        default: "Preferred MaintenanceWindow Start Time"
+      PreferredMaintenanceWindowEndTime:
+        default: "Preferred Maintenance Window End Time"
+Parameters:
+  AccessCidr:
+    Description: CIDR block to allow to connect to database
+    Type: String
+  AllocatedStorageAndIops:
+    Description: Storage/IOPS to allocate
+    Type: String
+    Default: 100 GB / 1,000 IOPS
+    AllowedValues:
+      - 100 GB / 1,000 IOPS
+      - 300 GB / 3,000 IOPS
+      - 600 GB / 6,000 IOPS
+      - 1,000 GB / 10,000 IOPS
+      - 1,500 GB / 15,000 IOPS
+      - 2,000 GB / 20,000 IOPS
+      - 3,000 GB / 30,000 IOPS
+      - 4,000 GB / 40,000 IOPS
+      - 6,000 GB / 60,000 IOPS
+  AllowMajorVersionUpgrade:
+    Description: If you update the EngineVersion property to a version that's different
+      from the DB instance's current major version, set this property to true.
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  AutoMinorVersionUpgrade:
+    Description: Indicates that minor engine upgrades are applied automatically to
+      the DB instance during the maintenance window.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  AvailabilityZones:
+    Description: list of availability zones to use, must be the same quantity as specified
+      in NumberOfAvailabilityZones
+    Type: CommaDelimitedList
+    Default: Auto
+  BackupRetentionPeriod:
+    Description: The number of days during which automatic DB snapshots are retained.
+      Setting 0 disables automatic snapshots, maximum value is 35
+    Type: Number
+    Default: '35'
+    MinValue: '0'
+    MaxValue: '35'
+  CidrBlocks:
+    Description: comma seperated list of CIDR blocks to place RDS into, must be the
+      same quantity as specified in NumberOfAvailabilityZones
+    Type: CommaDelimitedList
+    Default: Auto
+  CidrSize:
+    Description: Size of Cidr block to allocate if CidrBlocks is set to Auto.
+    Type: String
+    Default: 27
+  CopyTagsToSnapshot:
+    Description: Indicates whether to copy all of the user-defined tags from the DB
+      instance to snapshots of the DB instance.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  DBInstanceClass:
+    Description: The compute and memory capacity of the DB instance.
+    Type: String
+    Default: db.m4.xlarge
+    AllowedValues:
+      - db.m1.small
+      - db.m1.medium
+      - db.m1.large
+      - db.m1.xlarge
+      - db.m2.xlarge
+      - db.m2.2xlarge
+      - db.m2.4xlarge
+      - db.m3.medium
+      - db.m3.large
+      - db.m3.xlarge
+      - db.m3.2xlarge
+      - db.m4.large
+      - db.m4.xlarge
+      - db.m4.2xlarge
+      - db.m4.4xlarge
+      - db.m4.10xlarge
+      - db.r3.large
+      - db.r3.xlarge
+      - db.r3.2xlarge
+      - db.r3.4xlarge
+      - db.r3.8xlarge
+      - db.t2.micro
+      - db.t2.small
+      - db.t2.medium
+      - db.t2.large
+  DBName:
+    Description: The name of the database to create when the DB instance is created.
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: ^(?!^mysql$)(?!^performance_schema$)(?!^information_schema$)[a-zA-Z0-9]*$
+    ConstraintDescription: must contain from 1 to 64 alphanumeric characters, and
+      not be reserved mariadb term.
+  EngineVersion:
+    Description: The version number of the database engine to use.
+    Type: String
+    Default: 10.1.23
+    AllowedValues:
+      - 10.0.17
+      - 10.0.24
+      - 10.0.28
+      - 10.0.31
+      - 10.1.14
+      - 10.1.19
+      - 10.1.23
+  MasterUserPassword:
+    Description: Master user database Password
+    Type: String
+    NoEcho: 'true'
+  MasterUsername:
+    Description: Master database Username
+    Type: String
+  MonitoringInterval:
+    Description: The interval, in seconds, between points when Enhanced Monitoring
+      metrics are collected for the DB instance.
+    Type: String
+    Default: '1'
+    AllowedValues:
+      - '0'
+      - '1'
+      - '5'
+      - '10'
+      - '15'
+      - '30'
+      - '60'
+  MultiAZ:
+    Description: Specifies if the database instance is a multiple Availability Zone
+      deployment.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  MysqlServerTimezone:
+    Description: The default timezone for the database engine to use.
+    Type: String
+    Default: UTC
+    AllowedValues:
+      - Africa/Cairo
+      - Africa/Casablanca
+      - Africa/Harare
+      - Africa/Monrovia
+      - Africa/Nairobi
+      - Africa/Tripoli
+      - Africa/Windhoek
+      - America/Araguaina
+      - America/Asuncion
+      - America/Bogota
+      - America/Caracas
+      - America/Chihuahua
+      - America/Cuiaba
+      - America/Denver
+      - America/Fortaleza
+      - America/Guatemala
+      - America/Halifax
+      - America/Manaus
+      - America/Matamoros
+      - America/Monterrey
+      - America/Montevideo
+      - America/Phoenix
+      - America/Santiago
+      - America/Tijuana
+      - Asia/Amman
+      - Asia/Ashgabat
+      - Asia/Baghdad
+      - Asia/Baku
+      - Asia/Bangkok
+      - Asia/Beirut
+      - Asia/Calcutta
+      - Asia/Damascus
+      - Asia/Dhaka
+      - Asia/Irkutsk
+      - Asia/Jerusalem
+      - Asia/Kabul
+      - Asia/Karachi
+      - Asia/Kathmandu
+      - Asia/Krasnoyarsk
+      - Asia/Magadan
+      - Asia/Muscat
+      - Asia/Novosibirsk
+      - Asia/Riyadh
+      - Asia/Seoul
+      - Asia/Shanghai
+      - Asia/Singapore
+      - Asia/Taipei
+      - Asia/Tehran
+      - Asia/Tokyo
+      - Asia/Ulaanbaatar
+      - Asia/Vladivostok
+      - Asia/Yakutsk
+      - Asia/Yerevan
+      - Atlantic/Azores
+      - Australia/Adelaide
+      - Australia/Brisbane
+      - Australia/Darwin
+      - Australia/Hobart
+      - Australia/Perth
+      - Australia/Sydney
+      - Canada/Newfoundland
+      - Canada/Saskatchewan
+      - Brazil/East
+      - Europe/Amsterdam
+      - Europe/Athens
+      - Europe/Dublin
+      - Europe/Helsinki
+      - Europe/Istanbul
+      - Europe/Kaliningrad
+      - Europe/Moscow
+      - Europe/Paris
+      - Europe/Prague
+      - Europe/Sarajevo
+      - Pacific/Auckland
+      - Pacific/Fiji
+      - Pacific/Guam
+      - Pacific/Honolulu
+      - Pacific/Samoa
+      - US/Alaska
+      - US/Central
+      - US/Eastern
+      - US/East-Indiana
+      - US/Pacific
+      - UTC
+  NumberOfAvailabilityZones:
+    Description: Quantity of subnets to use, if selecting more than 2 the region this
+      stack is in must have at least that many Availability Zones
+    Type: String
+    Default: '2'
+    AllowedValues:
+      - '2'
+      - '3'
+      - '4'
+      - '5'
+  PortNumber:
+    Description: The port number for the database server to listen on
+    Type: Number
+    Default: '10001'
+    MinValue: '1150'
+    MaxValue: '65535'
+  PreferredBackupWindow:
+    Description: The daily time range in UTC during which automated backups are created
+      (if automated backups are enabled). Cannot overlap with PreferredMaintenanceWindowTime
+    Type: String
+    Default: '00:00-02:00'
+    AllowedValues:
+      - '00:00-02:00'
+      - '01:00-03:00'
+      - '02:00-04:00'
+      - '03:00-05:00'
+      - '04:00-06:00'
+      - '05:00-07:00'
+      - '06:00-08:00'
+      - '07:00-09:00'
+      - '08:00-10:00'
+      - '09:00-11:00'
+      - 10:00-12:00
+      - 11:00-13:00
+      - 12:00-14:00
+      - 13:00-15:00
+      - 14:00-16:00
+      - 15:00-17:00
+      - 16:00-18:00
+      - 17:00-19:00
+      - 18:00-20:00
+      - 19:00-21:00
+      - 20:00-22:00
+      - 21:00-23:00
+      - 22:00-24:00
+  PreferredMaintenanceWindowDay:
+    Description: The day of the week which RDS maintenance will be performed
+    Type: String
+    Default: Mon
+    AllowedValues:
+      - Mon
+      - Tue
+      - Wed
+      - Thu
+      - Fri
+      - Sat
+      - Sun
+  PreferredMaintenanceWindowEndTime:
+    Description: The weekly end time in UTC for the RDS maintenance window, must be
+      more than PreferredMaintenanceWindowEndTime and cannot overlap with PreferredBackupWindow
+    Type: String
+    Default: '06:00'
+    AllowedValues:
+      - '00:00'
+      - '01:00'
+      - '02:00'
+      - '03:00'
+      - '04:00'
+      - '05:00'
+      - '06:00'
+      - '07:00'
+      - '08:00'
+      - '09:00'
+      - '10:00'
+      - '11:00'
+      - '12:00'
+      - '13:00'
+      - '14:00'
+      - '15:00'
+      - '16:00'
+      - '17:00'
+      - '18:00'
+      - '19:00'
+      - '20:00'
+      - '21:00'
+      - '22:00'
+  PreferredMaintenanceWindowStartTime:
+    Description: The weekly start time in UTC for the RDS maintenance window, must
+      be less than PreferredMaintenanceWindowEndTime and cannot overlap with PreferredBackupWindow
+    Type: String
+    Default: '04:00'
+    AllowedValues:
+      - '00:00'
+      - '01:00'
+      - '02:00'
+      - '03:00'
+      - '04:00'
+      - '05:00'
+      - '06:00'
+      - '07:00'
+      - '08:00'
+      - '09:00'
+      - '10:00'
+      - '11:00'
+      - '12:00'
+      - '13:00'
+      - '14:00'
+      - '15:00'
+      - '16:00'
+      - '17:00'
+      - '18:00'
+      - '19:00'
+      - '20:00'
+      - '21:00'
+      - '22:00'
+  PubliclyAccessible:
+    Description: Indicates whether the DB instance is an Internet-facing instance.
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  StorageEncrypted:
+    Description: Indicates whether the DB instance is encrypted.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  StorageType:
+    Description: Specifies the storage type to be associated with the DB instance.
+    Type: String
+    Default: io1
+    AllowedValues:
+      - io1
+      - gp2
+      - standard
+  VpcId:
+    Description: The ID of the VPC to launch the RDS instance into
+    Type: AWS::EC2::VPC::Id
+Mappings:
+  Version2Family:
+    10.0.17:
+      Family: mariadb10.0
+      MajorVersion: '10.0'
+    10.0.24:
+      Family: mariadb10.0
+      MajorVersion: '10.0'
+    10.0.28:
+      Family: mariadb10.0
+      MajorVersion: '10.0'
+    10.0.31:
+      Family: mariadb10.0
+      MajorVersion: '10.0'
+    10.1.14:
+      Family: mariadb10.1
+      MajorVersion: '10.1'
+    10.1.19:
+      Family: mariadb10.1
+      MajorVersion: '10.1'
+    10.1.23:
+      Family: mariadb10.1
+      MajorVersion: '10.1'
+Conditions:
+  3az: !Or
+    - !Equals
+      - !Ref 'NumberOfAvailabilityZones'
+      - '3'
+    - !Equals
+      - !Ref 'NumberOfAvailabilityZones'
+      - '4'
+    - !Equals
+      - !Ref 'NumberOfAvailabilityZones'
+      - '5'
+  4az: !Or
+    - !Equals
+      - !Ref 'NumberOfAvailabilityZones'
+      - '4'
+    - !Equals
+      - !Ref 'NumberOfAvailabilityZones'
+      - '5'
+  5az: !Equals
+    - !Ref 'NumberOfAvailabilityZones'
+    - '5'
+  100GB: !Equals
+    - !Ref 'AllocatedStorageAndIops'
+    - 100 GB / 1,000 IOPS
+  300GB: !Equals
+    - !Ref 'AllocatedStorageAndIops'
+    - 300 GB / 3,000 IOPS
+  600GB: !Equals
+    - !Ref 'AllocatedStorageAndIops'
+    - 600 GB / 6,000 IOPS
+  1000GB: !Equals
+    - !Ref 'AllocatedStorageAndIops'
+    - 1,000 GB / 10,000 IOPS
+  1500GB: !Equals
+    - !Ref 'AllocatedStorageAndIops'
+    - 1,500 GB / 15,000 IOPS
+  2000GB: !Equals
+    - !Ref 'AllocatedStorageAndIops'
+    - 2,000 GB / 20,000 IOPS
+  3000GB: !Equals
+    - !Ref 'AllocatedStorageAndIops'
+    - 3,000 GB / 30,000 IOPS
+  4000GB: !Equals
+    - !Ref 'AllocatedStorageAndIops'
+    - 4,000 GB / 40,000 IOPS
+  AuditSupported: !Not
+    - !Equals
+      - !Ref 'EngineVersion'
+      - 10.0.17
+Resources:
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      AllocatedStorage: !If
+        - 100GB
+        - '100'
+        - !If
+          - 300GB
+          - '300'
+          - !If
+            - 600GB
+            - '600'
+            - !If
+              - 1000GB
+              - '1000'
+              - !If
+                - 1500GB
+                - '1500'
+                - !If
+                  - 2000GB
+                  - '2000'
+                  - !If
+                    - 3000GB
+                    - '3000'
+                    - !If
+                      - 4000GB
+                      - '4000'
+                      - '6000'
+      AllowMajorVersionUpgrade: !Ref 'AllowMajorVersionUpgrade'
+      AutoMinorVersionUpgrade: !Ref 'AutoMinorVersionUpgrade'
+      BackupRetentionPeriod: !Ref 'BackupRetentionPeriod'
+      CopyTagsToSnapshot: !Ref 'CopyTagsToSnapshot'
+      DBInstanceClass: !Ref 'DBInstanceClass'
+      DBName: !Ref 'DBName'
+      DBParameterGroupName: !Ref 'DBParameterGroup'
+      DBSubnetGroupName: !Ref 'DBSubnetGroup'
+      Engine: mariadb
+      EngineVersion: !Ref 'EngineVersion'
+      Iops: !If
+        - 100GB
+        - '1000'
+        - !If
+          - 300GB
+          - '3000'
+          - !If
+            - 600GB
+            - '6000'
+            - !If
+              - 1000GB
+              - '10000'
+              - !If
+                - 1500GB
+                - '15000'
+                - !If
+                  - 2000GB
+                  - '20000'
+                  - !If
+                    - 3000GB
+                    - '30000'
+                    - !If
+                      - 4000GB
+                      - '40000'
+                      - '60000'
+      KmsKeyId: !GetAtt 'KMSKey.Arn'
+      LicenseModel: general-public-license
+      MasterUsername: !Ref 'MasterUsername'
+      MasterUserPassword: !Ref 'MasterUserPassword'
+      MonitoringInterval: !Ref 'MonitoringInterval'
+      MonitoringRoleArn: !GetAtt 'MonitoringRole.Arn'
+      MultiAZ: !Ref 'MultiAZ'
+      OptionGroupName: !Ref 'DBOptionGroup'
+      Port: !Ref 'PortNumber'
+      PreferredBackupWindow: !Ref 'PreferredBackupWindow'
+      PreferredMaintenanceWindow: !Sub '${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}'
+      PubliclyAccessible: !Ref 'PubliclyAccessible'
+      StorageEncrypted: !Ref 'StorageEncrypted'
+      StorageType: !Ref 'StorageType'
+      Tags:
+        - Key: ApplicationName
+          Value: !Ref 'ApplicationName'
+      VPCSecurityGroups:
+        - !Ref 'RDSSecurityGroup'
+  DBOptionGroup:
+    Type: AWS::RDS::OptionGroup
+    DeletionPolicy: Retain
+    Properties:
+      EngineName: mariadb
+      MajorEngineVersion: !FindInMap
+        - Version2Family
+        - !Ref 'EngineVersion'
+        - MajorVersion
+      OptionGroupDescription: !Sub 'StackName ${AWS::StackName} Database ${DBName}'
+      OptionConfigurations:
+        - !If
+          - AuditSupported
+          - OptionName: MARIADB_AUDIT_PLUGIN
+            OptionSettings:
+              - Name: SERVER_AUDIT_FILE_ROTATE_SIZE
+                Value: '100000000'
+              - Name: SERVER_AUDIT_FILE_ROTATIONS
+                Value: '100'
+          - !Ref 'AWS::NoValue'
+      Tags:
+        - Key: ApplicationName
+          Value: !Ref 'ApplicationName'
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: !Sub 'StackName ${AWS::StackName} Database ${DBName}'
+      Family: !FindInMap
+        - Version2Family
+        - !Ref 'EngineVersion'
+        - Family
+      Parameters:
+        time_zone: !Ref 'MysqlServerTimezone'
+      Tags:
+        - Key: ApplicationName
+          Value: !Ref 'ApplicationName'
+  DBSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !Ref 'AvailabilityZones'
+      VpcId: !Ref 'VpcId'
+      CidrBlock: !Select
+        - 0
+        - !Ref 'CidrBlocks'
+      Tags:
+        - Key: APPLICATION_NAME
+          Value: !Ref 'ApplicationName'
+  DBSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !Ref 'AvailabilityZones'
+      VpcId: !Ref 'VpcId'
+      CidrBlock: !Select
+        - 1
+        - !Ref 'CidrBlocks'
+      Tags:
+        - Key: APPLICATION_NAME
+          Value: !Ref 'ApplicationName'
+  DBSubnet3:
+    Condition: 3az
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 2
+        - !Ref 'AvailabilityZones'
+      VpcId: !Ref 'VpcId'
+      CidrBlock: !Select
+        - 2
+        - !Ref 'CidrBlocks'
+      Tags:
+        - Key: APPLICATION_NAME
+          Value: !Ref 'ApplicationName'
+  DBSubnet4:
+    Condition: 4az
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 3
+        - !Ref 'AvailabilityZones'
+      VpcId: !Ref 'VpcId'
+      CidrBlock: !Select
+        - 3
+        - !Ref 'CidrBlocks'
+      Tags:
+        - Key: APPLICATION_NAME
+          Value: !Ref 'ApplicationName'
+  DBSubnet5:
+    Condition: 5az
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 4
+        - !Ref 'AvailabilityZones'
+      VpcId: !Ref 'VpcId'
+      CidrBlock: !Select
+        - 4
+        - !Ref 'CidrBlocks'
+      Tags:
+        - Key: APPLICATION_NAME
+          Value: !Ref 'ApplicationName'
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub 'StackName ${AWS::StackName} Database ${DBName}'
+      SubnetIds:
+        - !Ref 'DBSubnet1'
+        - !Ref 'DBSubnet2'
+        - !If
+          - 3az
+          - !Ref 'DBSubnet3'
+          - !Ref 'AWS::NoValue'
+        - !If
+          - 4az
+          - !Ref 'DBSubnet4'
+          - !Ref 'AWS::NoValue'
+        - !If
+          - 5az
+          - !Ref 'DBSubnet5'
+          - !Ref 'AWS::NoValue'
+      Tags:
+        - Key: ApplicationName
+          Value: !Ref 'ApplicationName'
+  KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub 'StackName ${AWS::StackName} Database ${DBName}'
+      Enabled: 'true'
+      EnableKeyRotation: 'true'
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+            Resource: '*'
+  MonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: monitoring.rds.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub 'Allow Client connections to StackName ${AWS::StackName} Database ${DBName}'
+      VpcId: !Ref 'VpcId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref 'PortNumber'
+          ToPort: !Ref 'PortNumber'
+          CidrIp: !Ref 'AccessCidr'
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: '-1'
+          ToPort: '-1'
+          CidrIp: '0.0.0.0/0'
+Outputs:
+  EndpointAddress:
+    Value: !GetAtt 'DBInstance.Endpoint.Address'
+Outputs:
+  EndpointAddress:
+    Value: !GetAtt 'DBInstance.Endpoint.Address'
+  MasterUsername:
+    Value: !Ref 'MasterUsername'
+  MasterPassword:
+    Value: !Ref 'MasterUserPassword'
+  Port:
+    Value: !Ref 'PortNumber'
+  DBName:
+    Value: !Ref 'DBName'

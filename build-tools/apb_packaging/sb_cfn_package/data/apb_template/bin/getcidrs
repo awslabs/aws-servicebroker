@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+import boto3
+import sys
+import netaddr
+
+# TODO: add locking mechanism to prevent collisions when run concurrently
+
+CIDR_SIZE = int(sys.argv[1])
+QTY = int(sys.argv[2])
+VPC_ID = sys.argv[3]
+REGION = sys.argv[4]
+
+vpc = boto3.resource('ec2', region_name=REGION).Vpc(VPC_ID)
+
+vpc_cidrs = list(netaddr.IPNetwork(vpc.cidr_block).subnet(CIDR_SIZE))
+allocated_cidrs = netaddr.IPSet([ s.cidr_block for s in vpc.subnets.all() ])
+unused_cidrs = netaddr.IPSet([vpc.cidr_block]) ^ allocated_cidrs
+available_cidrs = []
+for sl in [ list(s.subnet(CIDR_SIZE)) for s in unused_cidrs.iter_cidrs() ]:
+    available_cidrs = available_cidrs + sl
+if len(available_cidrs) < QTY:
+    sys.stderr.write("Not enough available space in the vpc\n")
+    sys.exit(1)
+print(','.join([str(s) for s in available_cidrs[-(QTY):]]))
