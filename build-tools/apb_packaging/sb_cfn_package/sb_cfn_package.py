@@ -140,8 +140,8 @@ class SbCfnPackage(object):
             os.makedirs(os.path.join(build_path, "/%s" % service_name), exist_ok=True)
         else:
             tmpname = '/tmp/AWSSB-' + str(b64encode(bytes(str(random()), 'utf8'))).replace("b'", '').replace("'", '').replace('=', '')
+            os.makedirs(tmpname)
         print("build path: %s" % tmpname)
-        os.makedirs(tmpname)
         shutil.copytree(os.path.dirname(os.path.abspath(__file__)) + '/data/apb_template/', tmpname + '/apb')
         for dname, dirs, files in os.walk(tmpname):
             for fname in files:
