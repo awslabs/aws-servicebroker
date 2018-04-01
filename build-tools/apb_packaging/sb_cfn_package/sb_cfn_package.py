@@ -70,19 +70,22 @@ def cli():
         help='Path to the CloudFormation template to use for the build'
     )
     args = parser.parse_args()
+    template_path = os.path.abspath(args.templatepath)
     loglevel = getattr(logging, args.loglevel.upper())
     logging.getLogger().setLevel(loglevel)
     logging.info('Set loglevel to %s' % args.loglevel.upper())
     logging.debug("Passed arguments: {} ".format(args.__dict__))
+    build_path = None
     if args.ci:
+        build_path = os.path.abspath(args.ci)
         try:
-            shutil.rmtree(os.path.join(args.ci, "/%s" % args.name))
+            shutil.rmtree(build_path + "/%s" % args.name)
         except FileNotFoundError:
             pass
-    sb_pack = SbCfnPackage(template_path=os.path.abspath(args.templatepath), service_spec_path=args.service_spec_path)
-    artifacts = sb_pack.build_artifacts(args.name, args.s3_acl, args.s3_bucket, args.profile, build_path=args.ci)
+    sb_pack = SbCfnPackage(template_path=template_path, service_spec_path=args.service_spec_path)
+    artifacts = sb_pack.build_artifacts(args.name, args.s3_acl, args.s3_bucket, args.profile, build_path=build_path)
     results = sb_pack.create_apb_skeleton(artifacts['apb_spec'], artifacts['prescribed_parameters'],
-                                          artifacts['bindings'], artifacts['template'], args.name, build_path=args.ci)
+                                          artifacts['bindings'], artifacts['template'], args.name, build_path=build_path)
     os.chdir(os.path.join(results, 'apb'))
     tag = args.docker_image_tag or artifacts['apb_spec']['name']
     results = subprocess.run(["apb", "build", "--tag", tag], stdout=subprocess.PIPE)
@@ -100,7 +103,8 @@ def cli():
             raise Exception('docker push failed')
     if args.ci:
         os.makedirs('./ci')
-        shutil.copy(os.path.join(os.path.dirname(os.path.abspath(args.templatepath)), 'ci/config.yml'), './ci/config.yml')
+        print(os.path.join(os.path.dirname(template_path), 'ci/config.yml'))
+        shutil.copy(os.path.join(os.path.dirname(template_path), 'ci/config.yml'), './ci/config.yml')
 
 
 class SbCfnPackage(object):
@@ -139,8 +143,9 @@ class SbCfnPackage(object):
 
     def create_apb_skeleton(self, apb_spec, prescribed_parameters, bindings, template, service_name, build_path=None):
         if build_path:
-            tmpname = os.path.join(build_path, "/%s" % service_name)
-            os.makedirs(os.path.join(build_path, "/%s" % service_name), exist_ok=True)
+            os.makedirs(build_path, exist_ok=True)
+            tmpname = os.path.join(build_path, "%s" % service_name)
+            os.makedirs(os.path.join(build_path, "%s" % service_name), exist_ok=True)
         else:
             tmpname = '/tmp/AWSSB-' + str(b64encode(bytes(str(random()), 'utf8'))).replace("b'", '').replace("'", '').replace('=', '')
             os.makedirs(tmpname)
@@ -149,11 +154,12 @@ class SbCfnPackage(object):
         for dname, dirs, files in os.walk(tmpname):
             for fname in files:
                 fpath = os.path.join(dname, fname)
-                with open(fpath) as f:
-                    s = f.read()
-                s = s.replace("${SERVICE_NAME}", service_name).replace('${CREATE_IAM_USER}', str(bindings['IAMUser']))
-                with open(fpath, "w") as f:
-                    f.write(s)
+                if not fname.endswith('.zip'):
+                    with open(fpath) as f:
+                        s = f.read()
+                    s = s.replace("${SERVICE_NAME}", service_name).replace('${CREATE_IAM_USER}', str(bindings['IAMUser']))
+                    with open(fpath, "w") as f:
+                        f.write(s)
         for plan in prescribed_parameters.keys():
             prescribed_parameters[plan]['params_string'] = "{{ namespace }}::{{ _apb_plan_id }}::{{ _apb_service_class_id }}::{{ _apb_service_instance_id }}"
             prescribed_parameters[plan]['params_hash'] = "{{ params_string | checksum }}"

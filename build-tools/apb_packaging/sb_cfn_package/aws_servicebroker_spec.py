@@ -236,8 +236,9 @@ class AwsServiceBrokerSpec(object):
 
     def _publish_lambda_zip(self, func_path, util_name):
         if self.build_path:
-            tmp_zip = os.path.join(self.build_path, '/%s/functions/lambda_function.zip' % util_name)
-            os.makedirs(os.path.join(self.build_path, '/%s/functions/' % util_name), exist_ok=True)
+            os.makedirs(self.build_path, exist_ok=True)
+            tmp_zip = os.path.join(self.build_path, '%s/functions/%s/lambda_function.zip' % (self.service_name, util_name))
+            os.makedirs(os.path.join(self.build_path, '%s/functions/%s' % (self.service_name, util_name)), exist_ok=True)
         else:
             tmp_zip = '/tmp/%s-lambda_function.zip' % random.randrange(10000000, 99999999)
         os.chdir(func_path)
