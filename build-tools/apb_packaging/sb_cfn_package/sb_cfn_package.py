@@ -58,6 +58,12 @@ def cli():
         "--profile",
         default=None,
         help='aws credential profile to use'
+    ),
+    parser.add_argument(
+        "-c",
+        "--ci",
+        default=None,
+        help='Path to the place build output, if not specified a random directory will be created in /tmp'
     )
     parser.add_argument(
         "templatepath",
@@ -68,10 +74,12 @@ def cli():
     logging.getLogger().setLevel(loglevel)
     logging.info('Set loglevel to %s' % args.loglevel.upper())
     logging.debug("Passed arguments: {} ".format(args.__dict__))
+    if args.ci:
+        shutil.rmtree(os.path.join(args.ci, "/%s" % args.name))
     sb_pack = SbCfnPackage(template_path=os.path.abspath(args.templatepath), service_spec_path=args.service_spec_path)
-    artifacts = sb_pack.build_artifacts(args.name, args.s3_acl, args.s3_bucket, args.profile)
+    artifacts = sb_pack.build_artifacts(args.name, args.s3_acl, args.s3_bucket, args.profile, build_path=args.ci)
     results = sb_pack.create_apb_skeleton(artifacts['apb_spec'], artifacts['prescribed_parameters'],
-                                          artifacts['bindings'], artifacts['template'], args.name)
+                                          artifacts['bindings'], artifacts['template'], args.name, build_path=args.ci)
     os.chdir(os.path.join(results, 'apb'))
     tag = args.docker_image_tag or artifacts['apb_spec']['name']
     results = subprocess.run(["apb", "build", "--tag", tag], stdout=subprocess.PIPE)
@@ -115,17 +123,21 @@ class SbCfnPackage(object):
         if not self.service_spec:
             raise Exception("cannot continue without either a ['Metadata']['AWS::ServiceBroker::Specification'] section in the template, or a path to a seperate spec using service_spec_path")
 
-    def build_artifacts(self, service_name, s3acl='private', bucket=None, profile=None, test=False):
+    def build_artifacts(self, service_name, s3acl='private', bucket=None, profile=None, test=False, build_path=None):
         """
         Builds artifacts required to create an apb using the specification in the cloudformation template metadata
 
         :return:
         """
-        return AwsServiceBrokerSpec(service_name=service_name, bucket_name=bucket, profile=profile, s3acl=s3acl, test=test).build_abp_spec(self.service_spec, self.template, self.template_path)
+        return AwsServiceBrokerSpec(service_name=service_name, bucket_name=bucket, profile=profile, s3acl=s3acl, test=test).build_abp_spec(self.service_spec, self.template, self.template_path, build_path=build_path)
 
-    def create_apb_skeleton(self, apb_spec, prescribed_parameters, bindings, template, service_name):
-        tmpname = '/tmp/AWSSB-' + str(b64encode(bytes(str(random()), 'utf8'))).replace("b'",'').replace("'", '').replace('=', '')
-        print("temporary path: %s" % tmpname)
+    def create_apb_skeleton(self, apb_spec, prescribed_parameters, bindings, template, service_name, build_path=None):
+        if build_path:
+            tmpname = os.path.join(build_path, "/%s" % service_name)
+            os.makedirs(os.path.join(build_path, "/%s" % service_name), exist_ok=True)
+        else:
+            tmpname = '/tmp/AWSSB-' + str(b64encode(bytes(str(random()), 'utf8'))).replace("b'", '').replace("'", '').replace('=', '')
+        print("build path: %s" % tmpname)
         os.makedirs(tmpname)
         shutil.copytree(os.path.dirname(os.path.abspath(__file__)) + '/data/apb_template/', tmpname + '/apb')
         for dname, dirs, files in os.walk(tmpname):

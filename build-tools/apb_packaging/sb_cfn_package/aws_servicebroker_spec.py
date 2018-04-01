@@ -79,7 +79,8 @@ class AwsServiceBrokerSpec(object):
             key_value = None
         return key_value
 
-    def build_abp_spec(self, cfn_spec, template, path):
+    def build_abp_spec(self, cfn_spec, template, path, build_path=None):
+        self.build_path = build_path
         self.template = template
         apb_spec = OrderedDict()
         for key in cfn_spec.keys():
@@ -234,7 +235,11 @@ class AwsServiceBrokerSpec(object):
                     self.template['Conditions'] = OrderedDict({**self.template['Conditions'], **snippet['Conditions']})
 
     def _publish_lambda_zip(self, func_path, util_name):
-        tmp_zip = '/tmp/%s-lambda_function.zip' % random.randrange(10000000, 99999999)
+        if self.build_path:
+            tmp_zip = os.path.join(self.build_path, '/%s/functions/lambda_function.zip' % util_name)
+            os.makedirs(os.path.join(self.build_path, '/%s/functions/' % util_name), exist_ok=True)
+        else:
+            tmp_zip = '/tmp/%s-lambda_function.zip' % random.randrange(10000000, 99999999)
         os.chdir(func_path)
         if os.path.isfile("requirements.txt"):
             with open("requirements.txt") as f:
@@ -243,7 +248,8 @@ class AwsServiceBrokerSpec(object):
         self._zipdir(func_path, tmp_zip)
         key = self.key_prefix + 'functions/' + util_name + '/lambda_function.zip'
         self.s3_client.upload_file(tmp_zip, self.bucket_name, key, ExtraArgs={"ACL": self.s3acl})
-        os.remove(tmp_zip)
+        if not self.build_path:
+            os.remove(tmp_zip)
         return self.bucket_name, key
 
     def _zipdir(self, path, output):
