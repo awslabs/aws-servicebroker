@@ -75,7 +75,10 @@ def cli():
     logging.info('Set loglevel to %s' % args.loglevel.upper())
     logging.debug("Passed arguments: {} ".format(args.__dict__))
     if args.ci:
-        shutil.rmtree(os.path.join(args.ci, "/%s" % args.name))
+        try:
+            shutil.rmtree(os.path.join(args.ci, "/%s" % args.name))
+        except FileNotFoundError:
+            pass
     sb_pack = SbCfnPackage(template_path=os.path.abspath(args.templatepath), service_spec_path=args.service_spec_path)
     artifacts = sb_pack.build_artifacts(args.name, args.s3_acl, args.s3_bucket, args.profile, build_path=args.ci)
     results = sb_pack.create_apb_skeleton(artifacts['apb_spec'], artifacts['prescribed_parameters'],
