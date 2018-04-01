@@ -1,0 +1,8 @@
+global:
+  parameters: {}
+  regions:
+    - us-east-1
+
+plans:
+  default:
+    parameters: {}
