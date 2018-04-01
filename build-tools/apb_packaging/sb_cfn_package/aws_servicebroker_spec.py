@@ -28,7 +28,7 @@ class AwsServiceBrokerSpec(object):
     """
     Implements the AWS Service Broker Specification
     """
-    def __init__(self, service_name, bucket_name=None, key_prefix='', region=None, profile=None, s3acl='private'):
+    def __init__(self, service_name, bucket_name=None, key_prefix='', region=None, profile=None, s3acl='private', test=False):
         """
         Load the specification from config files
         """
@@ -49,6 +49,7 @@ class AwsServiceBrokerSpec(object):
         self.profile = profile
         self.s3acl = s3acl
         self.service_name = service_name
+        self.test = test
 
     def lint(self, input_spec):
         """
@@ -128,6 +129,8 @@ class AwsServiceBrokerSpec(object):
         self._inject_utils()
         self._build_functions(path)
         self._upload_template()
+        if self.test:
+            self.delete_asset_bucket()
         return {"apb_spec": apb_spec, "prescribed_parameters": prescribed_parameters, "bindings": bindings, "template": self.template}
 
     def _upload_template(self):
@@ -273,6 +276,11 @@ class AwsServiceBrokerSpec(object):
                 self.s3_client.create_bucket(Bucket=self.bucket_name)
         return
 
+    def delete_asset_bucket(self):
+        s3objects = self.s3_client.list_objects_v2(Bucket=self.bucket_name)
+        if 'Contents' in s3objects.keys():
+            self.s3_client.delete_objects(Bucket=self.bucket_name, Delete={'Objects': [{'Key': key['Key']} for key in s3objects['Contents']]})
+        self.s3_client.delete_bucket(Bucket=self.bucket_name)
     def _build_nested(self, key, apb_key, cfn_spec):
         output_dict = {}
         nested_keys = self._render_dot(apb_key)

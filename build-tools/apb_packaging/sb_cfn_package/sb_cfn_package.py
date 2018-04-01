@@ -108,13 +108,13 @@ class SbCfnPackage(object):
         if not self.service_spec:
             raise Exception("cannot continue without either a ['Metadata']['AWS::ServiceBroker::Specification'] section in the template, or a path to a seperate spec using service_spec_path")
 
-    def build_artifacts(self, service_name, s3acl='private', bucket=None, profile=None):
+    def build_artifacts(self, service_name, s3acl='private', bucket=None, profile=None, test=False):
         """
         Builds artifacts required to create an apb using the specification in the cloudformation template metadata
 
         :return:
         """
-        return AwsServiceBrokerSpec(service_name=service_name, bucket_name=bucket, profile=profile, s3acl=s3acl).build_abp_spec(self.service_spec, self.template, self.template_path)
+        return AwsServiceBrokerSpec(service_name=service_name, bucket_name=bucket, profile=profile, s3acl=s3acl, test=test).build_abp_spec(self.service_spec, self.template, self.template_path)
 
     def create_apb_skeleton(self, apb_spec, prescribed_parameters, bindings, template, service_name):
         tmpname = '/tmp/AWSSB-' + str(b64encode(bytes(str(random()), 'utf8'))).replace("b'",'').replace("'", '').replace('=', '')
