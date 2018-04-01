@@ -98,6 +98,9 @@ def cli():
         if results.returncode != 0:
             print(results.stderr.decode("utf-8"))
             raise Exception('docker push failed')
+    if args.ci:
+        os.makedirs('./ci')
+        shutil.copy(os.path.join(os.path.dirname(os.path.abspath(args.templatepath)), 'ci/config.yml'), './ci/config.yml')
 
 
 class SbCfnPackage(object):
