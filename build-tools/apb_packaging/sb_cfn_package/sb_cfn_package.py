@@ -21,7 +21,7 @@ def cli():
     parser.add_argument(
         '-l',
         '--loglevel',
-        default='warning',
+        default='error',
         help='Set loglevel. Allowed values are debug, info, warning, error, critical. Default is warning'
     )
     parser.add_argument(
