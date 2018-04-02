@@ -91,7 +91,8 @@ def cli():
     results = subprocess.run(["apb", "build", "--tag", tag], stdout=subprocess.PIPE)
     print(results.stdout.decode("utf-8"))
     if results.returncode != 0:
-        print(results.stderr.decode("utf-8"))
+        if results.stderr:
+            print(results.stderr.decode("utf-8"))
         raise Exception('apb build failed')
     if '/' in tag:
         results = subprocess.run(["docker", "push", tag], stdout=subprocess.PIPE)
@@ -99,7 +100,8 @@ def cli():
             if not l.endswith(': Preparing') and not l.endswith(': Waiting'):
                 print(l)
         if results.returncode != 0:
-            print(results.stderr.decode("utf-8"))
+            if results.stderr:
+                print(results.stderr.decode("utf-8"))
             raise Exception('docker push failed')
     if args.ci:
         os.makedirs('./ci')
