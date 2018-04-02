@@ -103,7 +103,6 @@ def cli():
             raise Exception('docker push failed')
     if args.ci:
         os.makedirs('./ci')
-        print(os.path.join(os.path.dirname(template_path), 'ci/config.yml'))
         shutil.copy(os.path.join(os.path.dirname(template_path), 'ci/config.yml'), './ci/config.yml')
 
 
@@ -177,7 +176,10 @@ class SbCfnPackage(object):
             elif t['name'] == 'Create Resources':
                 if 'Parameters' in template.keys():
                     for p in template['Parameters'].keys():
-                        t['cloudformation']['template_parameters'][p] = '{{ %s | default("") | string }}' % p
+                        default = ""
+                        if 'Default' in template['Parameters'][p].keys():
+                            default = template['Parameters'][p]['Default']
+                        t['cloudformation']['template_parameters'][p] = '{{ %s | default("%s") | string }}' % (p, default)
         with open(tmpname + '/apb/roles/aws-provision-apb/tasks/main.yml', 'w') as f:
             f.write(CFNYAMLHandler.ordered_safe_dump(main_provision_task, default_flow_style=False))
         with open(tmpname + '/template.yaml', 'w') as f:
