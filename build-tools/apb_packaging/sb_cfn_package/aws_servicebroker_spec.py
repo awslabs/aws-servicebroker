@@ -340,7 +340,7 @@ class AwsServiceBrokerSpec(object):
             elif 'Type' in self.template['Parameters'][p].keys():
                 if self.template['Parameters'][p]['Type'] == 'Number':
                     apb_param['type'] = 'int'
-                elif self.template['Parameters'][p]['Type'] == 'String':
+                else:
                     apb_param['type'] = 'string'
             if 'default' in apb_param.keys():
                 if type(apb_param['default']) == str:
