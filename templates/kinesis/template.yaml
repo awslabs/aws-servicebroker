@@ -45,7 +45,7 @@ Metadata:
       ShardCount:
         default: "Shard Count"
       StreamEncrypted:
-        default: "StreamE ncrypted"
+        default: "Stream Encrypted"
 Parameters:
   RetentionPeriodHours:
     Type: String
@@ -85,7 +85,6 @@ Resources:
     Condition: EncryptionEnabled
     Type: AWS::KMS::Key
     Properties:
-      Description: !Sub 'Application: ${ApplicationName} Database: ${StreamName}'
       Enabled: 'true'
       EnableKeyRotation: 'true'
       KeyPolicy:
@@ -95,20 +94,20 @@ Resources:
           - Sid: Allow administration of the key
             Effect: Allow
             Principal:
-              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
             Action:
-              - kms:Create*
-              - kms:Describe*
-              - kms:Enable*
-              - kms:List*
-              - kms:Put*
-              - kms:Update*
-              - kms:Revoke*
-              - kms:Disable*
-              - kms:Get*
-              - kms:Delete*
-              - kms:ScheduleKeyDeletion
-              - kms:CancelKeyDeletion
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
             Resource: '*'
 Outputs:
   StreamName:
