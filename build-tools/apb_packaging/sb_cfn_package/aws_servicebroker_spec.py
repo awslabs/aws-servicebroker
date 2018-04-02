@@ -272,8 +272,7 @@ class AwsServiceBrokerSpec(object):
         if not self.bucket_name:
             identity = self.boto3_session.client('sts', region_name=self.region).get_caller_identity()
             account_id = identity['Account']
-            bucket_suffix = identity['UserId'][-8:].lower()
-            self.bucket_name = 'awsservicebroker-assets-%s%s' % (account_id, bucket_suffix)
+            self.bucket_name = 'awsservicebroker-assets-%s' % account_id
         try:
             self.s3_client.head_bucket(Bucket=self.bucket_name)
         except botocore.exceptions.ClientError as e:
