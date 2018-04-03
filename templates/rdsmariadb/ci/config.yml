@@ -6,9 +6,13 @@ global:
 plans:
   dev:
     parameters:
+      MasterUsername: testuser
+      MasterUserPassword: drCmbTamVf2qnqfRp
+      DBName: testdb
       DBInstanceClass: db.t2.large
       AllocatedStorageAndIops: "100 GB / 1,000 IOPS"
       MysqlServerTimezone: "UTC"
       PubliclyAccessible: false
       AccessCidr: "10.0.0.0/16"
-    sample_app: rds-sample-app-apb
+    sample_app: rds-sample-app
+    sample_app_plan: rds-sample
