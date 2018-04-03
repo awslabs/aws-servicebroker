@@ -171,8 +171,16 @@ class SbCfnPackage(object):
             f.write(CFNYAMLHandler.ordered_safe_dump(apb_spec, default_flow_style=False))
         with open(tmpname + '/apb/roles/aws-provision-apb/tasks/main.yml') as f:
             main_provision_task = yaml.load(f)
+        create_user = False
+        try:
+            create_user = template['Metadata']['AWS::ServiceBroker::Specification']['Bindings']['IAM']['AddKeypair']
+        except KeyError as e:
+            pass
         for t in main_provision_task:
             if t['name'] == 'Encode bind credentials':
+                if not create_user:
+                    t['asb_encode_binding']['fields'].pop('%s_AWS_ACCESS_KEY_ID' % service_name)
+                    t['asb_encode_binding']['fields'].pop('%s_AWS_SECRET_ACCESS_KEY' % service_name)
                 for b in bindings['CFNOutputs']:
                     t['asb_encode_binding']['fields'][b] = "{{ cfn.stack_outputs.%s }}" % b
             elif t['name'] == 'Create Resources':
