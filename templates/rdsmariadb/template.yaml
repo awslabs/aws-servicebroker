@@ -670,9 +670,6 @@ Resources:
       PubliclyAccessible: !Ref 'PubliclyAccessible'
       StorageEncrypted: !Ref 'StorageEncrypted'
       StorageType: !Ref 'StorageType'
-      Tags:
-        - Key: ApplicationName
-          Value: !Ref 'ApplicationName'
       VPCSecurityGroups:
         - !Ref 'RDSSecurityGroup'
   DBOptionGroup:
@@ -695,9 +692,6 @@ Resources:
               - Name: SERVER_AUDIT_FILE_ROTATIONS
                 Value: '100'
           - !Ref 'AWS::NoValue'
-      Tags:
-        - Key: ApplicationName
-          Value: !Ref 'ApplicationName'
   DBParameterGroup:
     Type: AWS::RDS::DBParameterGroup
     Properties:
@@ -708,9 +702,6 @@ Resources:
         - Family
       Parameters:
         time_zone: !Ref 'MysqlServerTimezone'
-      Tags:
-        - Key: ApplicationName
-          Value: !Ref 'ApplicationName'
   DBSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -721,9 +712,6 @@ Resources:
       CidrBlock: !Select
         - 0
         - !Ref 'CidrBlocks'
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref 'ApplicationName'
   DBSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
@@ -734,9 +722,6 @@ Resources:
       CidrBlock: !Select
         - 1
         - !Ref 'CidrBlocks'
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref 'ApplicationName'
   DBSubnet3:
     Condition: 3az
     Type: AWS::EC2::Subnet
@@ -748,9 +733,6 @@ Resources:
       CidrBlock: !Select
         - 2
         - !Ref 'CidrBlocks'
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref 'ApplicationName'
   DBSubnet4:
     Condition: 4az
     Type: AWS::EC2::Subnet
@@ -762,9 +744,6 @@ Resources:
       CidrBlock: !Select
         - 3
         - !Ref 'CidrBlocks'
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref 'ApplicationName'
   DBSubnet5:
     Condition: 5az
     Type: AWS::EC2::Subnet
@@ -776,9 +755,6 @@ Resources:
       CidrBlock: !Select
         - 4
         - !Ref 'CidrBlocks'
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref 'ApplicationName'
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -798,9 +774,6 @@ Resources:
           - 5az
           - !Ref 'DBSubnet5'
           - !Ref 'AWS::NoValue'
-      Tags:
-        - Key: ApplicationName
-          Value: !Ref 'ApplicationName'
   KMSKey:
     Type: AWS::KMS::Key
     Properties:
