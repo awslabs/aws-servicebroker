@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon RDS for MariaDB
+Description: Amazon RDS for MariaDB (qs-1ob09h6ae)
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0

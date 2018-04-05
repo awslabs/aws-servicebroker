@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon Kinesis Data Stream
+Description: Amazon Kinesis Data Stream (qs-1ob09h69o)
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0

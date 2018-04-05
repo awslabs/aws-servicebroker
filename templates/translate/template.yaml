@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon Translate
+Description: Amazon Translate (qs-1ob09h6at)
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0
