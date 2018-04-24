@@ -1,7 +1,7 @@
 # AWS Service Broker Overview
 The AWS Service Broker is a Service Broker that provides access to AWS services within the Service Catalog on RedHat OpenShift Container Platform. The broker implementation is based on the [Ansible Service Broker](https://github.com/openshift/ansible-service-broker/blob/master/docs/introduction.md).
 
-![Architecture](/images/architecture.png)
+![Architecture](/docs/images/architecture.png)
 
 ## Requirements:
 **OpenShift** (Origin or Enterprise) >= 3.7  
