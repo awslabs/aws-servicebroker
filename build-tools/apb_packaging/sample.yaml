@@ -49,10 +49,15 @@ Metadata:
                   Effect: Allow
                   Resource: !GetAtt SQSQueue.Arn
           - arn:aws:iam::aws:policy/AmazonSQSReadOnlyAccess
+      ### Which template outputs should be made available as bindings
       CFNOutputs: [SQSQueueUrl, SQSQueueArn, SQSQueueName, SQSDeadLetterQueueUrl, SQSDeadLetterQueueArn]
     ServicePlans:
       ### OPTIONAL. This section defines service plans that the broker will expose
       ### If no plans are defined, then a default plan will be created, exposing all of the template parameters
+      ###
+      ### Utility Injection: Custom resources and associates conditions will be injected into the template if there are any parameters matching the following Key/Default values:
+      ###     - Name: AvailabilityZones, Default: Auto # custom resource that gets the number of AZ's as specified by the NumberOfAvailabilityZones parameter
+      ###     - Name: CidrBlocks, Default: Auto # custom resource that creates subnets based on the NumberOfAvailabilityZones and CidrSize parameters
         default:
           DisplayName: "Standard"
           Description: 'Managed SQS Queue (Standard)'
