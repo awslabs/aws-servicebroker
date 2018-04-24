@@ -408,11 +408,11 @@ All of the scripts above will output the details of the OpenShift Cluster.  Howe
 
 When you visit the cluster URL  ([https://172.17.0.1:8443/console/](https://172.17.0.1:8443/console/) is default for local CatASB) you should see a login screen as shown below.  The default login for CatASB is `admin` username with `admin` password.
 
-![OpenShift Login](images/openshift-login.png)
+![OpenShift Login](/docs/images/openshift-login.png)
 
 After login, you will be greeted with the following main screen.
 
-![OpenShift Service Catalog](images/service-catalog.png)
+![OpenShift Service Catalog](/docs/images/service-catalog.png)
 
 
 ## Using Secrets to Hide Parameters from Service Catalog Users
@@ -632,4 +632,4 @@ To bind applications to APB during the provisioning step, you must already have 
 
 We've run into some cases with RDS where the connection to the RDS instance was not accessible.  When this happens look at the VPC of the RDS instance and trace to the associated routing table.  Verify that the routing table has a reference to the internet gateway, if you don't see a reference to the igw like below then add it so external traffic is allowed.
 
-![AWS VPC Dashboard](images/vpc-dashboard.png)
+![AWS VPC Dashboard](/docs/images/vpc-dashboard.png)
