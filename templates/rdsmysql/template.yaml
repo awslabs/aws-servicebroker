@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon RDS for MySQL (qs-1nt0fs92s)
+Description: "AWS Service Broker - Amazon RDS for MySQL (qs-1nt0fs92s)"
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0

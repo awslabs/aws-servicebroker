@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon Rekognition (qs-1ob09h6ao)
+Description: "AWS Service Broker - Amazon Rekognition (qs-1ob09h6ao)"
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0
