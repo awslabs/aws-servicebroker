@@ -4,7 +4,7 @@ global:
     - us-east-1
 
 plans:
-  sqs-fifo:
+  fifo:
     parameters:
       ContentBasedDeduplication: "true"
       DelaySeconds: 5
