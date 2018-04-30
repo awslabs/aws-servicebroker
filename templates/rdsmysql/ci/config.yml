@@ -12,4 +12,3 @@ plans:
       MysqlServerTimezone: "UTC"
       PubliclyAccessible: "false"
       AccessCidr: "10.0.0.0/16"
-    sample_app: rds-sample-app-apb

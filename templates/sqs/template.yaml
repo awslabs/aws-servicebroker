@@ -35,7 +35,6 @@ Metadata:
                   - 'sqs:SendMessageBatch'
                   Effect: Allow
                   Resource: !GetAtt SQSQueue.Arn
-      CFNOutputs: [SQSQueueUrl, SQSQueueArn, SQSQueueName, SQSDeadLetterQueueUrl, SQSDeadLetterQueueArn]
     ServicePlans:
         standard:
           DisplayName: "Standard"
@@ -179,3 +178,12 @@ Outputs:
     Value: !GetAtt
       - SQSQueue
       - QueueName
+  DeadLetterQueueURL:
+    Description: URL of newly created SQS Queue
+    Value: !If [ CreateDeadLetterQueue, !Ref MyDeadLetterQueue, "" ]
+  DeadLetterQueueARN:
+    Description: ARN of newly created SQS Queue
+    Value: If [ CreateDeadLetterQueue, !GetAtt MyDeadLetterQueue.Arn, "" ]
+  DeadLetterQueueName:
+    Description: Name newly created SQS Queue
+    Value: If [ CreateDeadLetterQueue, !GetAtt MyDeadLetterQueue.QueueName, "" ]

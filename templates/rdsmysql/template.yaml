@@ -21,7 +21,6 @@ Metadata:
     Bindings:
       IAM:
         AddKeypair: False
-      CFNOutputs: [EndpointAddress, MasterUsername, MasterPassword, Port, DBName]
     ServicePlans:
         production:
           DisplayName: "Production"
@@ -844,3 +843,11 @@ Resources:
 Outputs:
   EndpointAddress:
     Value: !GetAtt 'DBInstance.Endpoint.Address'
+  MasterUsername:
+    Value: !Ref 'MasterUsername'
+  MasterPassword:
+    Value: !Ref 'MasterUserPassword'
+  Port:
+    Value: !Ref 'PortNumber'
+  DBName:
+    Value: !Ref 'DBName'
