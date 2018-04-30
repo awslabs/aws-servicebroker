@@ -313,42 +313,43 @@ class AwsServiceBrokerSpec(object):
         if 'Parameters' not in self.template:
             self.template['Parameters'] = {}
         for p in self.template['Parameters'].keys():
-            param = self.template['Parameters'][p]
-            apb_param = OrderedDict({'name': p})
-            for e in param.keys():
-                if e in cfn_map["Parameters"].keys():
-                    apb_param[cfn_map["Parameters"][e]] = param[e]
-            if "AWS::CloudFormation::Interface" in self.template['Metadata'].keys():
-                if "ParameterLabels" in self.template['Metadata']['AWS::CloudFormation::Interface']:
-                    if p in self.template['Metadata']['AWS::CloudFormation::Interface']['ParameterLabels']:
-                        apb_param['title'] = self.template['Metadata']['AWS::CloudFormation::Interface']['ParameterLabels'][p]['default']
-                if "ParameterGroups" in self.template['Metadata']['AWS::CloudFormation::Interface']:
-                    for group in self.template['Metadata']['AWS::CloudFormation::Interface']['ParameterGroups']:
-                        if p in group['Parameters']:
-                            apb_param['display_group'] = group['Label']['default']
-            apb_param['required'] = True
-            if 'Default' in self.template['Parameters'][p].keys():
-                if self.template['Parameters'][p]['Default'] == '':
-                    apb_param.pop('default')
-                    apb_param['required'] = False
-            if 'NoEcho' in self.template['Parameters'][p].keys():
-                apb_param['display_type'] = 'password'
-            if 'AllowedValues' in self.template['Parameters'][p].keys():
-                apb_param['type'] = 'enum'
-                apb_param['enum'] = self.template['Parameters'][p]['AllowedValues']
-            elif 'Type' in self.template['Parameters'][p].keys():
-                if self.template['Parameters'][p]['Type'] == 'Number':
-                    apb_param['type'] = 'int'
-                else:
-                    apb_param['type'] = 'string'
-            if 'default' in apb_param.keys():
-                if type(apb_param['default']) == str:
-                    if apb_param['default'].isnumeric():
-                        try:
-                            apb_param['default'] = int(apb_param['default'])
-                        except Exception:
-                            pass
-            output_parameters.append(apb_param)
+            if p not in plan_params:
+                param = self.template['Parameters'][p]
+                apb_param = OrderedDict({'name': p})
+                for e in param.keys():
+                    if e in cfn_map["Parameters"].keys():
+                        apb_param[cfn_map["Parameters"][e]] = param[e]
+                if "AWS::CloudFormation::Interface" in self.template['Metadata'].keys():
+                    if "ParameterLabels" in self.template['Metadata']['AWS::CloudFormation::Interface']:
+                        if p in self.template['Metadata']['AWS::CloudFormation::Interface']['ParameterLabels']:
+                            apb_param['title'] = self.template['Metadata']['AWS::CloudFormation::Interface']['ParameterLabels'][p]['default']
+                    if "ParameterGroups" in self.template['Metadata']['AWS::CloudFormation::Interface']:
+                        for group in self.template['Metadata']['AWS::CloudFormation::Interface']['ParameterGroups']:
+                            if p in group['Parameters']:
+                                apb_param['display_group'] = group['Label']['default']
+                apb_param['required'] = True
+                if 'Default' in self.template['Parameters'][p].keys():
+                    if self.template['Parameters'][p]['Default'] == '':
+                        apb_param.pop('default')
+                        apb_param['required'] = False
+                if 'NoEcho' in self.template['Parameters'][p].keys():
+                    apb_param['display_type'] = 'password'
+                if 'AllowedValues' in self.template['Parameters'][p].keys():
+                    apb_param['type'] = 'enum'
+                    apb_param['enum'] = self.template['Parameters'][p]['AllowedValues']
+                elif 'Type' in self.template['Parameters'][p].keys():
+                    if self.template['Parameters'][p]['Type'] == 'Number':
+                        apb_param['type'] = 'int'
+                    else:
+                        apb_param['type'] = 'string'
+                if 'default' in apb_param.keys():
+                    if type(apb_param['default']) == str:
+                        if apb_param['default'].isnumeric():
+                            try:
+                                apb_param['default'] = int(apb_param['default'])
+                            except Exception:
+                                pass
+                output_parameters.append(apb_param)
         merged_params = []
         for injected in default_parameters:
             if injected['name'] not in [p['name'] for p in output_parameters]:
