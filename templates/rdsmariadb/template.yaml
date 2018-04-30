@@ -8,7 +8,7 @@ Metadata:
       - RDS
       - MariaDB
       - database
-    Name: rdsmariadb-apb
+    Name: rdsmariadb
     DisplayName: "Amazon RDS for MariaDB"
     LongDescription: "MariaDB is a popular open source relational database created by the original developers of MySQL. Amazon RDS makes it easy to set up, operate, and scale MariaDB deployments in the cloud. With Amazon RDS, you can deploy scalable MariaDB databases in minutes with cost-efficient and resizable hardware capacity. Amazon RDS frees you up to focus on your application by managing time-consuming database administration tasks including backups, software patching, monitoring, scaling and replication."
     ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png"

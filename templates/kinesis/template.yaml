@@ -7,7 +7,7 @@ Metadata:
       - AWS
       - Kinesis
       - stream
-    Name: kinesis-apb
+    Name: kinesis
     DisplayName: "Amazon Kinesis"
     LongDescription: "Amazon Kinesis Data Streams enables you to build custom applications that process or analyze streaming data for specialized needs. Kinesis Data Streams can continuously capture and store terabytes of data per hour from hundreds of thousands of sources such as website clickstreams, financial transactions, social media feeds, IT logs, and location-tracking events."
     ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonKinesis_LARGE.png"

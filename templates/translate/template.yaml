@@ -7,7 +7,7 @@ Metadata:
       - AWS
       - Translate
       - Language
-    Name: translate-apb
+    Name: translate
     DisplayName: "Amazon Translate"
     LongDescription: "[PREVIEW] You must have already signed up for the preview in order to use this service. Amazon Translate is a neural machine translation service that delivers fast, high-quality, and affordable language translation. Neural machine translation is a form of language translation automation that uses machine learning and deep learning models to deliver more accurate and more natural sounding translation than traditional statistical and rule-based translation algorithms."
     ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AWSPreview_LARGE.png"

@@ -7,7 +7,7 @@ Metadata:
       - AWS
       - Rekognition
       - Image
-    Name: rekognition-apb
+    Name: rekognition
     DisplayName: "Amazon Rekognition"
     LongDescription: "Amazon Rekognition makes it easy to add image and video analysis to your applications. You just provide an image or video to the Rekognition API, and the service can identify the objects, people, text, scenes, and activities, as well as detect any inappropriate content. Amazon Rekognition also provides highly accurate facial analysis and facial recognition. You can detect, analyze, and compare faces for a wide variety of user verification, cataloging, people counting, and public safety use cases."
     ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonRekognition_LARGE.png"

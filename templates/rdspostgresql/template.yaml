@@ -8,7 +8,7 @@ Metadata:
       - RDS
       - PostgreSQL
       - database
-    Name: rdspostgresql-apb
+    Name: rdspostgresql
     DisplayName: "Amazon RDS for PostgreSQL"
     LongDescription: "PostgreSQL has become the preferred open source relational database for many enterprise developers and start-ups, powering leading geospatial and mobile applications. Amazon RDS makes it easy to set up, operate, and scale PostgreSQL deployments in the cloud. With Amazon RDS, you can deploy scalable PostgreSQL deployments in minutes with cost-efficient and resizable hardware capacity. Amazon RDS manages complex and time-consuming administrative tasks such as PostgreSQL software installation and upgrades; storage management; replication for high availability and read throughput; and backups for disaster recovery."
     ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png"
