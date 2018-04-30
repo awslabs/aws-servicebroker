@@ -10,7 +10,7 @@ setup_options = dict(
     packages=['sb_cfn_package'],
     zip_safe=False,
     extras_require={
-        ':python_version=="3.5"': ['argparse>=1.1', 'taskcat>=2018.305.233813', 'pip', 'yaml']
+        ':python_version>="3.5"': ['argparse>=1.1', 'taskcat>=2018.305.233813', 'pip', 'pyyaml']
     },
 
     classifiers=(
