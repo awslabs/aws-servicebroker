@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon Lex (qs-1ob09h6a4)
+Description: "AWS Service Broker - Amazon Lex (qs-1ob09h6a4)"
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0

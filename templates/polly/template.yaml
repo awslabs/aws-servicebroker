@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon Polly (qs-1ob09h6a9)
+Description: "AWS Service Broker - Amazon Polly (qs-1ob09h6a9)"
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0

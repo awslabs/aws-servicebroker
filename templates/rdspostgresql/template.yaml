@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon RDS for PostgreSQL (qs-1ob09h6aj)
+Description: "AWS Service Broker - Amazon RDS for PostgreSQL (qs-1ob09h6aj)"
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0

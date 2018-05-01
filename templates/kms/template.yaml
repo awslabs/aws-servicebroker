@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: KMS Key (qs-1ob09h69u)
+Description: "AWS Service Broker - KMS Key (qs-1ob09h69u)"
 Metadata:
   'AWS::ServiceBroker::Specification':
     Version: 1.0
