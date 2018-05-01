@@ -1,0 +1,47 @@
+Resources:
+  AWSSBInjectedLambdaZipsBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      Tags: []
+  AWSSBInjectedCopyZips:
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedCopyZipsLambda.Arn
+      DestBucket: !Ref AWSSBInjectedLambdaZipsBucket
+      SourceBucket: null
+      Prefix: null
+      Objects: []
+  AWSSBInjectedCopyZipsRole: 
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Path: /
+      Policies:
+      - PolicyName: lambda-copier
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: [ "s3:GetObject" ]
+            Resource: [ "arn:aws:s3:::${SourceBucketName}/${KeyPrefix}*" ]
+          - Effect: Allow
+            Action: [ "s3:PutObject", "s3:DeleteObject" ]
+            Resource: [ !Sub "arn:aws:s3:::${AWSSBInjectedLambdaZipsBucket}/${KeyPrefix}*" ]
+  AWSSBInjectedCopyZipsLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python2.7
+      Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: null

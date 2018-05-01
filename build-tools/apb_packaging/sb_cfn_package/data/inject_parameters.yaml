@@ -1,0 +1,56 @@
+- name: aws_access_key
+  required: true
+  title: AWS Access Key
+  description: 'AWS Access Key to authenticate to AWS with.'
+  type: string
+  display_group: AWS Account Information
+- name: aws_secret_key
+  required: true
+  title: AWS Secret Key
+  description: 'AWS Secret Key to authenticate to AWS with.'
+  type: string
+  display_type: password
+  display_group: AWS Account Information
+- name: aws_cloudformation_role_arn
+  required: true
+  title: AWS Cloudformation role ARN
+  description: 'IAM role ARN for use as Cloudformation Stack Role.'
+  type: string
+  display_group: AWS Account Information
+- name: region
+  title: AWS Region
+  description: 'AWS Region to create RDS instance in.'
+  type: enum
+  enum:
+    - ap-northeast-1
+    - ap-northeast-2
+    - ap-south-1
+    - ap-southeast-1
+    - ap-southeast-2
+    - ca-central-1
+    - eu-central-1
+    - eu-west-1
+    - eu-west-2
+    - sa-east-1
+    - us-east-1
+    - us-east-2
+    - us-west-1
+    - us-west-2
+  default: us-west-2
+  display_group: AWS Account Information
+- name: SBArtifactS3Bucket
+  required: true
+  title: AWS Service Broker S3 Bucket
+  description: 'Name of the S3 bucket containing the AWS Service Broker Assets'
+  type: string
+  default: awsservicebroker
+  display_group: AWS Service Broker Configuration
+- name: SBArtifactS3KeyPrefix
+  required: false
+  title: AWS Service Broker S3 Key Prefix
+  description: >-
+     Name of the S3 key prefix containing the AWS Service Broker Assets,
+     leave empty if assets are in the root of the bucket
+  type: string
+  default: ""
+  display_group: AWS Service Broker Configuration

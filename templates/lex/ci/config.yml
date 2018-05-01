@@ -1,0 +1,13 @@
+global:
+  parameters: {}
+  regions:
+    - us-east-1
+
+plans:
+  default:
+    parameters:
+      SBArtifactS3Bucket: awsservicebrokeralpha
+      LexS3Bucket: awsservicebrokeralpha
+      CustomSlotTypesKey: demos/lex/FlowerTypes.json
+      IntentsKey: demos/lex/OrderFlowers.json
+      BotKey: demos/lex/OrderFlowersBot.json

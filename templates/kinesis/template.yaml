@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon Kinesis Data Stream (qs-1ob09h69o)
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - Kinesis
+      - stream
+    Name: kinesis
+    DisplayName: "Amazon Kinesis"
+    LongDescription: "Amazon Kinesis Data Streams enables you to build custom applications that process or analyze streaming data for specialized needs. Kinesis Data Streams can continuously capture and store terabytes of data per hour from hundreds of thousands of sources such as website clickstreams, financial transactions, social media feeds, IT logs, and location-tracking events."
+    ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonKinesis_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/kinesis/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: True
+        Policies:
+          - PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                  - "translate:TranslateText"
+                  Resource: "*"
+      CFNOutputs: [ StreamName, StreamArn ]
+    ServicePlans:
+        default:
+          DisplayName: "Standard"
+          Description: 'Amazon Kinesis'
+          LongDescription: "Creates a Kinesis stream"
+          Cost: "https://aws.amazon.com/kinesis/pricing/"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "Kinesis Stream Configuration"
+        Parameters:
+          - RetentionPeriodHours
+          - ShardCount
+          - StreamEncrypted
+    ParameterLabels:
+      RetentionPeriodHours:
+        default: "Retention Period Hours"
+      ShardCount:
+        default: "Shard Count"
+      StreamEncrypted:
+        default: "Stream Encrypted"
+Parameters:
+  RetentionPeriodHours:
+    Type: String
+    Description: The number of hours for the data records that are stored in shards
+      to remain accessible. The default value is 24. For more information about the
+      stream retention period, see Changing the Data Retention Period in the Amazon
+      Kinesis Developer Guide.
+    Default: '168'
+  ShardCount:
+    Type: String
+    Description: The number of shards that the stream uses. For greater provisioned
+      throughput, increase the number of shards.
+    Default: '3'
+  StreamEncrypted:
+    Description: Indicates whether the Kinesis Stream is encrypted.
+    Type: String
+    Default: 'True'
+    AllowedValues:
+      - 'True'
+      - 'False'
+Conditions:
+  EncryptionEnabled: !Equals
+    - !Ref 'StreamEncrypted'
+    - 'True'
+Resources:
+  KinesisStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      RetentionPeriodHours: !Ref 'RetentionPeriodHours'
+      ShardCount: !Ref 'ShardCount'
+      StreamEncryption: !If
+        - EncryptionEnabled
+        - KeyId: !GetAtt 'KMSKey.Arn'
+          EncryptionType: KMS
+        - !Ref 'AWS::NoValue'
+  KMSKey:
+    Condition: EncryptionEnabled
+    Type: AWS::KMS::Key
+    Properties:
+      Enabled: 'true'
+      EnableKeyRotation: 'true'
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+            Resource: '*'
+Outputs:
+  StreamName:
+    Description: The stream name or physical ID
+    Value: !Ref 'KinesisStream'
+  StreamArn:
+    Description: The ARN of the stream
+    Value: !GetAtt 'KinesisStream.Arn'
