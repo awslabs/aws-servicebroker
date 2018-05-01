@@ -7,6 +7,7 @@ from random import random
 from base64 import b64encode
 import shutil
 import subprocess
+import re
 try:
     from aws_servicebroker_spec import AwsServiceBrokerSpec
 except:
@@ -158,7 +159,7 @@ class SbCfnPackage(object):
                 if not fname.endswith('.zip'):
                     with open(fpath) as f:
                         s = f.read()
-                    s = s.replace("${SERVICE_NAME}", service_name).replace('${CREATE_IAM_USER}', str(bindings['IAMUser']))
+                    s = s.replace("${SERVICE_NAME}", service_name).replace("${SERVICE_NAME_UPPER}", service_name.upper()).replace('${CREATE_IAM_USER}', str(bindings['IAMUser']))
                     with open(fpath, "w") as f:
                         f.write(s)
         for plan in prescribed_parameters.keys():
@@ -179,10 +180,11 @@ class SbCfnPackage(object):
         for t in main_provision_task:
             if t['name'] == 'Encode bind credentials':
                 if not create_user:
-                    t['asb_encode_binding']['fields'].pop('%s_AWS_ACCESS_KEY_ID' % service_name)
-                    t['asb_encode_binding']['fields'].pop('%s_AWS_SECRET_ACCESS_KEY' % service_name)
+                    t['asb_encode_binding']['fields'].pop('%s_AWS_ACCESS_KEY_ID'.upper() % service_name)
+                    t['asb_encode_binding']['fields'].pop('%s_AWS_SECRET_ACCESS_KEY'.upper() % service_name)
+
                 for b in bindings['CFNOutputs']:
-                    t['asb_encode_binding']['fields'][b] = "{{ cfn.stack_outputs.%s }}" % b
+                    t['asb_encode_binding']['fields'][camel_convert(b).upper()] = "{{ cfn.stack_outputs.%s }}" % b
             elif t['name'] == 'Create Resources':
                 if 'Parameters' in template.keys():
                     for p in template['Parameters'].keys():
@@ -197,3 +199,6 @@ class SbCfnPackage(object):
         return tmpname
 
 
+def camel_convert(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()

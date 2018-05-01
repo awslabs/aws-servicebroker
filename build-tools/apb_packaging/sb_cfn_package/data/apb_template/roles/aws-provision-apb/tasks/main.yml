@@ -44,6 +44,6 @@
 - name: Encode bind credentials
   asb_encode_binding:
     fields:
-      ${SERVICE_NAME}_AWS_ACCESS_KEY_ID:     "{{ access_key_id }}"
-      ${SERVICE_NAME}_AWS_SECRET_ACCESS_KEY: "{{ secret_access_key }}"
+      ${SERVICE_NAME_UPPER}_AWS_ACCESS_KEY_ID:     "{{ access_key_id }}"
+      ${SERVICE_NAME_UPPER}_AWS_SECRET_ACCESS_KEY: "{{ secret_access_key }}"
   when: cfn.log | length < 1
