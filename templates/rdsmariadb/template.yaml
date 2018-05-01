@@ -833,9 +833,6 @@ Resources:
 Outputs:
   EndpointAddress:
     Value: !GetAtt 'DBInstance.Endpoint.Address'
-Outputs:
-  EndpointAddress:
-    Value: !GetAtt 'DBInstance.Endpoint.Address'
   MasterUsername:
     Value: !Ref 'MasterUsername'
   MasterPassword:

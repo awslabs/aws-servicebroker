@@ -4,7 +4,7 @@ global:
     - us-east-1
 
 plans:
-  mysql-dev:
+  dev:
     parameters:
       DBInstanceClass: db.t2.large
       AllocatedStorageAndIops: "100GB 1000IOPS"
@@ -12,4 +12,3 @@ plans:
       MysqlServerTimezone: "UTC"
       PubliclyAccessible: "false"
       AccessCidr: "10.0.0.0/16"
-    sample_app: rds-sample-app-apb

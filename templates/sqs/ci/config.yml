@@ -4,7 +4,7 @@ global:
     - us-east-1
 
 plans:
-  sqs-fifo:
+  fifo:
     parameters:
       ContentBasedDeduplication: "true"
       DelaySeconds: 5
@@ -13,4 +13,3 @@ plans:
       ReceiveMessageWaitTimeSeconds: "1"
       UsedeadletterQueue: "false"
       VisibilityTimeout: 5
-    sample_app: sqs-sample-app-apb
