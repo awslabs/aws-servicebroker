@@ -30,7 +30,7 @@ Metadata:
         Cost: "https://aws.amazon.com/elasticache/pricing/"
         ParameterValues:
           ClusterType: "multi-node"
-          AllowVersionUpgrade: "false"
+          AllowVersionUpgrade: "False"
           PortNumber: "6379"
           AZMode: "cross-az"
           NumberOfAvailabilityZones: "2"
