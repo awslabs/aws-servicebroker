@@ -6,11 +6,7 @@ global:
 plans:
   dev:
     parameters:
-      MasterUsername: testuser
-      MasterUserPassword: drCmbTamVf2qnqfRp
-      DBName: testdb
       DBInstanceClass: db.t2.large
-      AllocatedStorageAndIops: "100 GB / 1,000 IOPS"
       PostgresServerTimezone: "UTC"
       PubliclyAccessible: "false"
       AccessCidr: "10.0.0.0/16"
