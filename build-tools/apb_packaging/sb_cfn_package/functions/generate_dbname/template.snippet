@@ -1,6 +1,6 @@
 Conditions:
   AutoDBName: !Equals
-    - !Select [ 0, !Ref DBName ]
+    - !Ref DBName
     - "Auto"
 Resources:
   AWSSBInjectedGenerateDBNameRole:

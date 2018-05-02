@@ -1,6 +1,6 @@
 Conditions:
   AutoPassword: !Equals
-    - !Select [ 0, !Ref MasterUserPassword ]
+    - !Ref MasterUserPassword
     - "Auto"
 Resources:
   AWSSBInjectedGeneratePasswordRole:
