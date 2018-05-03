@@ -1,0 +1,309 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'AWS Service Broker - Amazon EMR (qs-1nt0fs92i)'
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - EMR
+      - MapReduce
+      - Hadoop
+      - Spark
+      - HBase
+      - Presto
+      - Flink
+    Name: rdsmysql
+    DisplayName: "Amazon EMR"
+    LongDescription: >-
+      Amazon EMR provides a managed Hadoop framework that makes it easy, fast, and
+      cost-effective to process vast amounts of data across dynamically scalable
+      Amazon EC2 instances. You can also run other popular distributed frameworks
+      such as Apache Spark, HBase, Presto, and Flink in Amazon EMR, and interact
+      with data in other AWS data stores such as Amazon S3 and Amazon DynamoDB.
+    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/Analytics_AmazonEMR_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/emr/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: False
+    ServicePlans:
+        production:
+          DisplayName: "Production"
+          Description: 'Configuration designed for production deployments'
+          LongDescription: "Creates an Amazon EMR cluster optimised for production use"
+          Cost: "https://aws.amazon.com/emr/pricing/"
+          ParameterValues:
+            EMRClusterName: "Auto"
+            EMRCidr: "Auto"
+        custom:
+          DisplayName: "Development"
+          Description: 'Custom configuration'
+          LongDescription: "Creates an Amazon EMR cluster with a custom configuration"
+          Cost: "https://aws.amazon.com/emr/pricing/"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "AWS Account Information"
+        Parameters:
+          - KeyName
+      - Label:
+          default: "EMR Settings"
+        Parameters:
+          - EMRApplication
+          - ReleaseLabel
+      - Label:
+          default: "Cluster Sizing"
+        Parameters:
+          - MasterInstanceType
+          - CoreInstanceType
+          - NumberOfCoreInstances
+    ParameterLabels:
+      KeyName:
+        default: "Key Name"
+      EMRApplication:
+        default: "EMR Application"
+      ReleaseLabel:
+        default: "Release Label"
+      MasterInstanceType:
+        default: "Master Instance Type"
+      CoreInstanceType:
+        default: "Core Instance Type"
+      NumberOfCoreInstances:
+        default: "Number Of Core Instances"
+Parameters:
+  EMRClusterName:
+    Description: Name of the cluster, if set to "Auto" a name will be auto-generated
+    Type: String
+    Default: Auto
+  KeyName:
+    Description: Must be an existing Keyname
+    Type: String
+  MasterInstanceType:
+    Description: Instance type to be used for the master instance.
+    Type: String
+    Default: m3.xlarge
+  CoreInstanceType:
+    Description: Instance type to be used for core instances.
+    Type: String
+    Default: m3.xlarge
+  NumberOfCoreInstances:
+    Description: Must be a valid number
+    Type: Number
+    Default: 2
+  VpcId:
+    Description: Must be a valid VPC ID
+    Type: "AWS::EC2::VPC::Id"
+  EMRCidr:
+    Description: CIDR Block for EMR subnet.
+    Type: String
+    Default: Auto
+  ReleaseLabel:
+    Description: Must be a valid EMR release  version
+    Default: emr-5.7.0
+    Type: String
+  Applications:
+    Description: >-
+      Please select which application will be installed on the cluster this
+      would be either Ganglia and spark, or Ganglia and s3 backed Hbase
+    Type: String
+    AllowedValues:
+      - Spark
+      - Hbase
+Conditions:
+  Spark: !Equals
+    - !Ref Applications
+    - Spark
+  Hbase: !Equals
+    - !Ref Applications
+    - Hbase
+Resources:
+  GetIgwRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+      Policies:
+        - PolicyName: GetIgwPolicy
+          PolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:DescribeInternetGateways",
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+  GetIgwFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Runtime: python2.7
+      Role: !GetAtt GetIgwRole.Arn
+      Handler: index.handler
+      Timeout: 300
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import traceback
+          from os import environ
+          def handler(event, context):
+            try:
+              ec2_client = boto3.client('ec2', region_name=environ['AWS_REGION'])
+              response_data = {
+                'IgwId': ec2_client.describe_internet_gateways(
+                  Filters=[
+                    {
+                      'Name': "attachment.vpc-id",
+                      'Values': [ event['ResourceProperties']['VpcId'] ]
+                    },
+                    {
+                      'Name': "attachment.state",
+                      'Values': ['available']}
+                  ]
+                )['InternetGateways'][0]['InternetGatewayId']
+              }
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, "GetIgwPhysicalId")
+            except Exception:
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, "GetIgwPhysicalId")
+              traceback.print_exc()
+  GetIgw:
+    Type: "AWS::CloudFormation::CustomResource"
+    Version: 1.0,
+    Properties:
+      ServiceToken: !GetAtt GetIgwFunction.Arn
+      VpcId: !Ref VpcId
+  EMRRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VpcId
+  EMRRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref EMRRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !GetAtt GetIgw.IgwId
+  EMRRouteTableAssoc:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref EMRRouteTable
+      SubnetId: !Ref EMRSubnet
+  EMRSubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: !Ref EMRCidr
+      VpcId: !Ref VpcId
+  LogBucket:
+    DeletionPolicy: Retain
+    Type: 'AWS::S3::Bucket'
+    Properties: {}
+  DataBucket:
+    DeletionPolicy: Retain
+    Type: 'AWS::S3::Bucket'
+    Properties: {}
+  EMRCluster:
+    DependsOn:
+      - EMRClusterServiceRole
+      - EMRClusterinstanceProfileRole
+      - EMRClusterinstanceProfile
+    Type: 'AWS::EMR::Cluster'
+    Properties:
+      Applications:
+        - Name: Ganglia
+        - !If
+          - Spark
+          - Name: Spark
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Hbase
+          - Name: Hbase
+          - !Ref 'AWS::NoValue'
+      Configurations:
+        - Classification: hbase-site
+          ConfigurationProperties:
+            hbase.rootdir: !Sub "s3://${DataBucket}/"
+        - Classification: hbase
+          ConfigurationProperties:
+            hbase.emr.storageMode: s3
+      Instances:
+        Ec2KeyName: !Ref KeyName
+        Ec2SubnetId: !Ref EMRSubnet
+        MasterInstanceGroup:
+          InstanceCount: 1
+          InstanceType: !Ref MasterInstanceType
+          Market: ON_DEMAND
+          Name: Master
+        CoreInstanceGroup:
+          InstanceCount: !Ref NumberOfCoreInstances
+          InstanceType: !Ref CoreInstanceType
+          Market: ON_DEMAND
+          Name: Core
+        TerminationProtected: false
+      VisibleToAllUsers: true
+      JobFlowRole: !Ref EMRClusterinstanceProfile
+      ReleaseLabel: !Ref ReleaseLabel
+      LogUri: !Sub "s3://${LogBucket}/"
+      Name: !Ref EMRClusterName
+      AutoScalingRole: EMR_AutoScaling_DefaultRole
+      ServiceRole: !Ref EMRClusterServiceRole
+  EMRClusterServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - elasticmapreduce.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole'
+      Path: /
+  EMRClusterinstanceProfileRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role'
+      Path: /
+  EMRClusterinstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref EMRClusterinstanceProfileRole
+Outputs:
+  S3DataBucket:
+    Value: !Ref DataBucket
+  EmrEndpoint:
+    Value: !GetAtt EMRCluster.MasterPublicDNS
+  EmrClusterId:
+    Value: !Ref EMRCluster

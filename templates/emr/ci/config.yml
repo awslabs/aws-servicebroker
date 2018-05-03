@@ -1,0 +1,14 @@
+global:
+  parameters: {}
+  regions:
+    - us-east-1
+
+plans:
+  production:
+    parameters:
+      EMRApplication: Spark
+      ReleaseLabel: emr-5.7.0
+      MasterInstanceType: m4.xlarge
+      CoreInstanceType: m4.xlarge
+      NumberOfCoreInstances: 2
+      KeyName: cikey
