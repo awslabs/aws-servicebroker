@@ -178,22 +178,23 @@ class SbCfnPackage(object):
         except KeyError as e:
             pass
         for t in main_provision_task:
-            if t['name'] == 'Encode bind credentials':
-                if not create_user:
-                    aws_key_id = '%s_AWS_ACCESS_KEY_ID' % service_name
-                    aws_key = '%s_AWS_SECRET_ACCESS_KEY' % service_name
-                    t['asb_encode_binding']['fields'].pop(aws_key_id.upper())
-                    t['asb_encode_binding']['fields'].pop(aws_key.upper())
+            if 'name' in t.keys():
+                if t['name'] == 'Encode bind credentials':
+                    if not create_user:
+                        aws_key_id = '%s_AWS_ACCESS_KEY_ID' % service_name
+                        aws_key = '%s_AWS_SECRET_ACCESS_KEY' % service_name
+                        t['asb_encode_binding']['fields'].pop(aws_key_id.upper())
+                        t['asb_encode_binding']['fields'].pop(aws_key.upper())
 
-                for b in bindings['CFNOutputs']:
-                    t['asb_encode_binding']['fields'][camel_convert(b).upper()] = "{{ cfn.stack_outputs.%s }}" % b
-            elif t['name'] == 'Create Resources':
-                if 'Parameters' in template.keys():
-                    for p in template['Parameters'].keys():
-                        default = ""
-                        if 'Default' in template['Parameters'][p].keys():
-                            default = template['Parameters'][p]['Default']
-                        t['cloudformation']['template_parameters'][p] = '{{ %s | default("%s") | string }}' % (p, default)
+                    for b in bindings['CFNOutputs']:
+                        t['asb_encode_binding']['fields'][camel_convert(b).upper()] = "{{ cfn.stack_outputs.%s }}" % b
+                elif t['name'] == 'Create Resources':
+                    if 'Parameters' in template.keys():
+                        for p in template['Parameters'].keys():
+                            default = ""
+                            if 'Default' in template['Parameters'][p].keys():
+                                default = template['Parameters'][p]['Default']
+                            t['cloudformation']['template_parameters'][p] = '{{ %s | default("%s") | string }}' % (p, default)
         with open(tmpname + '/apb/roles/aws-provision-apb/tasks/main.yml', 'w') as f:
             f.write(CFNYAMLHandler.ordered_safe_dump(main_provision_task, default_flow_style=False))
         with open(tmpname + '/template.yaml', 'w') as f:
