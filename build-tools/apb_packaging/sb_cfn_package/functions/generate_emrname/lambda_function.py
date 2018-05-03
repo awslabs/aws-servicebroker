@@ -31,7 +31,7 @@ def handler(event, context):
                 pw_len = int(event['ResourceProperties']['Length'])
             else:
                 pw_len = 16
-            response_data['DBName'] = generate_password(pw_len)
+            response_data['EMRClusterName'] = generate_password(pw_len)
         cfnresponse.send(event, context, response_code, response_data, phys_id)
     except Exception as e:
         print(str(e))
