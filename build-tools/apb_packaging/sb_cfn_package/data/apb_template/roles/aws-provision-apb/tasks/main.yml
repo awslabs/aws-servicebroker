@@ -25,6 +25,10 @@
 - name: Check for CloudFormation error logs
   debug:
     var: cfn.log
+- name: Fail if there is CFN log errors
+  fail:
+    msg: "{{ cfn.log }}"
+  when: cfn.log | length > 0
 - name: Get IAM user key_id
   shell: "ssmfetch {{ cfn.stack_outputs.UserKeyId }} {{ region }}"
   register: command_output
@@ -46,4 +50,3 @@
     fields:
       ${SERVICE_NAME_UPPER}_AWS_ACCESS_KEY_ID:     "{{ access_key_id }}"
       ${SERVICE_NAME_UPPER}_AWS_SECRET_ACCESS_KEY: "{{ secret_access_key }}"
-  when: cfn.log | length < 1
