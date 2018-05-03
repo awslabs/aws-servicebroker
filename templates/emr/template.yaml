@@ -101,7 +101,7 @@ Parameters:
     Description: Must be a valid EMR release  version
     Default: emr-5.7.0
     Type: String
-  Applications:
+  EMRApplication:
     Description: >-
       Please select which application will be installed on the cluster this
       would be either Ganglia and spark, or Ganglia and s3 backed Hbase
@@ -111,10 +111,10 @@ Parameters:
       - Hbase
 Conditions:
   Spark: !Equals
-    - !Ref Applications
+    - !Ref EMRApplication
     - Spark
   Hbase: !Equals
-    - !Ref Applications
+    - !Ref EMRApplication
     - Hbase
 Resources:
   GetIgwRole:
