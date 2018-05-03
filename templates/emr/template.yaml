@@ -12,7 +12,7 @@ Metadata:
       - HBase
       - Presto
       - Flink
-    Name: rdsmysql
+    Name: emr
     DisplayName: "Amazon EMR"
     LongDescription: >-
       Amazon EMR provides a managed Hadoop framework that makes it easy, fast, and
