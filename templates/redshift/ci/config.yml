@@ -1,0 +1,17 @@
+global:
+  parameters: {}
+  regions:
+    - us-east-1
+
+plans:
+  redshift-prod:
+    parameters:
+      NumberOfNodes: '2'
+      NodeType: "dc1.large"
+      AccessCidr: "10.0.0.0/16"
+      StorageEncrypted: true
+      PubliclyAccessible: false
+      UseElasticIP: false
+      PreferredMaintenanceWindowDay: Mon
+      PreferredMaintenanceWindowStartTime: "04:00"
+      PreferredMaintenanceWindowEndTime: "06:00"
