@@ -7,4 +7,3 @@ plans:
   r53-hostedzone:
     parameters:
       HostedZoneName: "cibot.aws.dog8code.com"
-    sample_app: r53-sample-app-apb
