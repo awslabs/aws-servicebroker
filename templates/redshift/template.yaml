@@ -135,11 +135,6 @@ Metadata:
       PreferredMaintenanceWindowEndTime:
         default: "Preferred Maintenance Window End Time"
 Parameters:
-  ApplicationName:
-    Description: >-
-      This will be set as the value for the "APPLICATION_NAME" tag on all
-      supported resources
-    Type: String
   VpcId:
     Description: The ID of the VPC to launch the RDS instance into
     Type: 'AWS::EC2::VPC::Id'
@@ -376,7 +371,7 @@ Resources:
     Condition: EncryptStorage
     Type: 'AWS::KMS::Key'
     Properties:
-      Description: !Sub 'Application: ${ApplicationName} Database: ${DBName}'
+      Description: !Sub 'Database ${DBName}'
       Enabled: 'true'
       EnableKeyRotation: 'true'
       KeyPolicy:
@@ -408,17 +403,14 @@ Resources:
     Type: 'AWS::Redshift::ClusterParameterGroup'
     Properties:
       ParameterGroupFamily: redshift-1.0
-      Description: !Sub 'Application: ${ApplicationName} Database: ${DBName}'
+      Description: !Sub 'Database ${DBName}'
       Parameters:
         - ParameterName: enable_user_activity_logging
           ParameterValue: 'true'
-      Tags:
-        - Key: ApplicationName
-          Value: !Ref ApplicationName
   ClusterSubnetGroup:
     Type: 'AWS::Redshift::ClusterSubnetGroup'
     Properties:
-      Description: !Sub 'Application: ${ApplicationName} Database: ${DBName}'
+      Description: !Sub 'Database ${DBName}'
       SubnetIds:
         - !Ref ClusterSubnet1
         - !Ref ClusterSubnet2
@@ -434,9 +426,6 @@ Resources:
           - 5az
           - !Ref ClusterSubnet5
           - !Ref 'AWS::NoValue'
-      Tags:
-        - Key: ApplicationName
-          Value: !Ref ApplicationName
   ClusterSubnet1:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -447,9 +436,6 @@ Resources:
       CidrBlock: !Select
         - 0
         - !Ref CidrBlocks
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref ApplicationName
   ClusterSubnet2:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -460,9 +446,6 @@ Resources:
       CidrBlock: !Select
         - 1
         - !Ref CidrBlocks
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref ApplicationName
   ClusterSubnet3:
     Condition: 3az
     Type: 'AWS::EC2::Subnet'
@@ -474,9 +457,6 @@ Resources:
       CidrBlock: !Select
         - 2
         - !Ref CidrBlocks
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref ApplicationName
   ClusterSubnet4:
     Condition: 4az
     Type: 'AWS::EC2::Subnet'
@@ -488,9 +468,6 @@ Resources:
       CidrBlock: !Select
         - 3
         - !Ref CidrBlocks
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref ApplicationName
   ClusterSubnet5:
     Condition: 5az
     Type: 'AWS::EC2::Subnet'
@@ -502,19 +479,12 @@ Resources:
       CidrBlock: !Select
         - 4
         - !Ref CidrBlocks
-      Tags:
-        - Key: APPLICATION_NAME
-          Value: !Ref ApplicationName
   ClusterSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: !Sub >-
-        Allow Client connections to Application: ${ApplicationName} Cluster:
-        ${DBName}
+        Allow Client connections to Cluster ${DBName}
       VpcId: !Ref VpcId
-      Tags:
-        - Key: ApplicationName
-          Value: !Ref ApplicationName
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: !Ref PortNumber
@@ -557,9 +527,6 @@ Resources:
       PreferredMaintenanceWindow: !Sub >-
         ${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}
       PubliclyAccessible: !Ref PubliclyAccessible
-      Tags:
-        - Key: ApplicationName
-          Value: !Ref ApplicationName
       VpcSecurityGroupIds:
         - !Ref ClusterSecurityGroup
   ClusterEIP:
