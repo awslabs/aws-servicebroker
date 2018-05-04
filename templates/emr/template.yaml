@@ -36,7 +36,7 @@ Metadata:
             EMRClusterName: "Auto"
             EMRCidr: "Auto"
         custom:
-          DisplayName: "Development"
+          DisplayName: "Custom"
           Description: 'Custom configuration'
           LongDescription: "Creates an Amazon EMR cluster with a custom configuration"
           Cost: "https://aws.amazon.com/emr/pricing/"
@@ -92,7 +92,7 @@ Parameters:
     Default: 2
   VpcId:
     Description: Must be a valid VPC ID
-    Type: "AWS::EC2::VPC::Id"
+    Type: String
   EMRCidr:
     Description: CIDR Block for EMR subnet.
     Type: String
@@ -109,6 +109,7 @@ Parameters:
     AllowedValues:
       - Spark
       - Hbase
+    Default: Spark
 Conditions:
   Spark: !Equals
     - !Ref EMRApplication
