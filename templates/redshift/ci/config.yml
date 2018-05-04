@@ -4,14 +4,14 @@ global:
     - us-east-1
 
 plans:
-  redshift-prod:
+  production:
     parameters:
       NumberOfNodes: '2'
       NodeType: "dc1.large"
       AccessCidr: "10.0.0.0/16"
-      StorageEncrypted: true
-      PubliclyAccessible: false
-      UseElasticIP: false
+      StorageEncrypted: "True"
+      PubliclyAccessible: "False"
+      UseElasticIP: "False"
       PreferredMaintenanceWindowDay: Mon
       PreferredMaintenanceWindowStartTime: "04:00"
       PreferredMaintenanceWindowEndTime: "06:00"

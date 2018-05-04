@@ -4,6 +4,6 @@ global:
     - us-east-1
 
 plans:
-  r53-hostedzone:
+  hostedzone:
     parameters:
       HostedZoneName: "cibot.aws.dog8code.com"
