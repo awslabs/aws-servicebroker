@@ -188,13 +188,15 @@ class SbCfnPackage(object):
 
                     for b in bindings['CFNOutputs']:
                         t['asb_encode_binding']['fields'][camel_convert(b).upper()] = "{{ cfn.stack_outputs.%s }}" % b
-                elif t['name'] == 'Create Resources':
-                    if 'Parameters' in template.keys():
-                        for p in template['Parameters'].keys():
-                            default = ""
-                            if 'Default' in template['Parameters'][p].keys():
-                                default = template['Parameters'][p]['Default']
-                            t['cloudformation']['template_parameters'][p] = '{{ %s | default("%s") | string }}' % (p, default)
+            elif 'block' in t.keys():
+                for it in t['block']:
+                    if it['name'] == 'Create Resources':
+                        if 'Parameters' in template.keys():
+                            for p in template['Parameters'].keys():
+                                default = ""
+                                if 'Default' in template['Parameters'][p].keys():
+                                    default = template['Parameters'][p]['Default']
+                                it['cloudformation']['template_parameters'][p] = '{{ %s | default("%s") | string }}' % (p, default)
         with open(tmpname + '/apb/roles/aws-provision-apb/tasks/main.yml', 'w') as f:
             f.write(CFNYAMLHandler.ordered_safe_dump(main_provision_task, default_flow_style=False))
         with open(tmpname + '/template.yaml', 'w') as f:
