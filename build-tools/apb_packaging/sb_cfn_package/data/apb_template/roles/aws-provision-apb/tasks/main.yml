@@ -10,21 +10,35 @@
 - name: Log stack suffix
   debug:
     msg: "stack_suffix: {{ stack_suffix }}"
-- name: Create Resources
-  cloudformation:
-   stack_name: "AWSServiceBroker-${SERVICE_NAME}-{{ stack_suffix }}"
-   state: "present"
-   region: "{{ region }}"
-   disable_rollback: false
-   template_url: "https://s3.amazonaws.com/{{ SBArtifactS3Bucket }}/templates/${SERVICE_NAME}/template.yaml"
-   role_arn: "{{ aws_cloudformation_role_arn }}"
-   template_parameters: {}
-   tags:
-     ServiceBrokerId: "{{ application_name }}"
-  register: cfn
+- block:
+    - name: Create Resources
+      cloudformation:
+       stack_name: "AWSServiceBroker-${SERVICE_NAME}-{{ stack_suffix }}"
+       state: "present"
+       region: "{{ region }}"
+       disable_rollback: false
+       template_url: "https://s3.amazonaws.com/{{ SBArtifactS3Bucket }}/templates/${SERVICE_NAME}/template.yaml"
+       role_arn: "{{ aws_cloudformation_role_arn }}"
+       template_parameters: {}
+       tags:
+         ServiceBrokerId: "{{ application_name }}"
+      register: cfn
+  rescue:
+    - name: Writing error message
+      shell: echo '[CloudFormation Error] - {{ ansible_failed_result.msg }}' > /dev/termination-log
+    - name: Fail if there is CFN log errors
+      fail:
+        msg: "[APB Error] - {{ ansible_failed_result.msg }}"
 - name: Check for CloudFormation error logs
   debug:
     var: cfn.log
+- name: Writing error message
+  shell: echo '[CloudFormation Error] - {{ cfn.log }}' > /dev/termination-log
+  when: cfn.log | length > 0
+- name: Fail if there is CFN log errors
+  fail:
+    msg: "{{ cfn.log }}"
+  when: cfn.log | length > 0
 - name: Get IAM user key_id
   shell: "ssmfetch {{ cfn.stack_outputs.UserKeyId }} {{ region }}"
   register: command_output
@@ -46,4 +60,3 @@
     fields:
       ${SERVICE_NAME_UPPER}_AWS_ACCESS_KEY_ID:     "{{ access_key_id }}"
       ${SERVICE_NAME_UPPER}_AWS_SECRET_ACCESS_KEY: "{{ secret_access_key }}"
-  when: cfn.log | length < 1

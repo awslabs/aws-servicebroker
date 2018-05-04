@@ -210,7 +210,9 @@ class AwsServiceBrokerSpec(object):
             ['CidrBlocks', 'get_cidrs', 'GetCidrs', 'CidrBlocks', 'AutoCidrs'],
             ['NumberOfAvailabilityZones', 'get_azs', 'GetAzs', 'AvailabilityZones', 'AutoAzs'],
             ['MasterUserPassword', 'generate_password', 'GeneratePassword', 'MasterUserPassword', 'AutoPassword'],
-            ['DBName', 'generate_dbname', 'GenerateDBName', 'DBName', 'AutoDBName']
+            ['DBName', 'generate_dbname', 'GenerateDBName', 'DBName', 'AutoDBName'],
+            ['EMRClusterName', 'generate_emrname', 'GenerateEMRClusterName', 'EMRClusterName', 'AutoEMRClusterName'],
+            ['EMRCidr', 'get_emrcidrs', 'GetEMRCidr', 'EMRCidr', 'AutoEMRCidr']
         ]:
             if util[0] in self.template['Parameters']:
                 if self.template['Parameters'][util[3]]['Default'] == 'Auto':
