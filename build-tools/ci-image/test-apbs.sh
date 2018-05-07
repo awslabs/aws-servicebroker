@@ -35,7 +35,7 @@ fi
 FAILED=0
 for APB_NAME in $(echo $APBS); do
     echo "Testing APB: ${APB_NAME}"
-    ssh -i ~/.ssh/helioscibot.pem -o "StrictHostKeyChecking=no" ec2-user@$(echo ${OC_HOST} | awk -F ":" '{print $1}') "docker pull docker.io/${DH_ORG}/${APB_NAME}-apb:latest"
+    ssh -i ~/.ssh/helioscibot.pem -o "StrictHostKeyChecking=no" ec2-user@$(echo ${OC_HOST} | awk -F ":" '{print $1}') "docker pull docker.io/${DH_ORG}/${APB_NAME}-apb:latest  > /tmp/${APB_NAME}_docker_pull &"
     cd ${CODEBUILD_SRC_DIR}/build/${APB_NAME}/apb
     test_apb.py ${APB_NAME} . admin ${OC_PASS} ${OC_HOST} $(cat ${CODEBUILD_SRC_DIR}/commit_id) > /tmp/${APB_NAME} 2>&1 &
     echo "${APB_NAME}" > /tmp/$!
@@ -59,7 +59,7 @@ done
 LOCK_COUNT=$(test_apb.py checklock)
 if [ "$LOCK_COUNT" == "0" ] ; then
     test_apb.py resetlock
-    ssh -i ~/.ssh/helioscibot.pem -o "StrictHostKeyChecking=no" ec2-user@$(echo ${OC_HOST} | awk -F ":" '{print $1}') "source ~/.bash_profile ; cd ~/catasb/ec2/minimal ; ./reset_environment.sh"
+    ssh -i ~/.ssh/helioscibot.pem -o "StrictHostKeyChecking=no" ec2-user@$(echo ${OC_HOST} | awk -F ":" '{print $1}') "source ~/.bash_profile ; cd ~/catasb/ec2/minimal ; ./reset_environment.sh > /tmp/catasb_reset.log"
     test_apb.py resetunlock
 fi
 

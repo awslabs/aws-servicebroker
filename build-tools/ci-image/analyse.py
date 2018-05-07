@@ -28,7 +28,7 @@ for f in files:
             apbs.append(name)
     elif f.filename == 'broker_image_sha':
         broker = True
-    elif f.filename.startswith('build-tools/apb-packaging/sb_cfn_package/'):
+    elif f.filename.startswith('build-tools/apb_packaging/sb_cfn_package/'):
         build_all = True
 
 with open('apbs', 'w') as f:
