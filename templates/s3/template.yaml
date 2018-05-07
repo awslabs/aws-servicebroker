@@ -202,10 +202,7 @@ Resources:
     DeletionPolicy: Retain
     Properties:
       AccessControl: LogDeliveryWrite
-      BucketName: !Join 
-        - ''
-        - - !If [ AutoBucketName, !Ref S3bucket, !Ref BucketName ]
-          - logging
+      BucketName: !If [ AutoBucketName, !Ref "AWS::NoValue", !Join [ "-", [ !Ref BucketName, 'logging' ] ] ]
 Outputs:
   BucketName:
     Value: !Ref S3bucket
