@@ -65,6 +65,7 @@ Metadata:
             LifeCyclePrefix: Archive
             EnableVersioning: "True"
             BucketAccessControl: Private
+            EnableLogging: "True"
         custom:
           DisplayName: "Custom"
           Description: 'S3 Bucket pre-configured with custom configuration'
