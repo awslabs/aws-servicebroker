@@ -204,7 +204,7 @@ Resources:
       AccessControl: LogDeliveryWrite
       BucketName: !Join 
         - ''
-        - - !Ref BucketName
+        - - [ AutoBucketName, !Ref S3bucket, !Ref BucketName ]
           - logging
 Outputs:
   BucketName:
