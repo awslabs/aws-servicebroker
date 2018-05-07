@@ -1,0 +1,214 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'AWS Service Broker - Amazon S3 (qs-1nt0fs937)'
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - S3
+      - Object Storage
+    Name: s3
+    DisplayName: "Amazon S3"
+    LongDescription: "Amazon Simple Storage Service (Amazon S3) is storage for the Internet. You can use Amazon S3 to store and retrieve any amount of data at any time, from anywhere on the web. You can accomplish these tasks using the simple and intuitive web interface of the AWS Management Console."
+    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/Storage_AmazonS3_LARGE.png"
+    DocumentationUrl: https://aws.amazon.com/documentation/s3/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: True
+        Policies:
+          - PolicyDocument: {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": [
+                        "s3:AbortMultipartUpload",
+                        "s3:DeleteObject",
+                        "s3:GetObject",
+                        "s3:GetObjectAcl",
+                        "s3:GetObjectTagging",
+                        "s3:GetObjectTorrent",
+                        "s3:GetObjectVersion",
+                        "s3:GetObjectVersionAcl",
+                        "s3:GetObjectVersionTagging",
+                        "s3:GetObjectVersionTorrent",
+                        "s3:ListBucketMultipartUploads",
+                        "s3:ListMultipartUploadParts",
+                        "s3:PutObject",
+                        "s3:PutObjectAcl",
+                        "s3:PutObjectTagging"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": !Sub "${S3bucket.Arn}/*"
+                },
+                {
+                    "Action": [
+                        "s3:ListBucket"
+                    ],
+                    "Resource": !GetAtt S3bucket.Arn,
+                    "Effect": "Allow"
+                }
+            ]
+          }
+    ServicePlans:
+        production:
+          DisplayName: "Production"
+          Description: 'S3 Bucket pre-configured with production best practices'
+          LongDescription: "Amazon Simple Storage Service (Amazon S3) is storage for the Internet. You can use Amazon S3 to store and retrieve any amount of data at any time, from anywhere on the web. You can accomplish these tasks using the simple and intuitive web interface of the AWS Management Console."
+          Cost: "https://aws.amazon.com/s3/pricing/"
+          ParameterValues:
+            BucketName: "Auto"
+            LoggingPrefix: S3AccessLogs
+            # TODO: add glacier lifecycle for previous versions
+            EnableGlacierLifeCycle: "False"
+            GlacierLifeCycleTransitionInDays: "30"
+            LifeCyclePrefix: Archive
+            EnableVersioning: "True"
+            BucketAccessControl: Private
+        custom:
+          DisplayName: "Custom"
+          Description: 'S3 Bucket pre-configured with custom configuration'
+          LongDescription: "Amazon Simple Storage Service (Amazon S3) is storage for the Internet. You can use Amazon S3 to store and retrieve any amount of data at any time, from anywhere on the web. You can accomplish these tasks using the simple and intuitive web interface of the AWS Management Console."
+          Cost: "https://aws.amazon.com/s3/pricing/"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "S3 Bucket Settings"
+        Parameters:
+          - BucketName
+          - LoggingPrefix
+          - EnableLogging
+          - EnableGlacierLifeCycle
+          - GlacierLifeCycleTransitionInDays
+          - EnableVersioning
+          - LifeCyclePrefix
+          - BucketAccessControl
+    ParameterLabels:
+      BucketName:
+        default: "BucketName"
+      BucketAccessControl:
+        default: "Bucket Access Control"
+      LifeCyclePrefix:
+        default: "LifeCycle Prefix"
+      EnableVersioning:
+        default: "Enable Versioning"
+      GlacierLifeCycleTransitionInDays:
+        default: "Glacier LifeCycle Transition In Days"
+      EnableGlacierLifeCycle:
+        default: "Enable Glacier LifeCycle"
+      EnableLogging:
+        default: "Enable Logging"
+      LoggingPrefix:
+        default: "Logging Prefix"
+Parameters:
+  BucketName:
+    Description: >-
+      Must contain only lowercase letters, numbers, periods (.), and hyphens. If set to Auto, a bucket name will be generated
+      (-),Cannot end in numbers
+    Type: String
+    Default: "Auto"
+  LoggingPrefix:
+    Description: >-
+      Must contain only lowercase letters, numbers, periods (.), and hyphens
+      (-),Cannot end in numbers
+    Type: String
+    Default: Archive
+  EnableLogging:
+    Description: enable or discable S3 logging
+    Type: String
+    AllowedValues:
+      - 'True'
+      - 'False'
+    Default: 'True'
+  EnableGlacierLifeCycle:
+    Description: enable archiving to Glacier Storage
+    Type: String
+    AllowedValues:
+      - 'True'
+      - 'False'
+    Default: 'False'
+  GlacierLifeCycleTransitionInDays:
+    Description: Define how many days objects should exist before being moved to Glacier
+    Type: String
+    Default: '0'
+  EnableVersioning:
+    Description: enable versioning
+    Type: String
+    AllowedValues:
+      - 'True'
+      - 'False'
+    Default: 'False'
+  LifeCyclePrefix:
+    Description: >-
+      Must contain only lowercase letters, numbers, periods (.), and hyphens
+      (-),Cannot end in numbers
+    Type: String
+    Default: Archive
+  BucketAccessControl:
+    Description: define if the bucket can be accessed from public or private locations
+    Type: String
+    AllowedValues:
+      - Private
+      - PublicRead
+      - PublicReadWrite
+      - AuthenticatedRead
+      - LogDeliveryWrite
+      - BucketOwnerRead
+      - BucketOwnerFullControl
+      - AwsExecRead
+    Default: "Private"
+Conditions:
+  UseLogging: !Equals 
+    - !Ref EnableLogging
+    - 'True'
+  UseGlacierLifeCycle: !Equals 
+    - !Ref EnableGlacierLifeCycle
+    - 'True'
+  UseVersioning: !Equals 
+    - !Ref EnableVersioning
+    - 'True'
+  AutoBucketName: !Equals
+    - !Ref BucketName
+    - "Auto"
+Resources:
+  S3bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !If [ AutoBucketName, !Ref "AWS::NoValue", !Ref BucketName ]
+      AccessControl: !Ref BucketAccessControl
+      LifecycleConfiguration:
+        Rules:
+          - Id: GlacierRule
+            Prefix: !Ref LifeCyclePrefix
+            Status: Enabled
+            ExpirationInDays: '365'
+            Transitions:
+              - TransitionInDays: !Ref GlacierLifeCycleTransitionInDays
+                StorageClass: Glacier
+      LoggingConfiguration: !If 
+        - UseLogging
+        - DestinationBucketName: !Ref LoggingBucket
+          LogFilePrefix: !Ref LoggingPrefix
+        - !Ref 'AWS::NoValue'
+      VersioningConfiguration: !If 
+        - UseVersioning
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+    DeletionPolicy: Retain
+  LoggingBucket:
+    Condition: UseLogging
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: LogDeliveryWrite
+      BucketName: !Join 
+        - ''
+        - - !Ref BucketName
+          - logging
+Outputs:
+  BucketName:
+    Value: !Ref S3bucket
+    Description: Name of the sample Amazon S3 bucket.
+  BucketArn:
+    Value: !GetAtt S3bucket.Arn
+    Description: Name of the Amazon S3 bucket
