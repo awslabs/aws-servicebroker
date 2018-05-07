@@ -210,3 +210,6 @@ Outputs:
   BucketArn:
     Value: !GetAtt S3bucket.Arn
     Description: Name of the Amazon S3 bucket
+  LoggingBucketName:
+    Value: !If [ UseLogging, !If [ AutoBucketName, !Ref LoggingBucket, !Join [ "-", [ !Ref BucketName, 'logging' ] ] ], "" ]
+    Description: Name of the sample Amazon S3 bucket.
