@@ -212,4 +212,4 @@ Outputs:
     Description: Name of the Amazon S3 bucket
   LoggingBucketName:
     Value: !If [ UseLogging, !If [ AutoBucketName, !Ref LoggingBucket, !Join [ "-", [ !Ref BucketName, 'logging' ] ] ], "" ]
-    Description: Name of the sample Amazon S3 bucket.
+    Description: Name of the logging bucket.
