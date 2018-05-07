@@ -1,0 +1,9 @@
+global:
+  parameters: {}
+  regions:
+    - us-east-1
+
+plans:
+  hostedzone:
+    parameters:
+      HostedZoneName: "cibot.aws.dog8code.com"
