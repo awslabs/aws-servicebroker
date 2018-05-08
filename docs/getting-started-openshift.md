@@ -1,5 +1,7 @@
 # Getting Started Guide - OpenShift
 
+The AWS Service Broker is now Integrated into the Openshift AWS Quickstart, which provides an easy to deploy, production ready, Openshift Container Platform deployment. see [here](https://aws.amazon.com/quickstart/architecture/openshift/) for more details. 
+
 ## Overview
 
 This guide describes how to configure an OpenShift cluster with the capability to deploy AWS services.
