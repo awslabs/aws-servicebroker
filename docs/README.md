@@ -1,9 +1,10 @@
 AWS Service Broker Documentation
 ================================
-Documentation for the AWS Service Broker on RedHat OpenShift Container Platform.
+Documentation for the AWS Service Broker.
 
 ### Topics
-* [Getting Started With OCP and the AWS Service Broker](/docs/getting-started.md)
+* [Getting Started With Openshift and the AWS Service Broker](/docs/getting-started-openshift.md)
+* [Getting Started With Kubernetes and the AWS Service Broker](/docs/getting-started-k8s.md)
 * [AWS Service Broker Overview](/docs/Overview.md)
 * [FAQ](/docs/FAQ.md)
 * [Troubleshooting](/docs/Troubleshooting.md)
