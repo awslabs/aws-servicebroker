@@ -1,4 +1,4 @@
-- name: r53-sample-app-apb provision
+- name: route53-sample-app-apb provision
   hosts: localhost
   gather_facts: false
   connection: local

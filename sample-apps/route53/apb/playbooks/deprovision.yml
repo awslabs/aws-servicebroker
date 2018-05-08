@@ -1,4 +1,4 @@
-- name: r53-sample-app-apb deprovision
+- name: route53-sample-app-apb deprovision
   hosts: localhost
   gather_facts: false
   connection: local
