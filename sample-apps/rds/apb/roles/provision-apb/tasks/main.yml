@@ -1,0 +1,44 @@
+- name: create deployment config
+  openshift_v1_deployment_config:
+    name: rds-sample-app
+    namespace: '{{ namespace }}'
+    labels:
+      app: rds-sample-app
+      service: rds-sample-app
+    replicas: 1
+    selector:
+      app: rds-sample-app
+      service: rds-sample-app
+    spec_template_metadata_labels:
+      app: rds-sample-app
+      service: rds-sample-app
+    containers:
+    - env:
+      image: docker.io/awsservicebroker/rds-sample-app:latest
+      name: rds-sample-app
+      ports:
+      - container_port: 8080
+        protocol: TCP
+- name: create rds-sample-app service
+  k8s_v1_service:
+    name: rds-sample-app
+    namespace: '{{ namespace }}'
+    labels:
+      app: rds-sample-app
+      service: rds-sample-app
+    selector:
+      app: rds-sample-app
+      service: rds-sample-app
+    ports:
+      - name: web
+        port: 8080
+        target_port: 8080
+- name: create rds-sample-app route
+  openshift_v1_route:
+    name: rds-sample-app
+    namespace: '{{ namespace }}'
+    spec_port_target_port: web
+    labels:
+      app: rds-sample-app
+      service: rds-sample-app
+    to_name: rds-sample-app

@@ -1,0 +1,2 @@
+bottle==0.12.13
+pymemcache==1.4.3

@@ -1,0 +1,12 @@
+- openshift_v1_route:
+    name: emr-sample-app
+    namespace: '{{ namespace }}'
+    state: absent
+- k8s_v1_service:
+    name: emr-sample-app
+    namespace: '{{ namespace }}'
+    state: absent
+- openshift_v1_deployment_config:
+    name: emr-sample-app
+    namespace: '{{ namespace }}'
+    state: absent

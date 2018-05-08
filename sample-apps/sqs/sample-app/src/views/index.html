@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>sqs sample app</title>
+
+    <link rel='stylesheet' href='/static/css/main.css' />
+
+</head>
+<body>
+
+<section class='container'>
+    <hgroup>
+        <h1>sqs sample app</h1>
+    </hgroup>
+    <div class="row">
+        <section class='col-xs-12 col-sm-9 col-md-9'>
+            <section>
+                <h2>sqs playbook bundle</h2>
+                <h3>bind test results:</h3>
+                <pre>
+Overall Success: {{ success }}
+Tests:
+    Cleanup:
+        Successful: {{ data["cleanup"]["success"] }}
+        Details:
+        %for item in data["cleanup"]["data"]:
+            {{ item }}
+        %end
+    Put:
+        Successful: {{ data["put"]["success"] }}
+        Details:
+        %for item in data["put"]["data"]:
+            {{ item }}
+        %end
+    Describe:
+        Successful: {{ data["describe"]["success"] }}
+        Details:
+        %for item in data["describe"]["data"]:
+            {{ item }}
+        %end
+    List:
+        Successful: {{ data["list"]["success"] }}
+        Details:
+        %for item in data["list"]["data"]:
+            {{ item }}
+        %end
+    Idempotency:
+        Successful: {{ data["idempotency"]["success"] }}
+        Details:
+        %for item in data["idempotency"]["data"]:
+            {{ item }}
+        %end
+    Delete:
+        Successful: {{ data["delete"]["success"] }}
+        Details:
+        %for item in data["delete"]["data"]:
+            {{ item }}
+        %end
+                </pre>
+            </section>
+
+        </section>
+        <section class="col-xs-12 col-sm-6 col-md-6">
+
+
+        </section>
+    </div>
+
+    <footer>
+        <!--<div class="logo"><a href="https://www.amazonaws.com/"></a></div>-->
+    </footer>
+</section>
+
+
+</body>
+</html>

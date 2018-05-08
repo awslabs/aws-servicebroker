@@ -1,0 +1,12 @@
+- openshift_v1_route:
+    name: s3-sample-app
+    namespace: '{{ namespace }}'
+    state: absent
+- k8s_v1_service:
+    name: s3-sample-app
+    namespace: '{{ namespace }}'
+    state: absent
+- openshift_v1_deployment_config:
+    name: s3-sample-app
+    namespace: '{{ namespace }}'
+    state: absent
