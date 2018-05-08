@@ -1,0 +1,44 @@
+- name: create deployment config
+  openshift_v1_deployment_config:
+    name: sns-sample-app
+    namespace: '{{ namespace }}'
+    labels:
+      app: sns-sample-app
+      service: sns-sample-app
+    replicas: 1
+    selector:
+      app: sns-sample-app
+      service: sns-sample-app
+    spec_template_metadata_labels:
+      app: sns-sample-app
+      service: sns-sample-app
+    containers:
+    - env:
+      image: docker.io/awsservicebroker/sns-sample-app:latest
+      name: sns-sample-app
+      ports:
+      - container_port: 8080
+        protocol: TCP
+- name: create sns-sample-app service
+  k8s_v1_service:
+    name: sns-sample-app
+    namespace: '{{ namespace }}'
+    labels:
+      app: sns-sample-app
+      service: sns-sample-app
+    selector:
+      app: sns-sample-app
+      service: sns-sample-app
+    ports:
+      - name: web
+        port: 8080
+        target_port: 8080
+- name: create sns-sample-app route
+  openshift_v1_route:
+    name: sns-sample-app
+    namespace: '{{ namespace }}'
+    spec_port_target_port: web
+    labels:
+      app: sns-sample-app
+      service: sns-sample-app
+    to_name: sns-sample-app

@@ -1,0 +1,44 @@
+- name: create deployment config
+  openshift_v1_deployment_config:
+    name: emr-sample-app
+    namespace: '{{ namespace }}'
+    labels:
+      app: emr-sample-app
+      service: emr-sample-app
+    replicas: 1
+    selector:
+      app: emr-sample-app
+      service: emr-sample-app
+    spec_template_metadata_labels:
+      app: emr-sample-app
+      service: emr-sample-app
+    containers:
+    - env:
+      image: docker.io/awsservicebroker/emr-sample-app:latest
+      name: emr-sample-app
+      ports:
+      - container_port: 8080
+        protocol: TCP
+- name: create emr-sample-app service
+  k8s_v1_service:
+    name: emr-sample-app
+    namespace: '{{ namespace }}'
+    labels:
+      app: emr-sample-app
+      service: emr-sample-app
+    selector:
+      app: emr-sample-app
+      service: emr-sample-app
+    ports:
+      - name: web
+        port: 8080
+        target_port: 8080
+- name: create emr-sample-app route
+  openshift_v1_route:
+    name: emr-sample-app
+    namespace: '{{ namespace }}'
+    spec_port_target_port: web
+    labels:
+      app: emr-sample-app
+      service: emr-sample-app
+    to_name: emr-sample-app

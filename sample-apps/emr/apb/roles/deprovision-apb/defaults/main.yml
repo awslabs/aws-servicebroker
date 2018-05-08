@@ -1,0 +1,2 @@
+---
+namespace: "{{ lookup('env','NAMESPACE') | default('emr-sample-app', true) }}"
