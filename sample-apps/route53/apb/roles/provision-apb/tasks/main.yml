@@ -1,44 +1,44 @@
 - name: create deployment config
   openshift_v1_deployment_config:
-    name: r53-sample-app
+    name: route53-sample-app
     namespace: '{{ namespace }}'
     labels:
-      app: r53-sample-app
-      service: r53-sample-app
+      app: route53-sample-app
+      service: route53-sample-app
     replicas: 1
     selector:
-      app: r53-sample-app
-      service: r53-sample-app
+      app: route53-sample-app
+      service: route53-sample-app
     spec_template_metadata_labels:
-      app: r53-sample-app
-      service: r53-sample-app
+      app: route53-sample-app
+      service: route53-sample-app
     containers:
     - env:
-      image: docker.io/awsservicebroker/r53-sample-app:latest
-      name: r53-sample-app
+      image: docker.io/awsservicebroker/route53-sample-app:latest
+      name: route53-sample-app
       ports:
       - container_port: 8080
         protocol: TCP
-- name: create r53-sample-app service
+- name: create route53-sample-app service
   k8s_v1_service:
-    name: r53-sample-app
+    name: route53-sample-app
     namespace: '{{ namespace }}'
     labels:
-      app: r53-sample-app
-      service: r53-sample-app
+      app: route53-sample-app
+      service: route53-sample-app
     selector:
-      app: r53-sample-app
-      service: r53-sample-app
+      app: route53-sample-app
+      service: route53-sample-app
     ports:
       - name: web
         port: 8080
         target_port: 8080
-- name: create r53-sample-app route
+- name: create route53-sample-app route
   openshift_v1_route:
-    name: r53-sample-app
+    name: route53-sample-app
     namespace: '{{ namespace }}'
     spec_port_target_port: web
     labels:
-      app: r53-sample-app
-      service: r53-sample-app
-    to_name: r53-sample-app
+      app: route53-sample-app
+      service: route53-sample-app
+    to_name: route53-sample-app
