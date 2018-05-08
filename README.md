@@ -3,6 +3,7 @@
 The AWS Service Broker allows native AWS services to be exposed directly through third party application platforms, such as Red Hat OpenShift/Kubernetes, and provides simple integration of AWS Services directly within the application platform.
 
 [Homepage](https://aws.amazon.com/partners/servicebroker/)
+
 [Documentation](/docs/)
 
 ## License
