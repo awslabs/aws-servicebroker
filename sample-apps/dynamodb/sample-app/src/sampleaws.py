@@ -5,15 +5,10 @@ import boto3
 
 
 SECRETS = [
-    'DYNAMODB_TABLE_NAME',
-    'DYNAMODB_REGION',
-    'DYNAMODB_TABLE_ARN',
-    'DYNAMODB_ACCESS_KEY_ID',
-    'DYNAMODB_SECRET_ACCESS_KEY',
-    'DYNAMODB_HASH_ATTRIBUTE_NAME',
-    'DYNAMODB_HASH_ATTRIBUTE_TYPE',
-    'DYNAMODB_RANGE_ATTRIBUTE_NAME',
-    'DYNAMODB_RANGE_ATTRIBUTE_TYPE'
+    'TABLE_NAME',
+    'TABLE_ARN',
+    'DYNAMODB_AWS_ACCESS_KEY_ID',
+    'DYNAMODB_AWS_SECRET_ACCESS_KEY'
 ]
 
 
@@ -24,10 +19,10 @@ def check_secrets():
 def create_boto3_table_resource():
     return boto3.resource(
         "dynamodb",
-        aws_access_key_id=environ['DYNAMODB_ACCESS_KEY_ID'],
-        aws_secret_access_key=environ['DYNAMODB_SECRET_ACCESS_KEY'],
-        region_name=environ['DYNAMODB_REGION']
-    ).Table(environ['DYNAMODB_TABLE_NAME'])
+        aws_access_key_id=environ['DYNAMODB_AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=environ['DYNAMODB_AWS_SECRET_ACCESS_KEY'],
+        region_name=environ['TABLE_ARN'].split(':')[3]
+    ).Table(environ['TABLE_NAME'])
 
 
 def method_wrapper(method, **kwargs):
@@ -43,13 +38,13 @@ def method_wrapper(method, **kwargs):
 
 
 def get_list(**kwargs):
-    return [[i[environ['DYNAMODB_HASH_ATTRIBUTE_NAME']],i[environ['DYNAMODB_RANGE_ATTRIBUTE_NAME']]] for i in kwargs['table'].scan()['Items']]
+    return [[i['test'], i['test2']] for i in kwargs['table'].scan()['Items']]
 
 
 def get_item(item_id, **kwargs):
     item = kwargs['table'].get_item(Key={
-        environ['DYNAMODB_HASH_ATTRIBUTE_NAME']: item_id,
-        environ['DYNAMODB_RANGE_ATTRIBUTE_NAME']: kwargs['range_id']
+        'test': item_id,
+        'test2': kwargs['range_id']
     })['Item']
     item['item_id'] = item_id
     return item
@@ -57,8 +52,8 @@ def get_item(item_id, **kwargs):
 
 def delete_item(item_id, **kwargs):
     kwargs['table'].delete_item(Key={
-        environ['DYNAMODB_HASH_ATTRIBUTE_NAME']: item_id,
-        environ['DYNAMODB_RANGE_ATTRIBUTE_NAME']: kwargs['range_id']
+        'test': item_id,
+        'test2': kwargs['range_id']
     })
     return
 
