@@ -520,16 +520,24 @@ The modified configmap will look as follows:
         - type: basic
           enabled: False
     secrets:
-      - {apb_name: dh-sqs-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-sns-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-r53-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-rds-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-emr-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-redshift-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-elasticache-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-dynamodb-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-s3-apb, secret: aws-secret, title: aws-secret}
-      - {apb_name: dh-athena-apb, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-sqs, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-sns, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-r53, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-rdsmariadb, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-rdspostresql, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-rdsmysql, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-emr, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-redshift, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-elasticache, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-dynamodb, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-s3, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-athena, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-kinesis, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-kms, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-lex, secret: aws-secret, title: aws-secret} 
+      - {apb_name: dh-polly, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-rekognition, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-translate, secret: aws-secret, title: aws-secret}
 ```
 
 To make our edits take effect, **restart** the broker's `asb` pod
