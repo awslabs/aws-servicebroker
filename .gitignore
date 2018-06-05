@@ -1,0 +1,6 @@
+/servicebroker
+/servicebroker-linux
+/functional-testing/aws-servicebroker
+.idea/
+/Gopkg.lock
+/vendor/
