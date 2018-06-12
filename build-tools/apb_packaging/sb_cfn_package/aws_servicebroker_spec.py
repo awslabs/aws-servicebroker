@@ -319,7 +319,7 @@ class AwsServiceBrokerSpec(object):
         for p in self.template['Parameters'].keys():
             if p not in plan_params:
                 param = self.template['Parameters'][p]
-                apb_param = OrderedDict({'name': p})
+                apb_param = OrderedDict({'name': p, 'required': True})
                 for e in param.keys():
                     if e in cfn_map["Parameters"].keys():
                         apb_param[cfn_map["Parameters"][e]] = param[e]
@@ -331,7 +331,6 @@ class AwsServiceBrokerSpec(object):
                         for group in self.template['Metadata']['AWS::CloudFormation::Interface']['ParameterGroups']:
                             if p in group['Parameters']:
                                 apb_param['display_group'] = group['Label']['default']
-                apb_param['required'] = True
                 if 'Default' in self.template['Parameters'][p].keys():
                     if self.template['Parameters'][p]['Default'] == '':
                         apb_param.pop('default')
