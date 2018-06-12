@@ -98,7 +98,7 @@ class AwsServiceBrokerSpec(object):
                     raise AwsServiceBrokerSpecException('Required field "%s" is missing from spec metadata' % key)
                 elif apb_key not in apb_spec.keys() and self.spec[key]['Default'] and '.' not in apb_key:
                     if apb_key == 'description':
-                        apb_spec[apb_key] = re.compile('qs-([a-z0-9]){9}').sub('', template['Description']).strip()
+                        apb_spec[apb_key] = re.compile(' \(qs-([a-z0-9]){9}\)').sub('', template['Description']).strip()
                     elif apb_key not in ['plans']:
                         apb_spec[apb_key] = self.spec[key]['Default']
         prescribed_parameters = {}
