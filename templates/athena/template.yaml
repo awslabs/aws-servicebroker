@@ -43,7 +43,7 @@ Metadata:
                   - "s3:PutObject"
                   Effect: Allow
                   Resource: "*"
-      CFNOutputs: [TableName, TableArn]
+      CFNOutputs: [OutputLocation]
     ServicePlans:
         default:
           DisplayName: "Athena Table"
