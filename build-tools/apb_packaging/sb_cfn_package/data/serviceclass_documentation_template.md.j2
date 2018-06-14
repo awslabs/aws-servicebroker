@@ -9,6 +9,7 @@ Table of contents
 * [Parameters](#parameters)
 {% for plan in apb.plans %}  * [{{ plan.name }}](#param-{{ plan.name }})
 {% endfor %}* [Bind Credentials](#bind-credentials)
+{% if add_iam %}  * [IAM Policy](#iam-policy){% endif %}
 * [Examples](#kubernetes-openshift-examples)
 {% for plan in apb.plans %}  * [{{ plan.name }}](#example-{{ plan.name }})
 {% endfor %}
@@ -69,7 +70,17 @@ Name           | Description
 {% endfor %}
 <a id="kubernetes-openshift-examples" />
 
-# Kubernetes/Openshift Examples
+{% if add_iam %}<a id="iam-policy" />
+
+## IAM Policy
+
+This ServiceInstance creates an IAM user and access keys for bound applications to use to authenticate to the AWS API's at runtime. The user has the following IAM policy attached:
+
+```json
+{{ iam_policy }}
+```
+
+{% endif %}# Kubernetes/Openshift Examples
 
 ***Note:*** Examples do not include generic parameters, if you have not setup defaults for these you will need to add
 them as additional parameters

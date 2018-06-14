@@ -1,6 +1,7 @@
 import argparse
 import logging
 import yaml
+import json
 from taskcat.utils import CFNYAMLHandler
 import os
 from random import random
@@ -179,6 +180,19 @@ class SbCfnPackage(object):
         except KeyError as e:
             pass
         full_bindings = []
+        try:
+            add_iam = bool(template['Metadata']['AWS::ServiceBroker::Specification']['Bindings']['IAM']['AddKeypair'])
+        except KeyError:
+            add_iam = False
+        if add_iam:
+            full_bindings.append({
+                "name": apb_spec['name'].upper() + '_AWS_ACCESS_KEY_ID',
+                "description": 'AWS IAM Access Key ID, your application must use this for authenticating runtime calls to the %s service' % apb_spec['metadata']['displayName']
+            })
+            full_bindings.append({
+                "name": apb_spec['name'].upper() + '_AWS_SECRET_ACCESS_KEY',
+                "description": 'AWS IAM Secret Access Key, your application must use this for authenticating runtime calls to the %s service' % apb_spec['metadata']['displayName']
+            })
         for t in main_provision_task:
             if 'name' in t.keys():
                 if t['name'] == 'Encode bind credentials':
@@ -207,11 +221,11 @@ class SbCfnPackage(object):
             f.write(CFNYAMLHandler.ordered_safe_dump(main_provision_task, default_flow_style=False))
         with open(tmpname + '/template.yaml', 'w') as f:
             f.write(CFNYAMLHandler.ordered_safe_dump(template, default_flow_style=False))
-        render_documentation(apb_spec, template, prescribed_parameters, tmpname, full_bindings)
+        render_documentation(apb_spec, template, prescribed_parameters, tmpname, full_bindings, add_iam)
         return tmpname
 
 
-def render_documentation(apb, template, prescribed_params, tmp_path, bindings):
+def render_documentation(apb, template, prescribed_params, tmp_path, bindings, add_iam):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     abs_path = os.path.join(dir_path, 'data/serviceclass_documentation_template.md.j2')
     path, filename = os.path.split(abs_path)
@@ -223,8 +237,10 @@ def render_documentation(apb, template, prescribed_params, tmp_path, bindings):
             lengths[plan['name']]["optional"] = len([p for p in plan['parameters'] if 'default' in p.keys() and p['name'] not in ['aws_access_key', 'aws_secret_key', 'aws_cloudformation_role_arn', 'region', 'SBArtifactS3Bucket', 'SBArtifactS3KeyPrefix', 'VpcId']])
             lengths[plan['name']]["generic"] = len([p for p in plan['parameters'] if p['name'] in ['aws_access_key', 'aws_secret_key', 'aws_cloudformation_role_arn', 'region', 'SBArtifactS3Bucket', 'SBArtifactS3KeyPrefix', 'VpcId']])
             lengths[plan['name']]["prescribed"] = len([p for p in prescribed_params[plan['name']] if p not in ["params_string", "params_hash"]])
+    if add_iam:
+        iam_policy = json.dumps(template['Metadata']['AWS::ServiceBroker::Specification']['Bindings']['IAM']['Policies'], sort_keys=True, indent=4, separators=(',', ': '))
     result = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(
-        {"apb": apb, "template": template, "prescribed_params": prescribed_params, "lengths": lengths, "bindings": bindings}
+        {"apb": apb, "template": template, "prescribed_params": prescribed_params, "lengths": lengths, "bindings": bindings, "add_iam": add_iam, 'iam_policy': iam_policy}
     )
 
     with open(os.path.join(tmp_path, 'README.md'), 'w') as rendered_file:
