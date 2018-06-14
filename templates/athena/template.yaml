@@ -1,0 +1,252 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'AWS Service Broker - Amazon Athena. (qs-1nt0fs922)'
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - athena
+      - serverless
+      - SQL
+      - S3
+      - database
+    Name: athena
+    DisplayName: "Amazon Athena"
+    LongDescription: >-
+      Amazon Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL.
+      Athena is serverless, so there is no infrastructure to manage, and you pay only for the queries that you run.
+    ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonAthena_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/athena/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: True
+        Policies:
+          - PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Action:
+                  - "athena:*"
+                  Effect: Allow
+                  Resource: "*"
+                - Action:
+                  - "glue:*"
+                  Effect: Allow
+                  Resource: "*"
+                - Action:
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:ListMultipartUploadParts"
+                  - "s3:AbortMultipartUpload"
+                  - "s3:PutObject"
+                  Effect: Allow
+                  Resource: "*"
+      CFNOutputs: [TableName, TableArn]
+    ServicePlans:
+        default:
+          DisplayName: "Athena Table"
+          Description: 'Athena Table'
+          LongDescription: "Athena table using an existing S3 source"
+          Cost: "https://aws.amazon.com/athena/pricing/"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "Athena Settings"
+        Parameters:
+          - AthenaDBName
+          - TableName
+          - S3Source
+          - TableColumns
+          - RowFormat
+          - SerdeName
+          - SerdeProperties
+    ParameterLabels:
+      S3Source:
+        default: "S3 Source"
+      TableColumns:
+        default: "Table Columns"
+      RowFormat:
+        default: "Row Format"
+      SerdeName:
+        default: "SERDE Name"
+      SerdeProperties:
+        default: "SERDE Properties"
+      WriteCapacityUnits:
+        default: "Write Capacity Units"
+      AthenaDBName:
+         default: "DB Name"
+      TableName:
+        default: "Table Name"
+Parameters:
+  S3Source:
+    Type: String
+    Description: The S3 location for the source data.
+  TableColumns:
+    Type: String
+    Description: "The columns and their types in the format: (col_name data_type [COMMENT col_comment] [, ...] )"
+  RowFormat:
+    Type: String
+    AllowedValues:
+     - DELIMITED
+     - SERDE
+    Description: The row format of the source data.
+  SerdeName:
+    Type: String
+    Default: ""
+    Description: SERDE Name, only applicable if "Row Format" is set to SERDE.
+  SerdeProperties:
+    Type: String
+    Description: SERDE Properties in the format ("property_name" = "property_value", "property_name" = "property_value" [, ...] ). Only applicable if "Row Format" is set to SERDE.
+    Default: ""
+  AthenaDBName:
+    Type: String
+    Description: Athena Database name, will be created if it does not exist
+  TableName:
+    Type: String
+    Description: Athena table name
+Resources:
+  OutputBucket:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: Retain
+  CreateTable:
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt CreateTableFunction.Arn
+      AthenaDBName: !Ref AthenaDBName
+      TableName: !Ref TableName
+      Columns: !Ref TableColumns
+      SourceUri: !Ref S3Source
+      SerdeName: !Ref SerdeName
+      SerdeProperties: !Ref SerdeProperties
+      RowFormat: !Ref RowFormat
+      OutputLocation: !Sub "s3://${OutputBucket}/"
+  CreateTableFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+        ZipFile: |
+          import cfnresponse
+          import json
+          import boto3
+          import traceback
+          from os import environ
+          from time import sleep
+          region = environ['AWS_REGION']
+          athena_client = boto3.client('athena', region_name=region)
+          query_template = """
+          CREATE EXTERNAL TABLE
+            {db_name}.{table_name} {columns}
+            ROW FORMAT {row_format}
+            LOCATION '{location}';
+          """
+          serde_template = """SERDE {} WITH SERDEPROPERTIES {}"""
+          def query_status(qid):
+              response = athena_client.get_query_execution(QueryExecutionId=qid)
+              return response['QueryExecution']['Status']['State']
+          def lambda_handler(event, context):
+              print(json.dumps(event))
+              status = cfnresponse.FAILED
+              response_data = {}
+              physical_id = ''
+              try:
+                  query_dict = {
+                      'db_name': event['ResourceProperties']['AthenaDBName'],
+                      'table_name': event['ResourceProperties']['TableName'],
+                      'columns': event['ResourceProperties']['Columns'],
+                      'row_format': event['ResourceProperties']['RowFormat'],
+                      'location': event['ResourceProperties']['SourceUri']
+                  }
+                  if query_dict['row_format'] == 'SERDE':
+                      query_dict['row_format'] = serde_template.format(
+                             event['ResourceProperties']['SerdeName'],
+                             event['ResourceProperties']['SerdeProperties']
+                      )
+                  physical_id = "{}.{}".format(
+                      query_dict['db_name'],
+                      query_dict['table_name']
+                  )
+                  if event['RequestType'] == 'Create':
+                      query = "CREATE DATABASE IF NOT EXISTS {};".format(query_dict['db_name'])
+                      query_id = athena_client.start_query_execution(
+                          QueryString=query,
+                          ResultConfiguration={
+                              'OutputLocation': event['ResourceProperties']['OutputLocation']
+                          }
+                      )['QueryExecutionId']
+                      print("CREATE DATABASE Query ID: {}".format(query_id))
+                      while query_status(query_id) in ['QUEUED', 'RUNNING'] and context.get_remaining_time_in_millis() > 10000:
+                          sleep(5)
+                      query = query_template.format(**query_dict)
+                      query_id = athena_client.start_query_execution(
+                          QueryString=query,
+                          ResultConfiguration={
+                              'OutputLocation': event['ResourceProperties']['OutputLocation']
+                          }
+                      )['QueryExecutionId']
+                      print("CREATE TABLE Query ID: {}".format(query_id))
+                      while query_status(query_id) in ['QUEUED', 'RUNNING'] and context.get_remaining_time_in_millis() > 10000:
+                          sleep(5)
+                  elif event['RequestType'] == 'Delete':
+                      query = "DROP TABLE {}.{};".format(query_dict['db_name'], query_dict['table_name'])
+                      query_id = athena_client.start_query_execution(
+                          QueryString=query,
+                          ResultConfiguration={
+                              'OutputLocation': event['ResourceProperties']['OutputLocation']
+                          }
+                      )['QueryExecutionId']
+                      while query_status(query_id) in ['QUEUED', 'RUNNING'] and context.get_remaining_time_in_millis() > 10000:
+                          sleep(5)
+                  status = cfnresponse.SUCCESS
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+              finally:
+                  cfnresponse.send(event, context, status, response_data, physical_id)
+      Handler: index.lambda_handler
+      Role: !GetAtt CreateTableRole.Arn
+      Runtime: python2.7
+      Timeout: 300
+  CreateTableRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "CreateTablePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "s3:*"
+                Resource: "*"
+              -
+                Effect: "Allow"
+                Action: "athena:*"
+                Resource: "*"
+              -
+                Effect: "Allow"
+                Action: "glue:*"
+                Resource: "*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "arn:aws:logs:*:*:*"
+Outputs:
+  OutputLocation:
+    Value: !Sub "s3://${OutputBucket}/"

@@ -32,6 +32,11 @@ else
     APBS=$(cat apbs)
 fi
 
+if [ "$(echo $APBS)" == "" ] ; then
+    echo "No APB's were changed, so there's nothing to test"
+    exit 0
+fi
+
 FAILED=0
 for APB_NAME in $(echo $APBS); do
     echo "Testing APB: ${APB_NAME}"

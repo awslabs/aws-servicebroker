@@ -8,6 +8,7 @@ from base64 import b64encode
 import shutil
 import subprocess
 import re
+import jinja2
 try:
     from aws_servicebroker_spec import AwsServiceBrokerSpec
 except:
@@ -177,6 +178,7 @@ class SbCfnPackage(object):
             create_user = template['Metadata']['AWS::ServiceBroker::Specification']['Bindings']['IAM']['AddKeypair']
         except KeyError as e:
             pass
+        full_bindings = []
         for t in main_provision_task:
             if 'name' in t.keys():
                 if t['name'] == 'Encode bind credentials':
@@ -188,6 +190,10 @@ class SbCfnPackage(object):
 
                     for b in bindings['CFNOutputs']:
                         t['asb_encode_binding']['fields'][camel_convert(b).upper()] = "{{ cfn.stack_outputs.%s }}" % b
+                        description = ""
+                        if "Description" in template['Outputs'][b].keys():
+                            description = template['Outputs'][b]["Description"]
+                        full_bindings.append({"name": camel_convert(b).upper(), "description": description})
             elif 'block' in t.keys():
                 for it in t['block']:
                     if it['name'] == 'Create Resources':
@@ -201,8 +207,29 @@ class SbCfnPackage(object):
             f.write(CFNYAMLHandler.ordered_safe_dump(main_provision_task, default_flow_style=False))
         with open(tmpname + '/template.yaml', 'w') as f:
             f.write(CFNYAMLHandler.ordered_safe_dump(template, default_flow_style=False))
+        render_documentation(apb_spec, template, prescribed_parameters, tmpname, full_bindings)
         return tmpname
 
+
+def render_documentation(apb, template, prescribed_params, tmp_path, bindings):
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    abs_path = os.path.join(dir_path, 'data/serviceclass_documentation_template.md.j2')
+    path, filename = os.path.split(abs_path)
+    lengths = {}
+    for plan in apb['plans']:
+        lengths[plan['name']] = {"required": 0, "prescribed": 0, "optional": 0, "generic": 0}
+        if 'parameters' in plan.keys():
+            lengths[plan['name']]["required"] = len([p for p in plan['parameters'] if 'default' not in p.keys() and p['name'] not in ['aws_access_key', 'aws_secret_key', 'aws_cloudformation_role_arn', 'region', 'SBArtifactS3Bucket', 'SBArtifactS3KeyPrefix', 'VpcId']])
+            lengths[plan['name']]["optional"] = len([p for p in plan['parameters'] if 'default' in p.keys() and p['name'] not in ['aws_access_key', 'aws_secret_key', 'aws_cloudformation_role_arn', 'region', 'SBArtifactS3Bucket', 'SBArtifactS3KeyPrefix', 'VpcId']])
+            lengths[plan['name']]["generic"] = len([p for p in plan['parameters'] if p['name'] in ['aws_access_key', 'aws_secret_key', 'aws_cloudformation_role_arn', 'region', 'SBArtifactS3Bucket', 'SBArtifactS3KeyPrefix', 'VpcId']])
+            lengths[plan['name']]["prescribed"] = len([p for p in prescribed_params[plan['name']] if p not in ["params_string", "params_hash"]])
+    result = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(
+        {"apb": apb, "template": template, "prescribed_params": prescribed_params, "lengths": lengths, "bindings": bindings}
+    )
+
+    with open(os.path.join(tmp_path, 'README.md'), 'w') as rendered_file:
+        rendered_file.write(result)
+    return
 
 def camel_convert(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)

@@ -1,0 +1,13 @@
+global:
+  parameters: {}
+  regions:
+    - us-east-1
+
+plans:
+  default:
+    parameters:
+      DBName: testdb
+      TableName: testtable
+      S3Source: athenaci
+      TableColumns: (test string)
+      RowFormat: DELIMITED

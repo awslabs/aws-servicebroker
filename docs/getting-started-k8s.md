@@ -138,7 +138,7 @@ A [CloudFormation service role](https://docs.aws.amazon.com/AWSCloudFormation/la
                 "athena:*",
                 "dynamodb:*",
                 "elasticache:*",
-                "emr:*",
+                "elasticmapreduce:*",
                 "rds:*",
                 "redshift:*",
                 "route53:*",
