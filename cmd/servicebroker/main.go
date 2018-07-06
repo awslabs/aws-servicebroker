@@ -87,6 +87,12 @@ func runWithContext(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if options.BasicAuthUser == "" {
+		options.BasicAuthUser = os.Getenv("SECURITY_USER_NAME")
+	}
+	if options.BasicAuthPassword == "" {
+		options.BasicAuthPassword = os.Getenv("SECURITY_USER_PASSWORD")
+	}
 	auth := server.BasicAuthWrapper{User: options.BasicAuthUser, Pass: options.BasicAuthPassword}
 	s := server.New(api, reg, options.EnableBasicAuth, auth)
 
