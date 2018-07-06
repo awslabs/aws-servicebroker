@@ -1,6 +1,6 @@
 # If the USE_SUDO_FOR_DOCKER env var is set, prefix docker commands with 'sudo'
 ifdef USE_SUDO_FOR_DOCKER
-	SUDO_CMD = sudo
+SUDO_CMD = sudo
 endif
 
 IMAGE ?= docker.io/projectheliostest/nextgen-broker
@@ -15,7 +15,7 @@ test: ## Runs the tests
 
 functional-test: ## Builds and execs a minikube image for functional testing
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-    	go build -o functional-testing/aws-servicebroker --ldflags="-s" github.com/jaymccon/cfnsb/cmd/servicebroker && \
+    go build -o functional-testing/aws-servicebroker --ldflags="-s" github.com/jaymccon/cfnsb/cmd/servicebroker && \
     cd functional-testing ; \
       docker build -t aws-sb:functest . && \
       docker run --privileged -it --rm aws-sb:functest /start.sh ; \
@@ -25,10 +25,19 @@ linux: ## Builds a Linux executable
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
 	go build -o servicebroker-linux --ldflags="-s" github.com/jaymccon/cfnsb/cmd/servicebroker
 
+cf: ## Builds a PCF tile and bosh release
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+    go build -o packaging/cloudfoundry/resources/cfnsb --ldflags="-s" github.com/jaymccon/cfnsb/cmd/servicebroker && \
+	cd packaging/cloudfoundry/ ; \
+	  tile build ; \
+	cd ../../
+
 clean: ## Cleans up build artifacts
 	rm -f servicebroker
 	rm -f servicebroker-linux
 	rm -f functional-testing/aws-servicebroker
+	rm -rf packaging/cloudfoundry/product
+	rm -rf packaging/cloudfoundry/release
 
 help: ## Shows the help
 	@echo 'Usage: make <OPTIONS> ... <TARGETS>'

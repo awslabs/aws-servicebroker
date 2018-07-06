@@ -3,3 +3,6 @@
 /functional-testing/aws-servicebroker
 .idea/
 /vendor/
+/packaging/cloudfoundry/product/
+/packaging/cloudfoundry/release/
+/packaging/cloudfoundry/resources/cfnsb
