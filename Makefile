@@ -48,4 +48,4 @@ help: ## Shows the help
         awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ''
 
-.PHONY: build test linux image clean push deploy-helm deploy-openshift create-ns provision bind help
+.PHONY: build test functional-test linux cf clean help
