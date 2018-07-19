@@ -1,8 +1,6 @@
 # Getting Started Guide - Pivotal Cloud Foundry
 
-## Installing the AWS Service Broker in Pivotal Cloud Foundry
-
-*Note:* The use of the AWS Service Broker in Kubernetes is at an alpha stage, bugs and possible update related breaking 
+*Note:* The use of the AWS Service Broker in Cloud Foundry is at an alpha stage, bugs and possible update related breaking 
 changes may manifest. Use of the AWS Service Broker in Pivotal Cloud Foundry is not recommended for production at this 
 time.
 
