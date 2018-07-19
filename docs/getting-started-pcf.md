@@ -112,7 +112,7 @@ something else you will also need to update this policy to reflect the name.
 
 ### Installation
 
-* Download the [AWS Service Broker Tile](https://awsservicebrokeralpha.s3.amazonaws.com/pcf/aws-service-broker-0.0.15.pivotal)
+* Download the [AWS Service Broker Tile](https://awsservicebrokeralpha.s3.amazonaws.com/pcf/aws-service-broker-latest.pivotal)
 * Login to Ops Manager and import the tile
 * Complete configuration in the `AWS Service Broker Configuration` section. Take note of the following fields:
   * `AWS Access Key ID` and `AWS Secret Access` - if you are using an ec2 instance role attached to the broker hosts, 
