@@ -37,7 +37,7 @@ The following are required to provision AWS services from the OpenShift Service 
 *   OpenShift Container Platform (OCP) or Origin v3.7
 *   Docker
 *   Service Catalog
-*   AWS Service Broker configured with an appropriate registry (e.g. [docker.io/awsservicebroker](https://hub.docker.com/u/awsservicebroker/dashboard/))
+*   AWS Service Broker configured with an appropriate registry (e.g. [docker.io/awsservicebroker](https://hub.docker.com/u/awsservicebroker/))
 *   APB Prerequisites (if applicable)
 
 Instructions below will guide you in deploying these components in production and development environments.
