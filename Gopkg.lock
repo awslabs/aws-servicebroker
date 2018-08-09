@@ -126,8 +126,7 @@
   name = "github.com/pmorie/osb-broker-lib"
   packages = [
     "pkg/broker",
-    "pkg/metrics",
-    "pkg/rest"
+    "pkg/metrics"
   ]
   revision = "f4ca270ef323318b363f986229bd10bccb2d28b1"
   version = "0.0.10"

@@ -70,7 +70,6 @@ The user or role that the broker runs as requires at least the following policy
 #### Building the binary
 
 ```bash
-dep ensure
 make build # OSX binary
 make linux # linux binary
 ```
