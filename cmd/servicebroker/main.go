@@ -15,7 +15,7 @@ import (
 	"github.com/pmorie/osb-broker-lib/pkg/metrics"
 	"github.com/jaymccon/osb-broker-lib/pkg/rest"
 	"github.com/jaymccon/osb-broker-lib/pkg/server"
-	"github.com/jaymccon/aws-service-broker/pkg/broker"
+	"github.com/awslabs/aws-service-broker/pkg/broker"
 )
 
 var options struct {
