@@ -4,31 +4,32 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/golang/glog"
-	"github.com/pmorie/osb-broker-lib/pkg/broker"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"regexp"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/koding/cache"
-	"gopkg.in/yaml.v2"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/golang/glog"
+	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	"os"
-	"fmt"
-	"strings"
-	"time"
-	"io/ioutil"
+	"github.com/pmorie/osb-broker-lib/pkg/broker"
 	"github.com/satori/go.uuid"
-	"regexp"
-	"syscall"
+	"gopkg.in/yaml.v2"
 )
 
 // CacheTTL TTL for catalog cache record expiry
@@ -58,12 +59,12 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 			})
 	}
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: region,
+		Region:      region,
 		Credentials: &defaultCreds,
 	}))
 
 	s3sess := session.Must(session.NewSession(&aws.Config{
-		Region: &o.S3Region,
+		Region:      &o.S3Region,
 		Credentials: &defaultCreds,
 	}))
 
@@ -75,7 +76,7 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		panic(err)
 	}
 	db.accountid = *outp.Account
-	db.accountuuid = uuid.NewV5(uuid.NullUUID{}.UUID, db.accountid + db.brokerid)
+	db.accountuuid = uuid.NewV5(uuid.NullUUID{}.UUID, db.accountid+db.brokerid)
 	db.ddb = *ddbsvc
 
 	var catalogcache = cache.NewMemoryWithTTL(time.Duration(CacheTTL))
@@ -106,14 +107,14 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		s3key:          o.S3Key,
 		templatefilter: o.TemplateFilter,
 		region:         o.Region,
-		awssession:  	*sess,
-		s3svc:			*s3svc,
+		awssession:     *sess,
+		s3svc:          *s3svc,
 		ddbsvc:         *ddbsvc,
 		catalogcache:   catalogcache,
-		listingcache:	listingcache,
+		listingcache:   listingcache,
 		brokerid:       o.BrokerID,
-		db:				db,
-		rolearn:		o.RoleArn,
+		db:             db,
+		rolearn:        o.RoleArn,
 		overrides:      overrides,
 	}
 	updateCatalog(listingcache, catalogcache, *bd, *s3svc, db, bl)
@@ -121,7 +122,7 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 	return &bl, nil
 }
 
-func updateCatalog (listingcache cache.Cache, catalogcache cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db Db, bl BusinessLogic) {
+func updateCatalog(listingcache cache.Cache, catalogcache cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db Db, bl BusinessLogic) {
 	l, err := listTemplates(&bd, &bl)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "NoSuchBucket: The specified bucket does not exist") {
@@ -144,13 +145,12 @@ func updateCatalog (listingcache cache.Cache, catalogcache cache.Cache, bd Bucke
 	metadataUpdate(listingcache, catalogcache, bd, s3svc, db)
 }
 
-func pollUpdate (interval int, l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db Db, bl BusinessLogic) {
+func pollUpdate(interval int, l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db Db, bl BusinessLogic) {
 	for {
 		time.Sleep(time.Duration(interval) * time.Second)
 		go updateCatalog(l, c, bd, s3svc, db, bl)
 	}
 }
-
 
 func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db Db) {
 	data, err := l.Get("__LISTINGS__")
@@ -195,8 +195,8 @@ func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 					}
 				}
 				db.Unlock("ServiceSpec-" + item.Name)
-			} else	{
-				lockretry = append(lockretry, "ServiceSpec-" + item.Name)
+			} else {
+				lockretry = append(lockretry, "ServiceSpec-"+item.Name)
 			}
 		} else {
 			i, geterr := c.Get(item.Name)
@@ -235,7 +235,7 @@ func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 	}
 }
 
-func listingUpdate(l *[]ServiceLastUpdate,c cache.Cache) {
+func listingUpdate(l *[]ServiceLastUpdate, c cache.Cache) {
 	var services []ServiceNeedsUpdate
 	for _, item := range *l {
 		data, err := c.Get(item.Name)
@@ -262,38 +262,37 @@ func listingUpdate(l *[]ServiceLastUpdate,c cache.Cache) {
 // BusinessLogic holds configuration, caches and aws service clients
 type BusinessLogic struct {
 	sync.RWMutex
-	keyid string
-	secretkey string
-	profile string
-	tablename string
-	s3bucket string
-	s3region string
-	s3key string
+	keyid          string
+	secretkey      string
+	profile        string
+	tablename      string
+	s3bucket       string
+	s3region       string
+	s3key          string
 	templatefilter string
-	region string
-	awssession session.Session
-	s3svc s3.S3
-	ddbsvc dynamodb.DynamoDB
-	ssmsvc ssm.SSM
-	catalogcache cache.Cache
-	listingcache cache.Cache
-	instances map[string]*ServiceInstance
-	brokerid string
-	db Db
-	rolearn string
-	overrides map[string]string
+	region         string
+	awssession     session.Session
+	s3svc          s3.S3
+	ddbsvc         dynamodb.DynamoDB
+	ssmsvc         ssm.SSM
+	catalogcache   cache.Cache
+	listingcache   cache.Cache
+	instances      map[string]*ServiceInstance
+	brokerid       string
+	db             Db
+	rolearn        string
+	overrides      map[string]string
 }
 
-
 // ServiceLastUpdate date when a service exposed by the broker was last updated from s3
-type ServiceLastUpdate struct{
+type ServiceLastUpdate struct {
 	Name string
 	Date time.Time
 }
 
 // ServiceNeedsUpdate if Update == true the metadata should be refreshed from s3
-type ServiceNeedsUpdate struct{
-	Name string
+type ServiceNeedsUpdate struct {
+	Name   string
 	Update bool
 }
 
@@ -305,7 +304,6 @@ type BucketDetailsRequest struct {
 }
 
 var _ broker.Interface = &BusinessLogic{}
-
 
 func listTemplates(s3source *BucketDetailsRequest, b *BusinessLogic) (*[]ServiceLastUpdate, error) {
 	glog.Infoln("Listing objects bucket: " + s3source.bucket + " region: " + b.s3region + " prefix: " + s3source.prefix)
@@ -328,13 +326,13 @@ func listTemplates(s3source *BucketDetailsRequest, b *BusinessLogic) (*[]Service
 		}
 	}
 	glog.Infof("Found %x objects\n", numberOfRecords)
-		s := make([]ServiceLastUpdate, 0, numberOfRecords)
+	s := make([]ServiceLastUpdate, 0, numberOfRecords)
 	for _, s3obj := range ListResponse.Contents {
 		if strings.HasSuffix(*s3obj.Key, s3source.suffix) {
 			s = append(s, ServiceLastUpdate{
 				Name: strings.TrimSuffix(strings.TrimPrefix(*s3obj.Key, s3source.prefix), s3source.suffix),
 				Date: *s3obj.LastModified,
-			} )
+			})
 		}
 	}
 	return &s, nil
@@ -373,7 +371,7 @@ func (b *BusinessLogic) GetCatalog(c *broker.RequestContext) (*broker.CatalogRes
 	return response, nil
 }
 
-func getParams(in interface{}) (keys []string){
+func getParams(in interface{}) (keys []string) {
 	p := in.(map[string]interface{})
 	params, ok := p["properties"]
 	if !ok {
@@ -393,17 +391,17 @@ func (b *BusinessLogic) getOverrides(params []string, ns string, s string) (over
 			overrides[k] = v
 		}
 	}
-	
+
 	var services []string
 	var namespaces []string
 	if s != "all" {
 		services = append(services, "all")
 	}
-	if s != "all" {
+	if ns != "all" {
 		namespaces = append(namespaces, "all")
 	}
 	services = append(services, s)
-	namespaces = append(namespaces, s)
+	namespaces = append(namespaces, ns)
 	for _, s := range services {
 		for _, n := range namespaces {
 			for _, p := range params {
@@ -423,7 +421,7 @@ func (b *BusinessLogic) getOverrides(params []string, ns string, s string) (over
 	return overrides
 }
 
-func (b *BusinessLogic) getAwsClient(params map[string]string) (cfnsvc *cloudformation.CloudFormation, ssmsvc *ssm.SSM){
+func (b *BusinessLogic) getAwsClient(params map[string]string) (cfnsvc *cloudformation.CloudFormation, ssmsvc *ssm.SSM) {
 	var defaultCreds credentials.Credentials
 	region := aws.String(b.region)
 	keyid := b.keyid
@@ -439,7 +437,7 @@ func (b *BusinessLogic) getAwsClient(params map[string]string) (cfnsvc *cloudfor
 			})
 	}
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: region,
+		Region:      region,
 		Credentials: &defaultCreds,
 	}))
 	return cloudformation.New(sess), ssm.New(sess)
@@ -448,7 +446,7 @@ func (b *BusinessLogic) getAwsClient(params map[string]string) (cfnsvc *cloudfor
 // Provision is executed when the osb api receives PUT /v2/service_instances/:instance_id
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#provisioning
 func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.RequestContext) (*broker.ProvisionResponse, error) {
-	lockid := "serviceInstance__provision__" +  request.InstanceID
+	lockid := "serviceInstance__provision__" + request.InstanceID
 	gotlock := b.db.Lock(lockid)
 	if gotlock == false {
 		if b.db.WaitForUnlock(lockid) == false {
@@ -465,7 +463,7 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 		servicedef, err := b.db.GetServiceDefinition(request.ServiceID)
 		var plandef osb.Plan
 		for _, v := range servicedef.Plans {
-			if v.ID == request.PlanID{
+			if v.ID == request.PlanID {
 				plandef = v
 			}
 		}
@@ -485,7 +483,7 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 			// Instance ID in use, this is a conflict.
 			description := "InstanceID in use"
 			return nil, osb.HTTPStatusCodeError{
-				StatusCode: http.StatusConflict,
+				StatusCode:  http.StatusConflict,
 				Description: &description,
 			}
 		} else {
@@ -513,18 +511,18 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 			var inputParams []*cloudformation.Parameter
 			for k, p := range completeparams {
 				param := cloudformation.Parameter{
-					ParameterKey:     aws.String(k),
-					ParameterValue:   aws.String(p),
+					ParameterKey:   aws.String(k),
+					ParameterValue: aws.String(p),
 				}
 				inputParams = append(inputParams, &param)
 			}
 			stackInput := cloudformation.CreateStackInput{
-				Capabilities:     Cap,
-				Parameters:       inputParams,
-				RoleARN:          aws.String(b.rolearn),
-				StackName:        aws.String("CfnServiceBroker-" + servicedef.Name + "-" + instance.ID),
-				Tags:             tags,
-				TemplateURL:      aws.String("https://s3.amazonaws.com/" + b.s3bucket + "/" + b.s3key + strings.TrimSuffix(servicedef.Name, "-apb") + b.templatefilter),
+				Capabilities: Cap,
+				Parameters:   inputParams,
+				RoleARN:      aws.String(b.rolearn),
+				StackName:    aws.String("CfnServiceBroker-" + servicedef.Name + "-" + instance.ID),
+				Tags:         tags,
+				TemplateURL:  aws.String("https://s3.amazonaws.com/" + b.s3bucket + "/" + b.s3key + strings.TrimSuffix(servicedef.Name, "-apb") + b.templatefilter),
 			}
 			cfnsvc, _ := b.getAwsClient(completeparams)
 			results, err := cfnsvc.CreateStack(&stackInput)
@@ -545,7 +543,7 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 	}
 	description := "Failed to get lock for instanceId" + string(request.InstanceID)
 	return nil, osb.HTTPStatusCodeError{
-		StatusCode: http.StatusExpectationFailed,
+		StatusCode:  http.StatusExpectationFailed,
 		Description: &description,
 	}
 }
@@ -553,7 +551,7 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 // Deprovision executed when the osb api receives DELETE /v2/service_instances/:instance_id
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#deprovisioning
 func (b *BusinessLogic) Deprovision(request *osb.DeprovisionRequest, c *broker.RequestContext) (*broker.DeprovisionResponse, error) {
-	lockid := "serviceInstance__deprovision__" +  request.InstanceID
+	lockid := "serviceInstance__deprovision__" + request.InstanceID
 	gotlock := b.db.Lock(lockid)
 	response := broker.DeprovisionResponse{}
 	if gotlock == false {
@@ -586,7 +584,7 @@ func (b *BusinessLogic) Deprovision(request *osb.DeprovisionRequest, c *broker.R
 	}
 	description := "Failed to get lock for instanceId" + string(request.InstanceID)
 	return nil, osb.HTTPStatusCodeError{
-		StatusCode: http.StatusExpectationFailed,
+		StatusCode:  http.StatusExpectationFailed,
 		Description: &description,
 	}
 }
@@ -623,7 +621,7 @@ func (b *BusinessLogic) LastOperation(request *osb.LastOperationRequest, c *brok
 		r.LastOperationResponse.State = "in progress"
 		r.LastOperationResponse.Description = response.Stacks[0].StackStatusReason
 		return &r, nil
-	} else if stringInSlice(status, successfulstates){
+	} else if stringInSlice(status, successfulstates) {
 		glog.Infoln("CloudFormation stack operation completed...")
 		glog.Infoln(status)
 		r.LastOperationResponse.State = "succeeded"
@@ -691,9 +689,9 @@ func (b *BusinessLogic) Bind(request *osb.BindRequest, c *broker.RequestContext)
 
 func toSnakeCase(str string) string {
 	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-	var matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
+	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake  = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
 	return strings.ToUpper(snake)
 }
 
@@ -717,8 +715,6 @@ func (b *BusinessLogic) Update(request *osb.UpdateInstanceRequest, c *broker.Req
 func (b *BusinessLogic) BindingLastOperation(request *osb.BindingLastOperationRequest, c *broker.RequestContext) (*broker.LastOperationResponse, error) {
 	return &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "", Description: nil}}, nil
 }
-
-
 
 // ValidateBrokerAPIVersion does nothing ?
 func (b *BusinessLogic) ValidateBrokerAPIVersion(version string) error {
