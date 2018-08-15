@@ -120,6 +120,53 @@ type Interface interface {
 	//
 	// https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#binding
 	Bind(request *osb.BindRequest, c *RequestContext) (*BindResponse, error)
+	// GetBinding encapsulates the business logic that returns a binding in
+	// the form of a BindingResponse. The platform will only request a Binding
+	// if the broker's catalog has declared `"bindings_retrievable": true` for
+	// a particular service.
+	//
+	// The parameters are:
+	// - a osb.GetBindingRequest created from the original http request
+	// - a RequestContext object which encapsulates:
+	//    - a response writer, in case fine-grained control over the response is
+	//      required
+	//    - the original http request, in case access is required (to get special
+	//      request headers, for example)
+	//
+	// Implementers should return a GetBindingResponse for a successful operation
+	// or an error. The APISurface handles translating GetBindingResponses or
+	// errors into the correct form in the http response.
+	//
+	// For more information, see:
+	//
+	// https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#fetching-a-service-binding
+	GetBinding(request *osb.GetBindingRequest, c *RequestContext) (*GetBindingResponse, error)
+	// BindingLastOperation encapsulates the business logic for a last operation
+	// request and returns a osb.BindingLastOperationResponse or an error.
+	// BindingLastOperation is called when a platform checks the status of an ongoing
+	// asynchronous binding operation on an instance of a binding.
+	//
+	// NOTE: Asynchronous bindings are currently a proposal against the OSB spec
+	// that is in the "validating through implementation phase". For more information,
+	// see the PR: https://github.com/openservicebrokerapi/servicebroker/pull/334
+	//
+	// The parameters are:
+	// - a osb.BindingLastOperationRequest created from the original http request
+	// - a RequestContext object which encapsulates:
+	//    - a response writer, in case fine-grained control over the response is
+	//      required
+	//    - the original http request, in case access is required (to get special
+	//      request headers, for example)
+	//
+	// Implementers should return a BindingLastOperationResponse for a successful
+	// operation or an error. The APISurface handles translating
+	// BindingLastOperationResponses or errors into the correct form in the http
+	// response.
+	//
+	// For more information, see:
+	//
+	// https://github.com/mattmcneeney/servicebroker/blob/219bf56c58a2f37d4a1a1b1b49b6e0dcc9683167/spec.md#polling-last-operation-for-service-bindings
+	BindingLastOperation(request *osb.BindingLastOperationRequest, c *RequestContext) (*LastOperationResponse, error)
 	// Unbind encapsulates the business logic for an unbind operation and
 	// returns a osb.UnbindResponse or an error. Unbind deletes a binding and the
 	// resources associated with it.

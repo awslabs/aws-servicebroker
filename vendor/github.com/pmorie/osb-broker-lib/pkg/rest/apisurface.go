@@ -44,13 +44,40 @@ func (s *APISurface) OptionsHandler(w http.ResponseWriter, r *http.Request) {
 	s.writeResponse(w, http.StatusOK, nil)
 }
 
+// formatRequest generates ascii representation of a request
+func formatRequest(r *http.Request) string {
+	// Create return string
+	var request []string
+	// Add the request string
+	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
+	request = append(request, url)
+	// Add the host
+	request = append(request, fmt.Sprintf("Host: %v", r.Host))
+	// Loop through headers
+	for name, headers := range r.Header {
+		name = strings.ToLower(name)
+		for _, h := range headers {
+			request = append(request, fmt.Sprintf("%v: %v", name, h))
+		}
+	}
+
+	// If this is a POST, add post data
+	if r.Method == "POST" {
+		r.ParseForm()
+		request = append(request, "\n")
+		request = append(request, r.Form.Encode())
+	}
+	// Return the request as a string
+	return strings.Join(request, "\n")
+}
+
 // GetCatalogHandler is the mux handler that dispatches requests to get the
 // broker's catalog to the broker's Interface.
 func (s *APISurface) GetCatalogHandler(w http.ResponseWriter, r *http.Request) {
+	glog.V(10).Infoln(formatRequest(r))
 	s.Metrics.Actions.WithLabelValues("get_catalog").Inc()
 
 	version := getBrokerAPIVersionFromRequest(r)
-	fmt.Println(version)
 	if err := s.Broker.ValidateBrokerAPIVersion(version); err != nil {
 		s.writeError(w, err, http.StatusPreconditionFailed)
 		return
@@ -73,6 +100,7 @@ func (s *APISurface) GetCatalogHandler(w http.ResponseWriter, r *http.Request) {
 // ProvisionHandler is the mux handler that dispatches ProvisionRequests to the
 // broker's Interface.
 func (s *APISurface) ProvisionHandler(w http.ResponseWriter, r *http.Request) {
+	glog.V(10).Infoln(formatRequest(r))
 	s.Metrics.Actions.WithLabelValues("provision").Inc()
 
 	version := getBrokerAPIVersionFromRequest(r)
@@ -87,7 +115,7 @@ func (s *APISurface) ProvisionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	glog.Infof("Received ProvisionRequest for instanceID %q", request.InstanceID)
+	glog.V(4).Infof("Received ProvisionRequest for instanceID %q", request.InstanceID)
 
 	c := &broker.RequestContext{
 		Writer:  w,
@@ -95,6 +123,8 @@ func (s *APISurface) ProvisionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response, err := s.Broker.Provision(request, c)
+	glog.V(10).Infof("response: %q\n", response)
+	glog.V(10).Infof("err: %q\n", err)
 	if err != nil {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return
@@ -167,7 +197,7 @@ func (s *APISurface) DeprovisionHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	glog.Infof("Received DeprovisionRequest for instanceID %q", request.InstanceID)
+	glog.V(4).Infof("Received DeprovisionRequest for instanceID %q", request.InstanceID)
 
 	c := &broker.RequestContext{
 		Writer:  w,
@@ -231,7 +261,7 @@ func (s *APISurface) LastOperationHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	glog.Infof("Received LastOperationRequest for instanceID %q", request.InstanceID)
+	glog.V(4).Infof("Received LastOperationRequest for instanceID %q", request.InstanceID)
 
 	c := &broker.RequestContext{
 		Writer:  w,
@@ -288,7 +318,7 @@ func (s *APISurface) BindHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	glog.Infof("Received BindRequest for instanceID %q, bindingID %q", request.InstanceID, request.BindingID)
+	glog.V(4).Infof("Received BindRequest for instanceID %q, bindingID %q", request.InstanceID, request.BindingID)
 
 	c := &broker.RequestContext{
 		Writer:  w,
@@ -300,9 +330,20 @@ func (s *APISurface) BindHandler(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return
 	}
+
+	// MUST be returned if the binding was created as a result of this request.
 	status := http.StatusCreated
+
 	if response.Exists {
+		// MUST be returned if the binding already exists and the requested parameters
+		// are identical to the existing binding.
 		status = http.StatusOK
+	} else if response.Async {
+		// MUST be returned if the binding is in progress. NOTE: Async bindings
+		// are an alpha level feature currently in the "validating through
+		// implementation phase" of the OSB spec. See:
+		// https://github.com/openservicebrokerapi/servicebroker/pull/334
+		status = http.StatusAccepted
 	}
 
 	s.writeResponse(w, status, response)
@@ -330,6 +371,119 @@ func unpackBindRequest(r *http.Request) (*osb.BindRequest, error) {
 	return osbRequest, nil
 }
 
+// GetBindingHandler is the mux handler that dispatches get binding requests to
+// the broker's Interface.
+func (s *APISurface) GetBindingHandler(w http.ResponseWriter, r *http.Request) {
+	s.Metrics.Actions.WithLabelValues("get_binding").Inc()
+
+	version := getBrokerAPIVersionFromRequest(r)
+	if err := s.Broker.ValidateBrokerAPIVersion(version); err != nil {
+		s.writeError(w, err, http.StatusPreconditionFailed)
+		return
+	}
+
+	vars := mux.Vars(r)
+	request, err := unpackGetBindingRequest(r, vars)
+	if err != nil {
+		s.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	glog.Infof("Received GetBinding request for instanceID %q, bindingID %q", request.InstanceID, request.BindingID)
+
+	c := &broker.RequestContext{
+		Writer:  w,
+		Request: r,
+	}
+
+	response, err := s.Broker.GetBinding(request, c)
+	if err != nil {
+		s.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	s.writeResponse(w, http.StatusOK, response)
+}
+
+// unpackGetBindingRequest unpacks an osb get binding request from the given
+// HTTP request.
+func unpackGetBindingRequest(r *http.Request, vars map[string]string) (*osb.GetBindingRequest, error) {
+	request := &osb.GetBindingRequest{}
+
+	request.InstanceID = vars[osb.VarKeyInstanceID]
+	request.BindingID = vars[osb.VarKeyBindingID]
+
+	return request, nil
+}
+
+// GetBindingLastOperation is the mux handler that dispatches binding last
+// operation requests to the broker's Interface.
+func (s *APISurface) BindingLastOperationHandler(w http.ResponseWriter, r *http.Request) {
+	s.Metrics.Actions.WithLabelValues("binding_last_operation").Inc()
+
+	version := getBrokerAPIVersionFromRequest(r)
+	if err := s.Broker.ValidateBrokerAPIVersion(version); err != nil {
+		s.writeError(w, err, http.StatusPreconditionFailed)
+		return
+	}
+
+	vars := mux.Vars(r)
+	request, err := unpackBindingLastOperationRequest(r, vars)
+	if err != nil {
+		s.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	glog.Infof("Received BindingLastOperationRequest for instanceID %q, bindingID %q", request.InstanceID, request.BindingID)
+
+	c := &broker.RequestContext{
+		Writer:  w,
+		Request: r,
+	}
+
+	response, err := s.Broker.BindingLastOperation(request, c)
+	if err != nil {
+		s.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	s.writeResponse(w, http.StatusOK, response)
+}
+
+// unpackBindingLastOperationRequest unpacks an osb binding last operation
+// request from the given HTTP request.
+func unpackBindingLastOperationRequest(
+	r *http.Request, vars map[string]string,
+) (*osb.BindingLastOperationRequest, error) {
+	request := &osb.BindingLastOperationRequest{}
+	request.InstanceID = vars[osb.VarKeyInstanceID]
+	request.BindingID = vars[osb.VarKeyBindingID]
+
+	serviceID := vars[osb.VarKeyServiceID]
+	if serviceID != "" {
+		request.ServiceID = &serviceID
+	}
+
+	planID := vars[osb.VarKeyPlanID]
+	if planID != "" {
+		request.PlanID = &planID
+	}
+
+	operation := vars[osb.VarKeyOperation]
+	if operation != "" {
+		typedOperation := osb.OperationKey(operation)
+		request.OperationKey = &typedOperation
+	}
+
+	identity, err := retrieveOriginatingIdentity(r)
+	if err != nil {
+		return nil, err
+	}
+	request.OriginatingIdentity = identity
+
+	return request, nil
+}
+
 // UnbindHandler is the mux handler that dispatches unbind requests to the
 // broker's Interface.
 func (s *APISurface) UnbindHandler(w http.ResponseWriter, r *http.Request) {
@@ -348,7 +502,7 @@ func (s *APISurface) UnbindHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	glog.Infof("Received UnbindRequest for instanceID %q, bindingID %q", request.InstanceID, request.BindingID)
+	glog.V(4).Infof("Received UnbindRequest for instanceID %q, bindingID %q", request.InstanceID, request.BindingID)
 	c := &broker.RequestContext{
 		Writer:  w,
 		Request: r,
@@ -404,7 +558,7 @@ func (s *APISurface) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	glog.Infof("Received Update Request for instanceID %q", request.InstanceID)
+	glog.V(4).Infof("Received Update Request for instanceID %q", request.InstanceID)
 
 	c := &broker.RequestContext{
 		Writer:  w,
@@ -452,6 +606,7 @@ func unpackUpdateRequest(r *http.Request, vars map[string]string) (*osb.UpdateIn
 // the request header.
 func retrieveOriginatingIdentity(r *http.Request) (*osb.OriginatingIdentity, error) {
 	identityHeader := r.Header.Get(osb.OriginatingIdentityHeader)
+
 	if identityHeader != "" {
 		identitySlice := strings.Split(identityHeader, " ")
 		if len(identitySlice) != 2 {

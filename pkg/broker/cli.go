@@ -4,22 +4,6 @@ import (
 	"flag"
 )
 
-// Options cli options
-type Options struct {
-	CatalogPath    string
-	KeyID          string
-	SecretKey      string
-	Profile        string
-	TableName      string
-	S3Bucket       string
-	S3Region       string
-	S3Key          string
-	TemplateFilter string
-	Region         string
-	BrokerID       string
-	RoleArn        string
-}
-
 // AddFlags adds defined flags to cli options
 func AddFlags(o *Options) {
 	flag.StringVar(&o.KeyID, "keyId", "", "AWS IAM User Key ID to use, if left blank will attempt to use a role, if defined secret-key must also be defined.")

@@ -55,6 +55,12 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/go-errors/errors"
   packages = ["."]
   revision = "a6af135bd4e28680facf08a3d206b454abc877a4"
@@ -91,13 +97,10 @@
   version = "v1.6.2"
 
 [[projects]]
-  branch = "master"
+  branch = "basic_auth"
   name = "github.com/jaymccon/osb-broker-lib"
-  packages = [
-    "pkg/rest",
-    "pkg/server"
-  ]
-  revision = "5ccf6a025652d299689c2027343324af984fa543"
+  packages = ["pkg/server"]
+  revision = "bfb7c3ba100e248179f41094fc8dc94c31299aaa"
 
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
@@ -117,19 +120,26 @@
   version = "v1.0.1"
 
 [[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/pmorie/go-open-service-broker-client"
   packages = ["v2"]
   revision = "dca737037ce636eb282e84e3a1c7479c9692e884"
   version = "0.0.10"
 
 [[projects]]
+  branch = "master"
   name = "github.com/pmorie/osb-broker-lib"
   packages = [
     "pkg/broker",
-    "pkg/metrics"
+    "pkg/metrics",
+    "pkg/rest"
   ]
-  revision = "f4ca270ef323318b363f986229bd10bccb2d28b1"
-  version = "0.0.10"
+  revision = "87d71cfbf3427836e5623f1e3843a466348b7be6"
 
 [[projects]]
   name = "github.com/prometheus/client_golang"
@@ -174,19 +184,25 @@
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
     "blowfish"
   ]
-  revision = "5ba7f63082460102a45837dbd1827e10f9479ac0"
+  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "1e491301e022f8f977054da4c2d852decd59571f"
+  revision = "c39426892332e1bb5ec0a434a079bf82f5d30c54"
 
 [[projects]]
   branch = "v2"
@@ -209,6 +225,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c9c453ea9edd053794a771807fdc94c7fb78820fe3e5dc50f187f0c3fa73b36c"
+  inputs-digest = "f53b7a956d011eaabfddba4521e45047d127200d7465bcbad660c60783628fa6"
   solver-name = "gps-cdcl"
   solver-version = 1

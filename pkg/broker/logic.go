@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	dbConnector "github.com/awslabs/aws-service-broker/pkg/db"
+	"github.com/awslabs/aws-service-broker/pkg/dynamodbadapter"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -32,24 +34,62 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Options cli options
+type Options struct {
+	CatalogPath    string
+	KeyID          string
+	SecretKey      string
+	Profile        string
+	TableName      string
+	S3Bucket       string
+	S3Region       string
+	S3Key          string
+	TemplateFilter string
+	Region         string
+	BrokerID       string
+	RoleArn        string
+}
+
+// BucketDetailsRequest describes the details required to fetch metadata and templates from s3
+type BucketDetailsRequest struct {
+	bucket string
+	prefix string
+	suffix string
+}
+
+// BusinessLogic holds configuration, caches and aws service clients
+type BusinessLogic struct {
+	sync.RWMutex
+	keyid          string
+	secretkey      string
+	profile        string
+	tablename      string
+	s3bucket       string
+	s3region       string
+	s3key          string
+	templatefilter string
+	region         string
+	s3svc          s3.S3
+	ssmsvc         ssm.SSM
+	catalogcache   cache.Cache
+	listingcache   cache.Cache
+	instances      map[string]*dbConnector.ServiceInstance
+	brokerid       string
+	db             dbConnector.Db
+	rolearn        string
+	overrides      map[string]string
+}
+
 // CacheTTL TTL for catalog cache record expiry
 var CacheTTL = 1 * time.Hour
 
-// NewBusinessLogic runs at broker startup and bootstraps the broker
-func NewBusinessLogic(o Options) (*BusinessLogic, error) {
-	var db Db
-	db.region = o.Region
-	db.brokerid = o.BrokerID
-	db.tablename = o.TableName
-
+// Create AWS Session
+func createSession(keyid string, secretkey string, region string, profile string) *session.Session {
 	var defaultCreds credentials.Credentials
-	region := aws.String(o.Region)
-	keyid := o.KeyID
-	secretkey := o.SecretKey
 	if keyid != "" {
 		defaultCreds = *credentials.NewStaticCredentials(keyid, secretkey, "")
-	} else if o.Profile != "" {
-		defaultCreds = *credentials.NewChainCredentials([]credentials.Provider{&credentials.SharedCredentialsProvider{Profile: o.Profile}})
+	} else if profile != "" {
+		defaultCreds = *credentials.NewChainCredentials([]credentials.Provider{&credentials.SharedCredentialsProvider{Profile: profile}})
 	} else {
 		defaultCreds = *credentials.NewChainCredentials(
 			[]credentials.Provider{
@@ -59,25 +99,41 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 			})
 	}
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region:      region,
+		Region:      aws.String(region),
 		Credentials: &defaultCreds,
 	}))
+	return sess
+}
 
-	s3sess := session.Must(session.NewSession(&aws.Config{
-		Region:      &o.S3Region,
-		Credentials: &defaultCreds,
-	}))
+// NewBusinessLogic runs at broker startup and bootstraps the broker
+func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 
+	sess := createSession(o.KeyID, o.SecretKey, o.Region, o.Profile)
+	s3sess := createSession(o.KeyID, o.SecretKey, o.S3Region, o.Profile)
 	var s3svc = s3.New(s3sess)
 	var ddbsvc = dynamodb.New(sess)
 	stsClient := sts.New(sess)
-	outp, err := stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	callerid, err := stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 	if err != nil {
 		panic(err)
 	}
-	db.accountid = *outp.Account
-	db.accountuuid = uuid.NewV5(uuid.NullUUID{}.UUID, db.accountid+db.brokerid)
-	db.ddb = *ddbsvc
+	accountid := *callerid.Account
+	accountuuid := uuid.NewV5(uuid.NullUUID{}.UUID, accountid+o.BrokerID)
+
+	var db dbConnector.Db
+	db.Brokerid = o.BrokerID
+	db.Accountid = accountid
+	db.Accountuuid = accountuuid
+
+	// connect DynamoDB  adapter to storage port
+	db.DataStorePort = dynamodbadapter.DdbDataStore{
+		Accountid:   accountid,
+		Accountuuid: accountuuid,
+		Brokerid:    o.BrokerID,
+		Region:      o.Region,
+		Ddb:         *ddbsvc,
+		Tablename:   o.TableName,
+	}
 
 	var catalogcache = cache.NewMemoryWithTTL(time.Duration(CacheTTL))
 	var listingcache = cache.NewMemoryWithTTL(time.Duration(CacheTTL))
@@ -88,6 +144,7 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		if strings.HasPrefix(envvar[0], "PARAM_OVERRIDE_") {
 			key := strings.TrimPrefix(envvar[0], "PARAM_OVERRIDE_")
 			overrides[key] = envvar[1]
+			glog.V(10).Infof("%q=%q\n", key, envvar[1])
 		}
 	}
 
@@ -107,9 +164,7 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		s3key:          o.S3Key,
 		templatefilter: o.TemplateFilter,
 		region:         o.Region,
-		awssession:     *sess,
 		s3svc:          *s3svc,
-		ddbsvc:         *ddbsvc,
 		catalogcache:   catalogcache,
 		listingcache:   listingcache,
 		brokerid:       o.BrokerID,
@@ -122,7 +177,7 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 	return &bl, nil
 }
 
-func updateCatalog(listingcache cache.Cache, catalogcache cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db Db, bl BusinessLogic) {
+func updateCatalog(listingcache cache.Cache, catalogcache cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db dbConnector.Db, bl BusinessLogic) {
 	l, err := listTemplates(&bd, &bl)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "NoSuchBucket: The specified bucket does not exist") {
@@ -131,28 +186,34 @@ func updateCatalog(listingcache cache.Cache, catalogcache cache.Cache, bd Bucket
 		}
 		panic(err)
 	}
-	if db.Lock("catalogUpdate") {
+	if db.DataStorePort.Lock("catalogUpdate") {
 		listingUpdate(l, listingcache)
-		db.Unlock("catalogUpdate")
+		db.DataStorePort.Unlock("catalogUpdate")
 	} else {
-		if db.WaitForUnlock("catalogUpdate") == false {
-			if db.Lock("catalogUpdate") {
+		if db.DataStorePort.WaitForUnlock("catalogUpdate") == false {
+			if db.DataStorePort.Lock("catalogUpdate") {
 				listingUpdate(l, listingcache)
-				db.Unlock("catalogUpdate")
+				db.DataStorePort.Unlock("catalogUpdate")
 			}
 		}
 	}
 	metadataUpdate(listingcache, catalogcache, bd, s3svc, db)
 }
 
-func pollUpdate(interval int, l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db Db, bl BusinessLogic) {
+func pollUpdate(interval int, l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db dbConnector.Db, bl BusinessLogic) {
 	for {
 		time.Sleep(time.Duration(interval) * time.Second)
 		go updateCatalog(l, c, bd, s3svc, db, bl)
 	}
 }
 
-func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db Db) {
+// ServiceNeedsUpdate if Update == true the metadata should be refreshed from s3
+type ServiceNeedsUpdate struct {
+	Name   string
+	Update bool
+}
+
+func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc s3.S3, db dbConnector.Db) {
 	data, err := l.Get("__LISTINGS__")
 	if err != nil {
 		panic(err)
@@ -160,13 +221,15 @@ func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 	var lockretry []string
 	for _, item := range data.([]ServiceNeedsUpdate) {
 		if item.Update {
-			if db.Lock("ServiceSpec-" + item.Name) {
+			if db.DataStorePort.Lock("ServiceSpec-" + item.Name) {
 				key := bd.prefix + item.Name + "-spec.yaml"
 				obj, err := s3svc.GetObject(&s3.GetObjectInput{
 					Bucket: aws.String(bd.bucket),
 					Key:    aws.String(key),
 				})
 				if err != nil {
+					glog.V(10).Infoln(bd.prefix + item.Name + "-spec.yaml")
+					glog.V(10).Infoln(bd.bucket + "/" + key)
 					panic(err)
 				} else {
 					file, err := ioutil.ReadAll(obj.Body)
@@ -180,10 +243,12 @@ func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 						} else {
 							osbdef := db.ServiceDefinitionToOsb(i)
 							if osbdef.Name != "" {
-								err = db.PutServiceDefinition(osbdef)
+								err = db.DataStorePort.PutServiceDefinition(osbdef)
 								if err == nil {
 									c.Set(item.Name, osbdef)
 								} else {
+									glog.V(10).Infoln(item)
+									glog.V(10).Infoln(osbdef)
 									glog.Errorln(err)
 								}
 							} else {
@@ -194,7 +259,7 @@ func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 						}
 					}
 				}
-				db.Unlock("ServiceSpec-" + item.Name)
+				db.DataStorePort.Unlock("ServiceSpec-" + item.Name)
 			} else {
 				lockretry = append(lockretry, "ServiceSpec-"+item.Name)
 			}
@@ -214,11 +279,11 @@ func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 		for _, item := range lockretry {
 			go func() {
 				defer wg.Done()
-				if db.WaitForUnlock(item) == false {
+				if db.DataStorePort.WaitForUnlock(item) == false {
 					failedlock = true
 				} else {
-					serviceuuid := uuid.NewV5(db.accountuuid, item).String()
-					sdef, err := db.GetServiceDefinition(serviceuuid)
+					serviceuuid := uuid.NewV5(db.Accountuuid, item).String()
+					sdef, err := db.DataStorePort.GetServiceDefinition(serviceuuid)
 					if err != nil {
 						glog.Errorf("failed to get service definition for %q", item)
 						glog.Errorln(err)
@@ -233,6 +298,12 @@ func metadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 			metadataUpdate(l, c, bd, s3svc, db)
 		}
 	}
+}
+
+// ServiceLastUpdate date when a service exposed by the broker was last updated from s3
+type ServiceLastUpdate struct {
+	Name string
+	Date time.Time
 }
 
 func listingUpdate(l *[]ServiceLastUpdate, c cache.Cache) {
@@ -257,50 +328,6 @@ func listingUpdate(l *[]ServiceLastUpdate, c cache.Cache) {
 	}
 	glog.Infof("Updating listings cache with %q", services)
 	c.Set("__LISTINGS__", services)
-}
-
-// BusinessLogic holds configuration, caches and aws service clients
-type BusinessLogic struct {
-	sync.RWMutex
-	keyid          string
-	secretkey      string
-	profile        string
-	tablename      string
-	s3bucket       string
-	s3region       string
-	s3key          string
-	templatefilter string
-	region         string
-	awssession     session.Session
-	s3svc          s3.S3
-	ddbsvc         dynamodb.DynamoDB
-	ssmsvc         ssm.SSM
-	catalogcache   cache.Cache
-	listingcache   cache.Cache
-	instances      map[string]*ServiceInstance
-	brokerid       string
-	db             Db
-	rolearn        string
-	overrides      map[string]string
-}
-
-// ServiceLastUpdate date when a service exposed by the broker was last updated from s3
-type ServiceLastUpdate struct {
-	Name string
-	Date time.Time
-}
-
-// ServiceNeedsUpdate if Update == true the metadata should be refreshed from s3
-type ServiceNeedsUpdate struct {
-	Name   string
-	Update bool
-}
-
-// BucketDetailsRequest describes the details required to fetch metadata and templates from s3
-type BucketDetailsRequest struct {
-	bucket string
-	prefix string
-	suffix string
 }
 
 var _ broker.Interface = &BusinessLogic{}
@@ -384,35 +411,45 @@ func getParams(in interface{}) (keys []string) {
 	return keys
 }
 
-func (b *BusinessLogic) getOverrides(params []string, ns string, s string) (overrides map[string]string) {
-	overrides = make(map[string]string)
+func (b *BusinessLogic) getOverrides(params []string, space string, service string, cluster string) (overrides map[string]string) {
+	overrides_env := make(map[string]string)
 	for k, v := range b.overrides {
-		if stringInSlice(k, params) {
-			overrides[k] = v
-		}
+		glog.V(10).Infof("%q: %q", k, v)
+		overrides_env[k] = v
 	}
 
 	var services []string
 	var namespaces []string
-	if s != "all" {
+	var clusters []string
+	if service != "all" {
 		services = append(services, "all")
 	}
-	if ns != "all" {
+	if space != "all" {
 		namespaces = append(namespaces, "all")
 	}
-	services = append(services, s)
-	namespaces = append(namespaces, ns)
-	for _, s := range services {
+	if cluster != "all" {
+		clusters = append(clusters, "all")
+	}
+	overrides = make(map[string]string)
+	services = append(services, service)
+	namespaces = append(namespaces, space)
+	clusters = append(clusters, cluster)
+	for _, c := range clusters {
 		for _, n := range namespaces {
-			for _, p := range params {
-				paramname := b.brokerid + "_" + n + "_" + s + "_" + p
-				v, err := b.db.GetParam(paramname)
-				if err != nil {
-					glog.Infof("Unable to fetch parameter override for %#+v", paramname)
-					glog.Infoln(err.Error())
-				}
-				if v != "" {
-					overrides[p] = v
+			for _, s := range services {
+				for _, p := range params {
+					paramname := b.brokerid + "_" + c + "_" + n + "_" + s + "_" + p
+					v, err := b.db.DataStorePort.GetParam(paramname)
+					if err != nil {
+						glog.Infof("Unable to fetch parameter override for %#+v", paramname)
+						glog.Infoln(err.Error())
+					}
+					if v != "" {
+						overrides[p] = v
+					}
+					if _, ok := overrides_env[paramname]; ok {
+						overrides[p] = overrides_env[paramname]
+					}
 				}
 			}
 		}
@@ -426,7 +463,16 @@ func (b *BusinessLogic) getAwsClient(params map[string]string) (cfnsvc *cloudfor
 	region := aws.String(b.region)
 	keyid := b.keyid
 	secretkey := b.secretkey
-	if b.keyid != "" {
+	if _, ok := params["aws_access_key"]; ok {
+		keyid = params["aws_access_key"]
+	}
+	if _, ok := params["aws_secret_key"]; ok {
+		secretkey = params["aws_secret_key"]
+	}
+	glog.V(10).Infoln(params)
+	glog.V(10).Infoln(secretkey)
+	if keyid != "" {
+		glog.V(10).Infof("Using override credentials with keyid %q\n", keyid)
 		defaultCreds = *credentials.NewStaticCredentials(keyid, secretkey, "")
 	} else {
 		defaultCreds = *credentials.NewChainCredentials(
@@ -447,20 +493,23 @@ func (b *BusinessLogic) getAwsClient(params map[string]string) (cfnsvc *cloudfor
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#provisioning
 func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.RequestContext) (*broker.ProvisionResponse, error) {
 	lockid := "serviceInstance__provision__" + request.InstanceID
-	gotlock := b.db.Lock(lockid)
+	gotlock := b.db.DataStorePort.Lock(lockid)
 	if gotlock == false {
-		if b.db.WaitForUnlock(lockid) == false {
-			gotlock = b.db.Lock(lockid)
+		if b.db.DataStorePort.WaitForUnlock(lockid) == false {
+			gotlock = b.db.DataStorePort.Lock(lockid)
 		}
 	}
 	if gotlock {
 		response := broker.ProvisionResponse{}
-		instance := &ServiceInstance{
+		instance := &dbConnector.ServiceInstance{
 			ID:        request.InstanceID,
 			ServiceID: request.ServiceID,
 			PlanID:    request.PlanID,
 		}
-		servicedef, err := b.db.GetServiceDefinition(request.ServiceID)
+		if request.AcceptsIncomplete {
+			response.Async = true
+		}
+		servicedef, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
 		var plandef osb.Plan
 		for _, v := range servicedef.Plans {
 			if v.ID == request.PlanID {
@@ -470,13 +519,13 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 		if err != nil {
 			panic(err)
 		}
-		i, err := b.db.GetServiceInstance(request.InstanceID)
+		i, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
 
 		// Check to see if this is the same instance
 		if err != nil {
 			panic(err)
 		} else if i.ID != "" {
-			if i.match(instance) {
+			if i.Match(instance) {
 				response.Exists = true
 				return &response, nil
 			}
@@ -502,12 +551,42 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 			//glog.Infoln(plandef.Schemas.ServiceInstance.Create.Parameters)
 
 			params := getParams(plandef.Schemas.ServiceInstance.Create.Parameters)
-			//glog.Infoln(params)
-			completeparams := b.getOverrides(params, "all", "all")
+			glog.V(10).Infoln(params)
+			ns := "all"
+			cluster := "all"
+			if _, ok := request.Context["platform"]; ok {
+				if request.Context["platform"].(string) == "cloudfoundry" {
+					ns = request.Context["space_guid"].(string)
+					ns = strings.Replace(ns, "-", "", -1)
+					cluster = request.Context["organization_guid"].(string)
+					cluster = strings.Replace(cluster, "-", "", -1)
+				} else if request.Context["platform"].(string) == "kubernetes" {
+					ns = request.Context["namespace"].(string)
+					cluster = request.Context["clusterid"].(string)
+				}
+			}
+			completeparams := b.getOverrides(params, ns, servicedef.Name, cluster)
+			glog.V(10).Infoln(completeparams)
 			for k, p := range instance.Params {
 				completeparams[k] = p
 			}
-			instance.Params = completeparams
+			glog.V(10).Infoln(completeparams)
+			cfnsvc, _ := b.getAwsClient(completeparams)
+			instance.Params = make(map[string]string)
+			for k, v := range completeparams {
+				instance.Params[k] = v
+			}
+			glog.V(10).Infoln(instance.Params)
+			rolearn := b.rolearn
+			if _, ok := completeparams["aws_cloudformation_role_arn"]; ok {
+				rolearn = completeparams["aws_cloudformation_role_arn"]
+			}
+			nonCfnParamsarams := []string{"aws_cloudformation_role_arn", "aws_access_key", "aws_secret_key", "SBArtifactS3KeyPrefix", "SBArtifactS3Bucket"}
+			for _, k := range nonCfnParamsarams {
+				if _, ok := completeparams[k]; ok {
+					delete(completeparams, k)
+				}
+			}
 			var inputParams []*cloudformation.Parameter
 			for k, p := range completeparams {
 				param := cloudformation.Parameter{
@@ -516,29 +595,31 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 				}
 				inputParams = append(inputParams, &param)
 			}
+			glog.V(10).Infoln(inputParams)
 			stackInput := cloudformation.CreateStackInput{
 				Capabilities: Cap,
 				Parameters:   inputParams,
-				RoleARN:      aws.String(b.rolearn),
+				RoleARN:      aws.String(rolearn),
 				StackName:    aws.String("CfnServiceBroker-" + servicedef.Name + "-" + instance.ID),
 				Tags:         tags,
 				TemplateURL:  aws.String("https://s3.amazonaws.com/" + b.s3bucket + "/" + b.s3key + strings.TrimSuffix(servicedef.Name, "-apb") + b.templatefilter),
 			}
-			cfnsvc, _ := b.getAwsClient(completeparams)
+			glog.V(10).Infoln(stackInput)
 			results, err := cfnsvc.CreateStack(&stackInput)
 			if err != nil {
-				panic(err)
+				glog.Errorln(err)
+				b.db.DataStorePort.Unlock(lockid)
+				return &response, err
 			}
 			instance.StackID = *results.StackId
-			err = b.db.PutServiceInstance(*instance)
+			err = b.db.DataStorePort.PutServiceInstance(*instance)
 			if err != nil {
-				panic(err)
+				glog.Errorln(err)
+				b.db.DataStorePort.Unlock(lockid)
+				return &response, err
 			}
 		}
-		if request.AcceptsIncomplete {
-			response.Async = true
-		}
-		b.db.Unlock(lockid)
+		b.db.DataStorePort.Unlock(lockid)
 		return &response, nil
 	}
 	description := "Failed to get lock for instanceId" + string(request.InstanceID)
@@ -552,27 +633,33 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#deprovisioning
 func (b *BusinessLogic) Deprovision(request *osb.DeprovisionRequest, c *broker.RequestContext) (*broker.DeprovisionResponse, error) {
 	lockid := "serviceInstance__deprovision__" + request.InstanceID
-	gotlock := b.db.Lock(lockid)
+	gotlock := b.db.DataStorePort.Lock(lockid)
 	response := broker.DeprovisionResponse{}
 	if gotlock == false {
-		if b.db.WaitForUnlock(lockid) == false {
-			gotlock = b.db.Lock(lockid)
+		if b.db.DataStorePort.WaitForUnlock(lockid) == false {
+			gotlock = b.db.DataStorePort.Lock(lockid)
 		}
 	}
 	if gotlock {
-		si, err := b.db.GetServiceInstance(request.InstanceID)
+		si, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
 		if err != nil {
 			panic(err)
 		}
-		params := make(map[string]string)
-		cfnsvc, _ := b.getAwsClient(params)
+		if si.StackID == "" {
+			errmsg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way, assuming there is nothing to deprovision"
+			glog.Errorln(errmsg)
+			response.Async = false
+			return &response, nil
+		}
+		glog.V(10).Infoln(si.Params)
+		cfnsvc, _ := b.getAwsClient(si.Params)
 		_, err = cfnsvc.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(si.StackID)})
 
 		if err != nil {
 			panic(err)
 		}
 
-		b.db.Unlock(lockid)
+		b.db.DataStorePort.Unlock(lockid)
 
 		if err != nil {
 			panic(err)
@@ -594,11 +681,20 @@ func (b *BusinessLogic) Deprovision(request *osb.DeprovisionRequest, c *broker.R
 func (b *BusinessLogic) LastOperation(request *osb.LastOperationRequest, c *broker.RequestContext) (*broker.LastOperationResponse, error) {
 	glog.Infoln(request)
 	glog.Infoln(c)
-	si, err := b.db.GetServiceInstance(request.InstanceID)
+	si, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
 	if err != nil {
 		panic(err)
 	}
 	glog.Infoln(si)
+	r := broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "", Description: nil}}
+	if si.StackID == "" {
+		errmsg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way"
+		glog.Errorln(errmsg)
+		r.LastOperationResponse.State = "failed"
+		r.LastOperationResponse.Description = &errmsg
+		return &r, nil
+	}
+	glog.V(10).Infoln(si.Params)
 	cfnsvc, _ := b.getAwsClient(si.Params)
 	response, err := cfnsvc.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: aws.String(si.StackID)})
 	if err != nil {
@@ -608,7 +704,6 @@ func (b *BusinessLogic) LastOperation(request *osb.LastOperationRequest, c *brok
 	progressingstates := []string{"CREATE_IN_PROGRESS", "DELETE_IN_PROGRESS", "UPDATE_IN_PROGRESS", "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS"}
 	successfulstates := []string{"CREATE_COMPLETE", "DELETE_COMPLETE", "UPDATE_COMPLETE"}
 	status := *response.Stacks[0].StackStatus
-	r := broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "", Description: nil}}
 	if stringInSlice(status, failedstates) {
 		glog.Errorf("CloudFormation stack failed %#+v", si.StackID)
 		glog.Errorf(status)
@@ -645,8 +740,8 @@ func stringInSlice(a string, list []string) bool {
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#request-4
 func (b *BusinessLogic) Bind(request *osb.BindRequest, c *broker.RequestContext) (*broker.BindResponse, error) {
 
-	si, err := b.db.GetServiceInstance(request.InstanceID)
-	service, err := b.db.GetServiceDefinition(si.ServiceID)
+	si, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
+	service, err := b.db.DataStorePort.GetServiceDefinition(si.ServiceID)
 	if err != nil {
 		panic(err)
 	}
@@ -687,6 +782,18 @@ func (b *BusinessLogic) Bind(request *osb.BindRequest, c *broker.RequestContext)
 	return &response, nil
 }
 
+func (b *BusinessLogic) GetBinding(request *osb.GetBindingRequest, c *broker.RequestContext) (*broker.GetBindingResponse, error) {
+	glog.V(10).Infoln(request)
+	glog.V(10).Infoln(c)
+	return &broker.GetBindingResponse{}, nil
+}
+
+func BindingLastOperation(request *osb.BindingLastOperationRequest, c *broker.RequestContext) (*broker.LastOperationResponse, error) {
+	glog.V(10).Infoln(request)
+	glog.V(10).Infoln(c)
+	return &broker.LastOperationResponse{}, nil
+}
+
 func toSnakeCase(str string) string {
 	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
@@ -718,6 +825,6 @@ func (b *BusinessLogic) BindingLastOperation(request *osb.BindingLastOperationRe
 
 // ValidateBrokerAPIVersion does nothing ?
 func (b *BusinessLogic) ValidateBrokerAPIVersion(version string) error {
-	glog.Infof("Version: %q", version)
+	glog.Infof("Client OSB API Version: %q", version)
 	return nil
 }

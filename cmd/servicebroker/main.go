@@ -4,31 +4,31 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/golang/glog"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"os"
 	"os/signal"
 	"path"
 	"strconv"
 	"syscall"
-	"github.com/golang/glog"
-	prom "github.com/prometheus/client_golang/prometheus"
 
-	"github.com/pmorie/osb-broker-lib/pkg/metrics"
-	"github.com/jaymccon/osb-broker-lib/pkg/rest"
-	"github.com/jaymccon/osb-broker-lib/pkg/server"
 	"github.com/awslabs/aws-service-broker/pkg/broker"
+	"github.com/jaymccon/osb-broker-lib/pkg/server"
+	"github.com/pmorie/osb-broker-lib/pkg/metrics"
+	"github.com/pmorie/osb-broker-lib/pkg/rest"
 )
 
 var options struct {
 	broker.Options
 
-	Port        int
-	Insecure    bool
-	TLSCert     string
-	TLSKey      string
-	TLSCertFile string
-	TLSKeyFile  string
-	EnableBasicAuth bool
-	BasicAuthUser string
+	Port              int
+	Insecure          bool
+	TLSCert           string
+	TLSKey            string
+	TLSCertFile       string
+	TLSKeyFile        string
+	EnableBasicAuth   bool
+	BasicAuthUser     string
 	BasicAuthPassword string
 }
 
@@ -93,8 +93,8 @@ func runWithContext(ctx context.Context) error {
 	if options.BasicAuthPassword == "" {
 		options.BasicAuthPassword = os.Getenv("SECURITY_USER_PASSWORD")
 	}
-	auth := server.BasicAuthWrapper{User: options.BasicAuthUser, Pass: options.BasicAuthPassword}
-	s := server.New(api, reg, options.EnableBasicAuth, auth)
+	auth := server.BasicAuth{User: options.BasicAuthUser, Pass: options.BasicAuthPassword}
+	s := server.New(api, reg, options.EnableBasicAuth, auth.Secret)
 
 	glog.Infof("Starting broker!")
 

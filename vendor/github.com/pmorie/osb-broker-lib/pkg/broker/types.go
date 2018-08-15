@@ -42,6 +42,11 @@ type BindResponse struct {
 	Exists bool `json:"-"`
 }
 
+// GetBinding is sent as the response to a get binding call.
+type GetBindingResponse struct {
+	osb.GetBindingResponse
+}
+
 // UnbindResponse is sent as the response to a bind call.
 type UnbindResponse struct {
 	osb.UnbindResponse
