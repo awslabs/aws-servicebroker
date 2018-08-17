@@ -571,8 +571,8 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 			}
 			completeparams := b.getOverrides(params, ns, servicedef.Name, cluster)
 			glog.V(10).Infoln(completeparams)
-			for k, p := range instance.Params {
-				completeparams[k] = p
+			for k, p := range request.Parameters {
+				completeparams[k] = p.(string)
 			}
 			glog.V(10).Infoln(completeparams)
 			cfnsvc, _ := b.getAwsClient(completeparams)
@@ -585,8 +585,8 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 			if _, ok := completeparams["aws_cloudformation_role_arn"]; ok {
 				rolearn = completeparams["aws_cloudformation_role_arn"]
 			}
-			nonCfnParamsarams := []string{"aws_cloudformation_role_arn", "aws_access_key", "aws_secret_key", "SBArtifactS3KeyPrefix", "SBArtifactS3Bucket"}
-			for _, k := range nonCfnParamsarams {
+			nonCfnParamarams := []string{"aws_cloudformation_role_arn", "aws_access_key", "aws_secret_key", "SBArtifactS3KeyPrefix", "SBArtifactS3Bucket", "region"}
+			for _, k := range nonCfnParamarams {
 				if _, ok := completeparams[k]; ok {
 					delete(completeparams, k)
 				}
@@ -597,6 +597,8 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 					ParameterKey:   aws.String(k),
 					ParameterValue: aws.String(p),
 				}
+				glog.V(10).Infoln(param)
+				glog.V(10).Infof("%q: %q\n", k, p)
 				inputParams = append(inputParams, &param)
 			}
 			glog.V(10).Infoln(inputParams)
