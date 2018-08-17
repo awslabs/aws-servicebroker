@@ -85,11 +85,11 @@ aws-servicebroker \
     -alsologtostderr \
     -region us-east-1 \
     -s3Bucket awsservicebrokeralpha \
-    -s3Key pcf/templates \
+    -s3Key pcf/templates/ \
     -s3Region us-west-2 \
     -roleArn arn:aws:iam::1231231234:role/aws-service-broker-cloudformation \
     -port 3199 \
-    -tableName awssb
+    -tableName awssb \
     -enableBasicAuth \
     -basicAuthUser admin \
     -basicAuthPass <Password-Goes-Here>
