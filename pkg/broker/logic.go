@@ -154,6 +154,10 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		o.S3Key,
 		o.TemplateFilter,
 	}
+	s3key := o.S3Key
+	if strings.HasSuffix(o.S3Key, "/") == false {
+		s3key = s3key + "/"
+	}
 	bl := BusinessLogic{
 		keyid:          o.KeyID,
 		secretkey:      o.SecretKey,
@@ -161,7 +165,7 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		tablename:      o.TableName,
 		s3bucket:       o.S3Bucket,
 		s3region:       o.S3Region,
-		s3key:          o.S3Key,
+		s3key:          s3key,
 		templatefilter: o.TemplateFilter,
 		region:         o.Region,
 		s3svc:          *s3svc,
