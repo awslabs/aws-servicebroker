@@ -146,3 +146,50 @@ svcat unbind --name test-polly-bind
 # delete service
 svcat deprovision test-polly
 ```
+
+## Creating Resources In Seperate Target Account
+
+The aws-service-broker has the ability to be run from a central account and create resources in a target account.
+
+First, assume PowerUser credentials in the target account and create the role for the
+aws-service-broker to assume.
+
+```
+service_broker_account_id=123456654321
+
+aws cloudformation create-stack \
+    --stack-name AwsServiceBrokerWorkerRole \
+    --template-body file://setup/aws-service-broker-worker.json \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --parameters ParameterKey=ServiceBrokerAccountId,ParameterValue=$service_broker_account_id
+```
+
+To do you this you must ensure that the role the **aws-service-broker** is running allows it to assume the target role.
+
+Get the ARN:
+
+```
+aws cloudformation describe-stacks \
+        --stack-name AwsServiceBrokerWorkerRole | jq -r .Stacks[0].Outputs[0].OutputValue
+```
+
+Ensure the service broker role has:
+
+```json
+{
+  "Action": "sts:AssumeRole",
+  "Resource": "arn:aws:iam::123456654321:role/aws-service-broker-worker",
+  "Effect": "Allow"
+}
+```
+
+Provide **target_account_id** and **target_role_name** as parameters to the provision command
+to tell the service broker to assume the role in another account to provision.
+
+```
+svcat provision my-ingress-api-gw \
+    -n my-app \
+    --class my-class \
+    --plan prd \
+    -p VpcId=vpc-1234567887654321,target_account_id=123456654321,target_role_name=aws-service-broker-worker
+````
