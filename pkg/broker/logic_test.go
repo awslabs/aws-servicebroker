@@ -1,13 +1,10 @@
 package broker
 
 import (
-	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
-	"strings"
 	"testing"
 )
 
@@ -27,18 +24,9 @@ func (T *TestCases) GetTests(f string) error {
 	return nil
 }
 
-func TestNewBusinessLogic(t *testing.T) {
-	assert := assert.New(t)
-	options := new(TestCases)
-	options.GetTests("../../testcases/options.yaml")
-	spew.Dump(options)
-	for k, v := range *options {
-		expectSuccess := true
-		if strings.HasSuffix(k, "Bad") {
-			expectSuccess = false
-		}
-		fmt.Println(expectSuccess)
-		_, err := NewBusinessLogic(v)
-		assert.Nil(err)
-	}
+func TestAssumeRoleRegion(t *testing.T) {
+	bl := BusinessLogic{region: "us-east-2"}
+	cfnclient, ssmclient := bl.getAwsClient(map[string]string{})
+	assert.Equal(t, cfnclient.Endpoint, "https://cloudformation.us-east-2.amazonaws.com", "Checking cfn endpoint")
+	assert.Equal(t, ssmclient.Endpoint, "https://ssm.us-east-2.amazonaws.com", "Checking cfn endpoint")
 }

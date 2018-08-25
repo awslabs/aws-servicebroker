@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -60,6 +61,7 @@ type BucketDetailsRequest struct {
 // BusinessLogic holds configuration, caches and aws service clients
 type BusinessLogic struct {
 	sync.RWMutex
+	accountId      string
 	keyid          string
 	secretkey      string
 	profile        string
@@ -76,7 +78,6 @@ type BusinessLogic struct {
 	instances      map[string]*dbConnector.ServiceInstance
 	brokerid       string
 	db             dbConnector.Db
-	rolearn        string
 	overrides      map[string]string
 }
 
@@ -120,6 +121,8 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 	accountid := *callerid.Account
 	accountuuid := uuid.NewV5(uuid.NullUUID{}.UUID, accountid+o.BrokerID)
 
+	glog.Infof("Running as caller identity '%+v'.", callerid)
+
 	var db dbConnector.Db
 	db.Brokerid = o.BrokerID
 	db.Accountid = accountid
@@ -159,6 +162,7 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		s3key = s3key + "/"
 	}
 	bl := BusinessLogic{
+		accountId:      accountid,
 		keyid:          o.KeyID,
 		secretkey:      o.SecretKey,
 		profile:        o.Profile,
@@ -173,7 +177,6 @@ func NewBusinessLogic(o Options) (*BusinessLogic, error) {
 		listingcache:   listingcache,
 		brokerid:       o.BrokerID,
 		db:             db,
-		rolearn:        o.RoleArn,
 		overrides:      overrides,
 	}
 	updateCatalog(listingcache, catalogcache, *bd, *s3svc, db, bl)
@@ -458,39 +461,86 @@ func (b *BusinessLogic) getOverrides(params []string, space string, service stri
 			}
 		}
 	}
-	glog.Infoln(overrides)
+	glog.Infof("Overrides: '%+v'.", overrides)
 	return overrides
 }
 
 func (b *BusinessLogic) getAwsClient(params map[string]string) (cfnsvc *cloudformation.CloudFormation, ssmsvc *ssm.SSM) {
-	var defaultCreds credentials.Credentials
-	region := aws.String(b.region)
+	creds := b.getCredentials(params)
+	cfg := aws.NewConfig().WithCredentials(&creds).WithRegion(b.region)
+	currentAccountSession := session.Must(session.NewSession(cfg))
+
+	sess, err := b.assumeTargetRole(currentAccountSession, params)
+	if err != nil {
+		panic(err)
+	}
+	return cloudformation.New(sess), ssm.New(sess)
+}
+
+func (b BusinessLogic) getCredentials(params map[string]string) credentials.Credentials {
 	keyid := b.keyid
 	secretkey := b.secretkey
+
 	if _, ok := params["aws_access_key"]; ok {
 		keyid = params["aws_access_key"]
 	}
 	if _, ok := params["aws_secret_key"]; ok {
 		secretkey = params["aws_secret_key"]
 	}
-	glog.V(10).Infoln(params)
-	glog.V(10).Infoln(secretkey)
+
 	if keyid != "" {
-		glog.V(10).Infof("Using override credentials with keyid %q\n", keyid)
-		defaultCreds = *credentials.NewStaticCredentials(keyid, secretkey, "")
-	} else {
-		defaultCreds = *credentials.NewChainCredentials(
-			[]credentials.Provider{
-				&credentials.EnvProvider{},
-				&credentials.SharedCredentialsProvider{},
-				&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.Must(session.NewSession()))},
-			})
+		glog.Infof("Found 'aws_access_key' in params, using credentials keyid '%q'.", keyid)
+		return *credentials.NewStaticCredentials(keyid, secretkey, "")
 	}
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region:      region,
-		Credentials: &defaultCreds,
+
+	glog.Infof("Did not find 'aws_access_key' in params, using default chain.")
+	return *credentials.NewChainCredentials([]credentials.Provider{
+		&credentials.EnvProvider{},
+		&credentials.SharedCredentialsProvider{},
+		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.Must(session.NewSession()))},
+	})
+}
+
+func (b BusinessLogic) assumeTargetRole(sess *session.Session, params map[string]string) (*session.Session, error) {
+	region := b.region
+
+	if _, ok := params["target_role_name"]; !ok {
+		glog.Infof("Parameter 'target_role_name' not set. Using process credentials.")
+		return sess, nil
+	}
+
+	targetAccountRoleArn := generateRoleArn(params, b.accountId)
+	glog.Infof("Assuming role arn '%s'.", targetAccountRoleArn)
+	return assumeTargetRole(sess, targetAccountRoleArn, region), nil
+}
+
+func generateRoleArn(params map[string]string, currentAccountId string) string {
+	targetRoleName := params["target_role_name"]
+
+	if _, ok := params["target_account_id"]; ok {
+		targetAccountId := params["target_account_id"]
+
+		glog.Infof("Params 'target_account_id' present in params, assuming role in target account '%s'.", targetAccountId)
+		return fmtArn(targetAccountId, targetRoleName)
+	}
+
+	glog.Infof("Params 'target_account_id' not present in params, assuming role in current account '%s'.", currentAccountId)
+	return fmtArn(currentAccountId, targetRoleName)
+}
+
+func fmtArn(accountId, roleName string) string {
+	return fmt.Sprintf("arn:aws:iam::%s:role/%s", accountId, roleName)
+}
+
+func assumeTargetRole(sess *session.Session, targetAccountRoleArn, region string) *session.Session {
+	credentialsTargetAccount := stscreds.NewCredentials(sess, targetAccountRoleArn)
+
+	sessionTargetAccount := session.Must(session.NewSession(&aws.Config{
+		Region:      &region,
+		Credentials: credentialsTargetAccount,
 	}))
-	return cloudformation.New(sess), ssm.New(sess)
+
+	return sessionTargetAccount
 }
 
 // Provision is executed when the osb api receives PUT /v2/service_instances/:instance_id
@@ -581,11 +631,7 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 				instance.Params[k] = v
 			}
 			glog.V(10).Infoln(instance.Params)
-			rolearn := b.rolearn
-			if _, ok := completeparams["aws_cloudformation_role_arn"]; ok {
-				rolearn = completeparams["aws_cloudformation_role_arn"]
-			}
-			nonCfnParamarams := []string{"aws_cloudformation_role_arn", "aws_access_key", "aws_secret_key", "SBArtifactS3KeyPrefix", "SBArtifactS3Bucket", "region"}
+			nonCfnParamarams := []string{"target_role_name", "target_account_id", "aws_access_key", "aws_secret_key", "SBArtifactS3KeyPrefix", "SBArtifactS3Bucket", "region"}
 			for _, k := range nonCfnParamarams {
 				if _, ok := completeparams[k]; ok {
 					delete(completeparams, k)
@@ -602,21 +648,24 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 				inputParams = append(inputParams, &param)
 			}
 			glog.V(10).Infoln(inputParams)
+			glog.Infof("Input Parmas '%+v'", inputParams)
 			stackInput := cloudformation.CreateStackInput{
 				Capabilities: Cap,
 				Parameters:   inputParams,
-				RoleARN:      aws.String(rolearn),
 				StackName:    aws.String("CfnServiceBroker-" + servicedef.Name + "-" + instance.ID),
 				Tags:         tags,
-				TemplateURL:  aws.String("https://s3.amazonaws.com/" + b.s3bucket + "/" + b.s3key + strings.TrimSuffix(servicedef.Name, "-apb") + b.templatefilter),
+				TemplateURL:  b.generateS3HTTPUrl(servicedef.Name),
 			}
 			glog.V(10).Infoln(stackInput)
+
+			glog.Infof("Input '%+v'", stackInput)
 			results, err := cfnsvc.CreateStack(&stackInput)
 			if err != nil {
 				glog.Errorln(err)
 				b.db.DataStorePort.Unlock(lockid)
 				return &response, err
 			}
+			glog.Infof("Create stack result '%+v'", results)
 			instance.StackID = *results.StackId
 			err = b.db.DataStorePort.PutServiceInstance(*instance)
 			if err != nil {
@@ -633,6 +682,15 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 		StatusCode:  http.StatusExpectationFailed,
 		Description: &description,
 	}
+}
+
+func (b *BusinessLogic) generateS3HTTPUrl(serviceDefName string) *string {
+	prefix := "https://s3.amazonaws.com/"
+
+	if b.s3region != "us-east-1" {
+		prefix = fmt.Sprintf("https://s3-%s.amazonaws.com/", b.s3region)
+	}
+	return aws.String(prefix + b.s3bucket + "/" + b.s3key + strings.TrimSuffix(serviceDefName, "-apb") + b.templatefilter)
 }
 
 // Deprovision executed when the osb api receives DELETE /v2/service_instances/:instance_id
