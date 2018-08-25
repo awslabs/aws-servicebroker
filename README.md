@@ -44,7 +44,7 @@ The user or role that the broker runs as requires at least the following policy
 (will scope this down further before public release).
 
 If you do not intend to assume a role for stack creation, this role will also require any permissions
-need to manage resources it creates.
+needed to manage resources it creates.
  
 ```json
 {
