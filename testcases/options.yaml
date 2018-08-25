@@ -5,5 +5,4 @@ MinimalGood:
     s3key: templates/pcf
     templatefilter: -main.template
     brokerid: aws-service-broker
-    rolearn: arn::blah
     region: us-east-1

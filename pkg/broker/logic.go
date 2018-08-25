@@ -48,7 +48,6 @@ type Options struct {
 	TemplateFilter string
 	Region         string
 	BrokerID       string
-	RoleArn        string
 }
 
 // BucketDetailsRequest describes the details required to fetch metadata and templates from s3
@@ -488,12 +487,12 @@ func (b BusinessLogic) getCredentials(params map[string]string) credentials.Cred
 		secretkey = params["aws_secret_key"]
 	}
 
-	if keyid != "" {
-		glog.Infof("Found 'aws_access_key' in params, using credentials keyid '%q'.", keyid)
+	if keyid != "" && secretkey != "" {
+		glog.Infof("Found 'aws_access_key' and 'secretkey' in params, using credentials keyid '%q'.", keyid)
 		return *credentials.NewStaticCredentials(keyid, secretkey, "")
 	}
 
-	glog.Infof("Did not find 'aws_access_key' in params, using default chain.")
+	glog.Infof("Did not find 'aws_access_key' and 'secretkey' in params, using default chain.")
 	return *credentials.NewChainCredentials([]credentials.Provider{
 		&credentials.EnvProvider{},
 		&credentials.SharedCredentialsProvider{},
@@ -631,7 +630,14 @@ func (b *BusinessLogic) Provision(request *osb.ProvisionRequest, c *broker.Reque
 				instance.Params[k] = v
 			}
 			glog.V(10).Infoln(instance.Params)
-			nonCfnParamarams := []string{"target_role_name", "target_account_id", "aws_access_key", "aws_secret_key", "SBArtifactS3KeyPrefix", "SBArtifactS3Bucket", "region"}
+			nonCfnParamarams := []string{
+				"aws_access_key",
+				"aws_secret_key",
+				"SBArtifactS3KeyPrefix",
+				"SBArtifactS3Bucket",
+				"region",
+				"target_role_name",
+				"target_account_id"}
 			for _, k := range nonCfnParamarams {
 				if _, ok := completeparams[k]; ok {
 					delete(completeparams, k)
