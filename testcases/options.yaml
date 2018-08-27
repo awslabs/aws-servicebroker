@@ -1,4 +1,4 @@
-MinimalGood:
+Minimal:
     tablename: awssb
     s3bucket: awsservicebrokeralpha
     s3region: us-west-2

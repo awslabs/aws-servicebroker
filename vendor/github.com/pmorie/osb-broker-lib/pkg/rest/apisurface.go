@@ -44,37 +44,9 @@ func (s *APISurface) OptionsHandler(w http.ResponseWriter, r *http.Request) {
 	s.writeResponse(w, http.StatusOK, nil)
 }
 
-// formatRequest generates ascii representation of a request
-func formatRequest(r *http.Request) string {
-	// Create return string
-	var request []string
-	// Add the request string
-	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
-	request = append(request, url)
-	// Add the host
-	request = append(request, fmt.Sprintf("Host: %v", r.Host))
-	// Loop through headers
-	for name, headers := range r.Header {
-		name = strings.ToLower(name)
-		for _, h := range headers {
-			request = append(request, fmt.Sprintf("%v: %v", name, h))
-		}
-	}
-
-	// If this is a POST, add post data
-	if r.Method == "POST" {
-		r.ParseForm()
-		request = append(request, "\n")
-		request = append(request, r.Form.Encode())
-	}
-	// Return the request as a string
-	return strings.Join(request, "\n")
-}
-
 // GetCatalogHandler is the mux handler that dispatches requests to get the
 // broker's catalog to the broker's Interface.
 func (s *APISurface) GetCatalogHandler(w http.ResponseWriter, r *http.Request) {
-	glog.V(10).Infoln(formatRequest(r))
 	s.Metrics.Actions.WithLabelValues("get_catalog").Inc()
 
 	version := getBrokerAPIVersionFromRequest(r)
@@ -100,7 +72,6 @@ func (s *APISurface) GetCatalogHandler(w http.ResponseWriter, r *http.Request) {
 // ProvisionHandler is the mux handler that dispatches ProvisionRequests to the
 // broker's Interface.
 func (s *APISurface) ProvisionHandler(w http.ResponseWriter, r *http.Request) {
-	glog.V(10).Infoln(formatRequest(r))
 	s.Metrics.Actions.WithLabelValues("provision").Inc()
 
 	version := getBrokerAPIVersionFromRequest(r)
@@ -123,8 +94,6 @@ func (s *APISurface) ProvisionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response, err := s.Broker.Provision(request, c)
-	glog.V(10).Infof("response: %q\n", response)
-	glog.V(10).Infof("err: %q\n", err)
 	if err != nil {
 		s.writeError(w, err, http.StatusInternalServerError)
 		return

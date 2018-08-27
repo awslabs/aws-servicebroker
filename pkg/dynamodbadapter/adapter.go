@@ -2,7 +2,7 @@ package dynamodbadapter
 
 import (
 	"fmt"
-	dbConnector "github.com/awslabs/aws-service-broker/pkg/db"
+	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -244,8 +244,8 @@ func (db DdbDataStore) GetServiceDefinition(serviceuuid string) (osb.Service, er
 }
 
 // GetServiceInstance fetches given service instance from Dynamo
-func (db DdbDataStore) GetServiceInstance(sid string) (dbConnector.ServiceInstance, error) {
-	var si dbConnector.ServiceInstance
+func (db DdbDataStore) GetServiceInstance(sid string) (serviceinstance.ServiceInstance, error) {
+	var si serviceinstance.ServiceInstance
 	input := dynamodb.GetItemInput{
 		TableName: aws.String(db.Tablename),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -267,7 +267,7 @@ func (db DdbDataStore) GetServiceInstance(sid string) (dbConnector.ServiceInstan
 }
 
 // PutServiceInstance stores given service instance in Dynamo
-func (db DdbDataStore) PutServiceInstance(si dbConnector.ServiceInstance) error {
+func (db DdbDataStore) PutServiceInstance(si serviceinstance.ServiceInstance) error {
 	msi, err := dynamodbattribute.Marshal(si)
 	if err != nil {
 		return err

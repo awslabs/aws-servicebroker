@@ -73,9 +73,17 @@ func runWithContext(ctx context.Context) error {
 
 	addr := ":" + strconv.Itoa(options.Port)
 
-	businessLogic, err := broker.NewBusinessLogic(options.Options)
+	clients := broker.AwsClients{
+		NewCfn: broker.AwsCfnClientGetter,
+		NewS3:  broker.AwsS3ClientGetter,
+		NewSsm: broker.AwsSsmClientGetter,
+		NewSts: broker.AwsStsClientGetter,
+		NewDdb: broker.AwsDdbClientGetter,
+	}
+
+	awsBroker, err := broker.NewAWSBroker(options.Options, broker.AwsSessionGetter, clients, broker.GetCallerId, broker.UpdateCatalog, broker.PollUpdate)
 	if err != nil {
-		return err
+		glog.Fatalln(err)
 	}
 
 	// Prom. metrics
@@ -83,7 +91,7 @@ func runWithContext(ctx context.Context) error {
 	osbMetrics := metrics.New()
 	reg.MustRegister(osbMetrics)
 
-	api, err := rest.NewAPISurface(businessLogic, osbMetrics)
+	api, err := rest.NewAPISurface(awsBroker, osbMetrics)
 	if err != nil {
 		return err
 	}
