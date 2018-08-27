@@ -26,6 +26,7 @@
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "awstesting/mock",
     "internal/sdkio",
     "internal/sdkrand",
     "internal/shareddefaults",
@@ -40,10 +41,13 @@
     "service/cloudformation",
     "service/dynamodb",
     "service/dynamodb/dynamodbattribute",
+    "service/dynamodb/dynamodbiface",
     "service/dynamodb/expression",
     "service/s3",
+    "service/s3/s3iface",
     "service/ssm",
-    "service/sts"
+    "service/sts",
+    "service/sts/stsiface"
   ]
   revision = "827e7eac8c2680d5bdea7bc3ef29c596eabe1eae"
   version = "v1.13.59"
@@ -184,8 +188,17 @@
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/stretchr/objx"
+  packages = ["."]
+  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
+  version = "v0.1.1"
+
+[[projects]]
   name = "github.com/stretchr/testify"
-  packages = ["assert"]
+  packages = [
+    "assert",
+    "mock"
+  ]
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
@@ -225,6 +238,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f53b7a956d011eaabfddba4521e45047d127200d7465bcbad660c60783628fa6"
+  inputs-digest = "1918bd85e6cded76655b9252f60b9201f359f3d79fa8b1a051a8aa3543b9afa7"
   solver-name = "gps-cdcl"
   solver-version = 1
