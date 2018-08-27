@@ -40,11 +40,11 @@ You can customize the table name as needed and pass in your table name using –
 
 #### IAM 
  
-create an IAM role with the CloudFormation service in the trust policy and attach the AdministratorAccess managed 
-policy, the arn of this role must be provided to the broker with -roleArn
-
 The user or role that the broker runs as requires at least the following policy 
-(will scope this down further before public release)
+(will scope this down further before public release).
+
+If you do not intend to assume a role for stack creation, this role will also require any permissions
+needed to manage resources it creates.
  
 ```json
 {
@@ -55,7 +55,7 @@ The user or role that the broker runs as requires at least the following policy
             "cloudformation:*",
             "s3:*",
             "dynamodb:*",
-            "iam:PassRole",
+            "sts:AssumeRole",
             "ssm:*"
          ],
          "Resource": [
@@ -87,7 +87,6 @@ aws-servicebroker \
     -s3Bucket awsservicebrokeralpha \
     -s3Key pcf/templates/ \
     -s3Region us-west-2 \
-    -roleArn arn:aws:iam::1231231234:role/aws-service-broker-cloudformation \
     -port 3199 \
     -tableName awssb \
     -enableBasicAuth \
@@ -147,15 +146,17 @@ svcat unbind --name test-polly-bind
 svcat deprovision test-polly
 ```
 
-## Creating Resources In Seperate Target Account
+## Managing Resources Via Assumed Role
 
-The aws-service-broker has the ability to be run from a central account and create resources in a target account.
+The aws-service-broker has the ability to assume a role for all resources it manages.
 
-First, assume PowerUser credentials in the target account and create the role for the
-aws-service-broker to assume.
+This role can be in the same account, or a seperate target account.
+
+To setup the role, assume admin credentials in the account where the role will reside
+and create the role for the aws-service-broker to assume.
 
 ```
-service_broker_account_id=123456654321
+service_broker_account_id=123456654321 # role where the service broker will run, will be the same as the target if in single account
 
 aws cloudformation create-stack \
     --stack-name AwsServiceBrokerWorkerRole \
@@ -173,7 +174,7 @@ aws cloudformation describe-stacks \
         --stack-name AwsServiceBrokerWorkerRole | jq -r .Stacks[0].Outputs[0].OutputValue
 ```
 
-Ensure the service broker role has:
+Ensure the service broker role has the below permissions:
 
 ```json
 {

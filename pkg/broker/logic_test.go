@@ -28,5 +28,13 @@ func TestAssumeRoleRegion(t *testing.T) {
 	bl := BusinessLogic{region: "us-east-2"}
 	cfnclient, ssmclient := bl.getAwsClient(map[string]string{})
 	assert.Equal(t, cfnclient.Endpoint, "https://cloudformation.us-east-2.amazonaws.com", "Checking cfn endpoint")
-	assert.Equal(t, ssmclient.Endpoint, "https://ssm.us-east-2.amazonaws.com", "Checking cfn endpoint")
+	assert.Equal(t, ssmclient.Endpoint, "https://ssm.us-east-2.amazonaws.com", "Checking ssm endpoint")
+}
+
+func TestAssumeArnGeneration(t *testing.T) {
+	params := map[string]string{"target_role_name": "worker"}
+	accountId := "123456654321"
+	assert.Equal(t, generateRoleArn(params, accountId), "arn:aws:iam::123456654321:role/worker", "Validate role arn")
+	params["target_account_id"] = "000000000000"
+	assert.Equal(t, generateRoleArn(params, accountId), "arn:aws:iam::000000000000:role/worker", "Validate role arn")
 }
