@@ -149,8 +149,9 @@ svcat deprovision test-polly
 ## Passing In Credentials Via Parameters
 
 The **aws_access_key**, **aws_secret_key** and **aws_session_token** can
-be passed in as parameters to the provision request. If provided, they will
-be used in place of the aws service catalog process role.
+be passed in as parameters to the provision request.
+
+If provided, they will be used in place of the aws service catalog process role.
 
 For example
 
