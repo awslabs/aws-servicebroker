@@ -146,6 +146,35 @@ svcat unbind --name test-polly-bind
 svcat deprovision test-polly
 ```
 
+## Passing In Credentials Via Parameters
+
+The **aws_access_key**, **aws_secret_key** and **aws_session_token** can
+be passed in as parameters to the provision request.
+
+If provided, they will be used in place of the aws service catalog process role.
+
+For example
+
+```
+# svcat provision my-instance-name \
+	-n my-app \
+	--class my-instance-class \
+	--plan prd \
+	-p VpcId=vpc-123451234512341234,aws_access_key=bacdbcadbcadbcad,aws_secret_key=abcdabcdabcdabcdabcdabcdabcdabcd,aws_session_token=averylongsessssssssssssssssssssiontoken
+  Name:        my-instance-name
+  Namespace:   my-app
+  Status:
+  Class:       my-instance-class
+  Plan:        prd
+
+Parameters:
+  Name: my-ingress-sg-1535425552
+  VpcId: vpc-123451234512341234
+  aws_access_key: bacdbcadbcadbcad
+  aws_secret_key: abcdabcdabcdabcdabcdabcdabcdabcd
+  aws_session_token: averylongsessssssssssssssssssssiontoken
+```
+
 ## Managing Resources Via Assumed Role
 
 The aws-service-broker has the ability to assume a role for all resources it manages.

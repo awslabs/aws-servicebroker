@@ -137,6 +137,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 			nonCfnParamarams := []string{
 				"aws_access_key",
 				"aws_secret_key",
+				"aws_session_token",
 				"SBArtifactS3KeyPrefix",
 				"SBArtifactS3Bucket",
 				"region",
