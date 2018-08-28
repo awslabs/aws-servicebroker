@@ -2,18 +2,14 @@ package dynamodbadapter
 
 import (
 	"fmt"
+
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"github.com/golang/glog"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	"github.com/satori/go.uuid"
-	"math/rand"
-	"strings"
-	"syscall"
-	"time"
+	uuid "github.com/satori/go.uuid"
 )
 
 // DynamoDB implementation of DataStore Adapter
@@ -24,98 +20,6 @@ type DdbDataStore struct {
 	Region      string
 	Ddb         dynamodb.DynamoDB
 	Tablename   string
-}
-
-// Lock attempts to gain a distributed lock using DynamoDb as the backend
-func (db DdbDataStore) Lock(lockname string) bool {
-	lockuuid := uuid.NewV5(db.Accountuuid, lockname)
-	condBuilder := expression.AttributeNotExists(expression.Name("id"))
-	cond, err := expression.NewBuilder().WithCondition(condBuilder).Build()
-	if err != nil {
-		panic(err)
-	}
-	putInput := dynamodb.PutItemInput{
-		ConditionExpression:       cond.Condition(),
-		ExpressionAttributeNames:  cond.Names(),
-		ExpressionAttributeValues: cond.Values(),
-		TableName:                 aws.String(db.Tablename),
-		Item: map[string]*dynamodb.AttributeValue{
-			"id":     {S: aws.String(lockuuid.String())},
-			"userid": {S: aws.String(db.Accountuuid.String())},
-			"type":   {S: aws.String("lock")},
-		},
-	}
-	_, err = db.Ddb.PutItem(&putInput)
-	if err != nil {
-		if strings.HasPrefix(err.Error(), "ResourceNotFoundException: Requested resource not found") {
-			glog.Errorln("Cannot continue, DynamoDB table " + db.Tablename + " does not exist in Region " + db.Region + " Accountid " + db.Accountid)
-			syscall.Exit(2)
-		}
-		glog.Errorln("\"" + err.Error() + "\"")
-		glog.Errorln("already locked...")
-		return false
-	}
-	return true
-}
-
-// IsLocked tells whether a given lock is currently locked
-func (db DdbDataStore) IsLocked(lockname string) bool {
-	consistentRead := true
-	lockuuid := uuid.NewV5(db.Accountuuid, lockname)
-	getInput := dynamodb.GetItemInput{
-		ConsistentRead: &consistentRead,
-		TableName:      aws.String(db.Tablename),
-		Key: map[string]*dynamodb.AttributeValue{
-			"id": {
-				S: aws.String(lockuuid.String()),
-			},
-			"userid": {
-				S: aws.String(db.Accountuuid.String()),
-			},
-		},
-	}
-	result, err := db.Ddb.GetItem(&getInput)
-	if err != nil {
-		panic(err)
-	}
-	if len(result.Item) == 0 {
-		return false
-	}
-	return true
-}
-
-// WaitForUnlock blocks until given lock is unlocked or timeout is reached
-func (db DdbDataStore) WaitForUnlock(lockname string) bool {
-	waited := 0
-	timeout := 10
-	for db.IsLocked(lockname) {
-		rand.Seed(time.Now().UTC().UnixNano())
-		delay := rand.Intn(15-5) + 5
-		waited += delay
-		if waited > timeout {
-			db.Unlock(lockname)
-			return false
-		}
-		time.Sleep(time.Second * time.Duration(delay))
-	}
-	return true
-}
-
-// Unlock release given lock
-func (db DdbDataStore) Unlock(lockname string) error {
-	lockuuid := uuid.NewV5(db.Accountuuid, lockname)
-	DeleteInput := dynamodb.DeleteItemInput{
-		TableName: aws.String(db.Tablename),
-		Key: map[string]*dynamodb.AttributeValue{
-			"id":     {S: aws.String(lockuuid.String())},
-			"userid": {S: aws.String(db.Accountuuid.String())},
-		},
-	}
-	_, err := db.Ddb.DeleteItem(&DeleteInput)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // PutServiceDefinition push catalog service definition to DynamoDb

@@ -1,8 +1,6 @@
 package broker
 
 import (
-	"sync"
-
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -18,8 +16,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	"github.com/satori/go.uuid"
-	"gopkg.in/yaml.v2"
+	uuid "github.com/satori/go.uuid"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // Runs at startup and bootstraps the broker
@@ -102,26 +100,13 @@ func UpdateCatalog(listingcache cache.Cache, catalogcache cache.Cache, bd Bucket
 		}
 		return err
 	}
-	retries := 0
-	gotLock := db.DataStorePort.Lock("catalogUpdate")
-	for !gotLock && retries < 10 {
-		if !db.DataStorePort.WaitForUnlock("catalogUpdate") {
-			gotLock = db.DataStorePort.Lock("catalogUpdate")
-		}
-		retries += 1
+	err = listingUpdate(l, listingcache)
+	if err != nil {
+		return err
 	}
-	if gotLock {
-		err = listingUpdate(l, listingcache)
-		db.DataStorePort.Unlock("catalogUpdate")
-		if err != nil {
-			return err
-		}
-		err = metadataUpdate(listingcache, catalogcache, bd, s3svc, db, MetadataUpdate)
-		if err != nil {
-			return err
-		}
-	} else {
-		glog.Warningln("Failed to get lock for catalogUpdate after 10 retries")
+	err = metadataUpdate(listingcache, catalogcache, bd, s3svc, db, MetadataUpdate)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -138,52 +123,46 @@ func MetadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 	if err != nil {
 		return err
 	}
-	var lockretry []string
 	for _, item := range data.([]ServiceNeedsUpdate) {
 		if item.Update {
-			if db.DataStorePort.Lock("ServiceSpec-" + item.Name) {
-				key := bd.prefix + item.Name + "-spec.yaml"
-				glog.Infoln(aws.String(bd.bucket))
-				glog.Infoln(aws.String(key))
-				obj, err := s3svc.Client.GetObject(&s3.GetObjectInput{
-					Bucket: aws.String(bd.bucket),
-					Key:    aws.String(key),
-				})
+			key := bd.prefix + item.Name + "-spec.yaml"
+			glog.Infoln(aws.String(bd.bucket))
+			glog.Infoln(aws.String(key))
+			obj, err := s3svc.Client.GetObject(&s3.GetObjectInput{
+				Bucket: aws.String(bd.bucket),
+				Key:    aws.String(key),
+			})
+			if err != nil {
+				return err
+			} else if obj.Body == nil {
+				return errors.New("s3 object body missing")
+			} else {
+				file, err := ioutil.ReadAll(obj.Body)
 				if err != nil {
 					return err
-				} else if obj.Body == nil {
-					return errors.New("s3 object body missing")
 				} else {
-					file, err := ioutil.ReadAll(obj.Body)
-					if err != nil {
-						return err
+					var i map[string]interface{}
+					yamlerr := yaml.Unmarshal(file, &i)
+					if yamlerr != nil {
+						return yamlerr
 					} else {
-						var i map[string]interface{}
-						yamlerr := yaml.Unmarshal(file, &i)
-						if yamlerr != nil {
-							return yamlerr
-						} else {
-							osbdef := db.ServiceDefinitionToOsb(i)
-							if osbdef.Name != "" {
-								err = db.DataStorePort.PutServiceDefinition(osbdef)
-								if err == nil {
-									c.Set(item.Name, osbdef)
-								} else {
-									glog.V(10).Infoln(item)
-									glog.V(10).Infoln(osbdef)
-									glog.Errorln(err)
-								}
+						osbdef := db.ServiceDefinitionToOsb(i)
+						if osbdef.Name != "" {
+							err = db.DataStorePort.PutServiceDefinition(osbdef)
+							if err == nil {
+								c.Set(item.Name, osbdef)
 							} else {
-								glog.Errorf("invalid service definition for %q returned", i["name"].(string))
-								glog.Errorln(i)
-								glog.Errorln(osbdef)
+								glog.V(10).Infoln(item)
+								glog.V(10).Infoln(osbdef)
+								glog.Errorln(err)
 							}
+						} else {
+							glog.Errorf("invalid service definition for %q returned", i["name"].(string))
+							glog.Errorln(i)
+							glog.Errorln(osbdef)
 						}
 					}
 				}
-				db.DataStorePort.Unlock("ServiceSpec-" + item.Name)
-			} else {
-				lockretry = append(lockretry, "ServiceSpec-"+item.Name)
 			}
 		} else {
 			i, geterr := c.Get(item.Name)
@@ -192,32 +171,6 @@ func MetadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 			} else {
 				c.Set(item.Name, i)
 			}
-		}
-	}
-	failedlock := false
-	if len(lockretry) > 0 {
-		var wg sync.WaitGroup
-		wg.Add(len(lockretry))
-		for _, item := range lockretry {
-			go func() {
-				defer wg.Done()
-				if db.DataStorePort.WaitForUnlock(item) == false {
-					failedlock = true
-				} else {
-					serviceuuid := uuid.NewV5(db.Accountuuid, item).String()
-					sdef, err := db.DataStorePort.GetServiceDefinition(serviceuuid)
-					if err != nil {
-						glog.Errorf("failed to get service definition for %q", item)
-						glog.Errorln(err)
-					} else {
-						c.Set(serviceuuid, sdef)
-					}
-				}
-			}()
-		}
-		wg.Wait()
-		if failedlock {
-			metadataUpdate(l, c, bd, s3svc, db, MetadataUpdate)
 		}
 	}
 	return nil

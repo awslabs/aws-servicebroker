@@ -1,6 +1,9 @@
 package broker
 
 import (
+	"sync"
+	"time"
+
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -11,9 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	"github.com/satori/go.uuid"
-	"sync"
-	"time"
+	uuid "github.com/satori/go.uuid"
 )
 
 // Options cli options
@@ -85,10 +86,6 @@ type Db struct {
 
 // DataStore port, any backend datastore must provide at least these interfaces
 type DataStore interface {
-	Lock(lockname string) bool
-	IsLocked(lockname string) bool
-	WaitForUnlock(lockname string) bool
-	Unlock(lockname string) error
 	PutServiceDefinition(sd osb.Service) error
 	GetParam(paramname string) (value string, err error)
 	PutParam(paramname string, paramvalue string) error
