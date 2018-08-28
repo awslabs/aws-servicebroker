@@ -17,7 +17,3 @@ COPY --from=builder /go/src/github.com/awslabs/aws-service-broker/scripts/start_
 RUN chmod +x /usr/local/bin/start_broker.sh
 
 CMD ["start_broker.sh"]
-
-
-
-
