@@ -2,6 +2,11 @@ package broker
 
 import (
 	"errors"
+	"io/ioutil"
+	"log"
+	"strings"
+	"testing"
+
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -15,13 +20,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
-	"log"
-	"strings"
-	"testing"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type TestCases map[string]Options
@@ -106,10 +107,6 @@ func mockPollUpdate(interval int, l cache.Cache, c cache.Cache, bd BucketDetails
 // mock implementation of DataStore Adapter
 type mockDataStore struct{}
 
-func (db mockDataStore) Lock(lockname string) bool                                   { return true }
-func (db mockDataStore) IsLocked(lockname string) bool                               { return false }
-func (db mockDataStore) WaitForUnlock(lockname string) bool                          { return true }
-func (db mockDataStore) Unlock(lockname string) error                                { return nil }
 func (db mockDataStore) PutServiceDefinition(sd osb.Service) error                   { return nil }
 func (db mockDataStore) GetParam(paramname string) (value string, err error)         { return "some-value", nil }
 func (db mockDataStore) PutParam(paramname string, paramvalue string) error          { return nil }
@@ -135,50 +132,6 @@ func (db mockDataStore) GetServiceDefinition(serviceuuid string) (osb.Service, e
 	return service, nil
 }
 func (db mockDataStore) GetServiceInstance(sid string) (serviceinstance.ServiceInstance, error) {
-	si := serviceinstance.ServiceInstance{
-		ID:        "",
-		ServiceID: "",
-		PlanID:    "",
-		Params:    nil,
-		StackID:   "",
-	}
-	return si, nil
-}
-
-// mock implementation of DataStore Adapter
-type mockDataStoreLocked struct{}
-
-func (db mockDataStoreLocked) Lock(lockname string) bool                 { return false }
-func (db mockDataStoreLocked) IsLocked(lockname string) bool             { return true }
-func (db mockDataStoreLocked) WaitForUnlock(lockname string) bool        { return false }
-func (db mockDataStoreLocked) Unlock(lockname string) error              { return nil }
-func (db mockDataStoreLocked) PutServiceDefinition(sd osb.Service) error { return nil }
-func (db mockDataStoreLocked) GetParam(paramname string) (value string, err error) {
-	return "some-value", nil
-}
-func (db mockDataStoreLocked) PutParam(paramname string, paramvalue string) error          { return nil }
-func (db mockDataStoreLocked) PutServiceInstance(si serviceinstance.ServiceInstance) error { return nil }
-func (db mockDataStoreLocked) GetServiceDefinition(serviceuuid string) (osb.Service, error) {
-	service := osb.Service{
-		ID:                  "",
-		Name:                "",
-		Description:         "",
-		Tags:                nil,
-		Requires:            nil,
-		Bindable:            false,
-		BindingsRetrievable: false,
-		PlanUpdatable:       nil,
-		Plans:               nil,
-		DashboardClient: &osb.DashboardClient{
-			ID:          "",
-			Secret:      "",
-			RedirectURI: "",
-		},
-		Metadata: nil,
-	}
-	return service, nil
-}
-func (db mockDataStoreLocked) GetServiceInstance(sid string) (serviceinstance.ServiceInstance, error) {
 	si := serviceinstance.ServiceInstance{
 		ID:        "",
 		ServiceID: "",
@@ -283,10 +236,6 @@ func TestUpdateCatalog(t *testing.T) {
 
 	err = UpdateCatalog(bl.listingcache, bl.catalogcache, *bd, bl.s3svc, bl.db, *bl, mockListTemplates, mockListingUpdate, mockMetadataUpdateFail)
 	assert.EqualError(err, "MetadataUpdate failed")
-
-	bl.db.DataStorePort = mockDataStoreLocked{}
-	err = UpdateCatalog(bl.listingcache, bl.catalogcache, *bd, bl.s3svc, bl.db, *bl, mockListTemplates, mockListingUpdateFail, mockMetadataUpdate)
-	assert.Nil(err)
 }
 
 type mockS3 struct {

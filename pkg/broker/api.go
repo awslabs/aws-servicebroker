@@ -2,6 +2,9 @@ package broker
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -9,8 +12,6 @@ import (
 	"github.com/golang/glog"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
-	"net/http"
-	"strings"
 )
 
 // GetCatalog is executed on a /v2/catalog/ osb api call
@@ -49,192 +50,155 @@ func (b *AwsBroker) GetCatalog(c *broker.RequestContext) (*broker.CatalogRespons
 // Provision is executed when the osb api receives PUT /v2/service_instances/:instance_id
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#provisioning
 func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestContext) (*broker.ProvisionResponse, error) {
-	lockid := "serviceInstance__provision__" + request.InstanceID
-	gotlock := b.db.DataStorePort.Lock(lockid)
-	if gotlock == false {
-		if b.db.DataStorePort.WaitForUnlock(lockid) == false {
-			gotlock = b.db.DataStorePort.Lock(lockid)
+	response := broker.ProvisionResponse{}
+	instance := &serviceinstance.ServiceInstance{
+		ID:        request.InstanceID,
+		ServiceID: request.ServiceID,
+		PlanID:    request.PlanID,
+	}
+	if request.AcceptsIncomplete {
+		response.Async = true
+	}
+	servicedef, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
+	var plandef osb.Plan
+	for _, v := range servicedef.Plans {
+		if v.ID == request.PlanID {
+			plandef = v
 		}
 	}
-	if gotlock {
-		response := broker.ProvisionResponse{}
-		instance := &serviceinstance.ServiceInstance{
-			ID:        request.InstanceID,
-			ServiceID: request.ServiceID,
-			PlanID:    request.PlanID,
-		}
-		if request.AcceptsIncomplete {
-			response.Async = true
-		}
-		servicedef, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
-		var plandef osb.Plan
-		for _, v := range servicedef.Plans {
-			if v.ID == request.PlanID {
-				plandef = v
-			}
-		}
-		if err != nil {
-			panic(err)
-		}
-		i, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
+	if err != nil {
+		panic(err)
+	}
+	i, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
 
-		// Check to see if this is the same instance
-		if err != nil {
-			panic(err)
-		} else if i.ID != "" {
-			if i.Match(instance) {
-				response.Exists = true
-				return &response, nil
-			}
-			// Instance ID in use, this is a conflict.
-			description := "InstanceID in use"
-			return nil, osb.HTTPStatusCodeError{
-				StatusCode:  http.StatusConflict,
-				Description: &description,
-			}
-		} else {
-			var tags []*cloudformation.Tag
-			tags = append(tags, &cloudformation.Tag{
-				Key:   aws.String("ServiceBrokerId"),
-				Value: aws.String(b.region + "::" + b.brokerid),
-			})
-			tags = append(tags, &cloudformation.Tag{
-				Key:   aws.String("ServiceBrokerInstanceId"),
-				Value: aws.String(instance.ID),
-			})
-			var Cap []*string
-			Cap = append(Cap, aws.String("CAPABILITY_IAM"))
-			Cap = append(Cap, aws.String("CAPABILITY_NAMED_IAM"))
-			//glog.Infoln(plandef.Schemas.ServiceInstance.Create.Parameters)
+	// Check to see if this is the same instance
+	if err != nil {
+		panic(err)
+	} else if i.ID != "" {
+		if i.Match(instance) {
+			response.Exists = true
+			return &response, nil
+		}
+		// Instance ID in use, this is a conflict.
+		description := "InstanceID in use"
+		return nil, osb.HTTPStatusCodeError{
+			StatusCode:  http.StatusConflict,
+			Description: &description,
+		}
+	} else {
+		var tags []*cloudformation.Tag
+		tags = append(tags, &cloudformation.Tag{
+			Key:   aws.String("ServiceBrokerId"),
+			Value: aws.String(b.region + "::" + b.brokerid),
+		})
+		tags = append(tags, &cloudformation.Tag{
+			Key:   aws.String("ServiceBrokerInstanceId"),
+			Value: aws.String(instance.ID),
+		})
+		var Cap []*string
+		Cap = append(Cap, aws.String("CAPABILITY_IAM"))
+		Cap = append(Cap, aws.String("CAPABILITY_NAMED_IAM"))
+		//glog.Infoln(plandef.Schemas.ServiceInstance.Create.Parameters)
 
-			params := getParams(plandef.Schemas.ServiceInstance.Create.Parameters)
-			glog.V(10).Infoln(params)
-			ns := "all"
-			cluster := "all"
-			if _, ok := request.Context["platform"]; ok {
-				if request.Context["platform"].(string) == "cloudfoundry" {
-					ns = request.Context["space_guid"].(string)
-					ns = strings.Replace(ns, "-", "", -1)
-					cluster = request.Context["organization_guid"].(string)
-					cluster = strings.Replace(cluster, "-", "", -1)
-				} else if request.Context["platform"].(string) == "kubernetes" {
-					ns = request.Context["namespace"].(string)
-					cluster = request.Context["clusterid"].(string)
-				}
-			}
-			completeparams := getOverrides(b.brokerid, params, ns, servicedef.Name, cluster)
-			glog.V(10).Infoln(completeparams)
-			for k, p := range request.Parameters {
-				completeparams[k] = p.(string)
-			}
-			glog.V(10).Infoln(completeparams)
-			cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, completeparams))
-			instance.Params = make(map[string]string)
-			for k, v := range completeparams {
-				instance.Params[k] = v
-			}
-			glog.V(10).Infoln(instance.Params)
-			nonCfnParamarams := []string{
-				"aws_access_key",
-				"aws_secret_key",
-				"SBArtifactS3KeyPrefix",
-				"SBArtifactS3Bucket",
-				"region",
-				"target_role_name",
-				"target_account_id"}
-			for _, k := range nonCfnParamarams {
-				if _, ok := completeparams[k]; ok {
-					delete(completeparams, k)
-				}
-			}
-			var inputParams []*cloudformation.Parameter
-			for k, p := range completeparams {
-				param := cloudformation.Parameter{
-					ParameterKey:   aws.String(k),
-					ParameterValue: aws.String(p),
-				}
-				glog.V(10).Infoln(param)
-				glog.V(10).Infof("%q: %q\n", k, p)
-				inputParams = append(inputParams, &param)
-			}
-			glog.Infof("Input Parmas '%+v'", inputParams)
-			stackInput := cloudformation.CreateStackInput{
-				Capabilities: Cap,
-				Parameters:   inputParams,
-				StackName:    aws.String("CfnServiceBroker-" + servicedef.Name + "-" + instance.ID),
-				Tags:         tags,
-				TemplateURL:  b.generateS3HTTPUrl(servicedef.Name),
-			}
-			glog.V(10).Infoln(stackInput)
-			results, err := cfnsvc.CreateStack(&stackInput)
-			if err != nil {
-				glog.Errorln(err)
-				b.db.DataStorePort.Unlock(lockid)
-				return &response, err
-			}
-			instance.StackID = *results.StackId
-			err = b.db.DataStorePort.PutServiceInstance(*instance)
-			if err != nil {
-				glog.Errorln(err)
-				b.db.DataStorePort.Unlock(lockid)
-				return &response, err
+		params := getParams(plandef.Schemas.ServiceInstance.Create.Parameters)
+		glog.V(10).Infoln(params)
+		ns := "all"
+		cluster := "all"
+		if _, ok := request.Context["platform"]; ok {
+			if request.Context["platform"].(string) == "cloudfoundry" {
+				ns = request.Context["space_guid"].(string)
+				ns = strings.Replace(ns, "-", "", -1)
+				cluster = request.Context["organization_guid"].(string)
+				cluster = strings.Replace(cluster, "-", "", -1)
+			} else if request.Context["platform"].(string) == "kubernetes" {
+				ns = request.Context["namespace"].(string)
+				cluster = request.Context["clusterid"].(string)
 			}
 		}
-		b.db.DataStorePort.Unlock(lockid)
-		return &response, nil
+		completeparams := getOverrides(b.brokerid, params, ns, servicedef.Name, cluster)
+		glog.V(10).Infoln(completeparams)
+		for k, p := range request.Parameters {
+			completeparams[k] = p.(string)
+		}
+		glog.V(10).Infoln(completeparams)
+		cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, completeparams))
+		instance.Params = make(map[string]string)
+		for k, v := range completeparams {
+			instance.Params[k] = v
+		}
+		glog.V(10).Infoln(instance.Params)
+		nonCfnParamarams := []string{
+			"aws_access_key",
+			"aws_secret_key",
+			"SBArtifactS3KeyPrefix",
+			"SBArtifactS3Bucket",
+			"region",
+			"target_role_name",
+			"target_account_id"}
+		for _, k := range nonCfnParamarams {
+			if _, ok := completeparams[k]; ok {
+				delete(completeparams, k)
+			}
+		}
+		var inputParams []*cloudformation.Parameter
+		for k, p := range completeparams {
+			param := cloudformation.Parameter{
+				ParameterKey:   aws.String(k),
+				ParameterValue: aws.String(p),
+			}
+			glog.V(10).Infoln(param)
+			glog.V(10).Infof("%q: %q\n", k, p)
+			inputParams = append(inputParams, &param)
+		}
+		glog.Infof("Input Parmas '%+v'", inputParams)
+		stackInput := cloudformation.CreateStackInput{
+			Capabilities: Cap,
+			Parameters:   inputParams,
+			StackName:    aws.String("CfnServiceBroker-" + servicedef.Name + "-" + instance.ID),
+			Tags:         tags,
+			TemplateURL:  b.generateS3HTTPUrl(servicedef.Name),
+		}
+		glog.V(10).Infoln(stackInput)
+		results, err := cfnsvc.CreateStack(&stackInput)
+		if err != nil {
+			glog.Errorln(err)
+			return &response, err
+		}
+		instance.StackID = *results.StackId
+		err = b.db.DataStorePort.PutServiceInstance(*instance)
+		if err != nil {
+			glog.Errorln(err)
+			return &response, err
+		}
 	}
-	description := "Failed to get lock for instanceId" + string(request.InstanceID)
-	return nil, osb.HTTPStatusCodeError{
-		StatusCode:  http.StatusExpectationFailed,
-		Description: &description,
-	}
+	return &response, nil
 }
 
 // Deprovision executed when the osb api receives DELETE /v2/service_instances/:instance_id
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#deprovisioning
 func (b *AwsBroker) Deprovision(request *osb.DeprovisionRequest, c *broker.RequestContext) (*broker.DeprovisionResponse, error) {
-	lockid := "serviceInstance__deprovision__" + request.InstanceID
-	gotlock := b.db.DataStorePort.Lock(lockid)
 	response := broker.DeprovisionResponse{}
-	if gotlock == false {
-		if b.db.DataStorePort.WaitForUnlock(lockid) == false {
-			gotlock = b.db.DataStorePort.Lock(lockid)
-		}
+	si, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
+	if err != nil {
+		panic(err)
 	}
-	if gotlock {
-		si, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
-		if err != nil {
-			panic(err)
-		}
-		if si.StackID == "" {
-			errmsg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way, assuming there is nothing to deprovision"
-			glog.Errorln(errmsg)
-			response.Async = false
-			return &response, nil
-		}
-		glog.V(10).Infoln(si.Params)
-		cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, si.Params))
-		_, err = cfnsvc.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(si.StackID)})
-
-		if err != nil {
-			panic(err)
-		}
-
-		b.db.DataStorePort.Unlock(lockid)
-
-		if err != nil {
-			panic(err)
-		}
-		if request.AcceptsIncomplete {
-			response.Async = true
-		}
+	if si.StackID == "" {
+		errmsg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way, assuming there is nothing to deprovision"
+		glog.Errorln(errmsg)
+		response.Async = false
 		return &response, nil
 	}
-	description := "Failed to get lock for instanceId" + string(request.InstanceID)
-	return nil, osb.HTTPStatusCodeError{
-		StatusCode:  http.StatusExpectationFailed,
-		Description: &description,
+	glog.V(10).Infoln(si.Params)
+	cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, si.Params))
+	_, err = cfnsvc.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(si.StackID)})
+	if err != nil {
+		panic(err)
 	}
+
+	if request.AcceptsIncomplete {
+		response.Async = true
+	}
+	return &response, nil
 }
 
 // LastOperation executed when the osb api receives GET /v2/service_instances/:instance_id/last_operation
