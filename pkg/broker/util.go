@@ -113,12 +113,6 @@ func AwsCredentialsGetter(keyid string, secretkey string, profile string, params
 	}
 	if keyid != "" && secretkey != "" {
 		glog.Infof("Found 'aws_access_key' and 'aws_secret_key' in params, using credentials keyid '%q'.", keyid)
-
-		if _, ok := params["aws_session_token"]; ok {
-			glog.Infof("Found 'aws_session_token' in params, adding it to static credentials.")
-			return *credentials.NewStaticCredentials(keyid, secretkey, params["aws_session_token"])
-		}
-
 		return *credentials.NewStaticCredentials(keyid, secretkey, "")
 	} else if profile != "" {
 		glog.Infof("Profile specified, using profile '%q'.", profile)

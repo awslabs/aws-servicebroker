@@ -148,10 +148,13 @@ svcat deprovision test-polly
 
 ## Passing In Credentials Via Parameters
 
-The **aws_access_key**, **aws_secret_key** and **aws_session_token** can
-be passed in as parameters to the provision request.
+The **aws_access_key** and **aws_secret_key** can be passed in as parameters to the provision request.
 
 If provided, they will be used in place of the aws service catalog process role.
+
+These parameters will be stored in the DynamoDB backend.  Currentently STS generated credentials
+are not supported as there is no way to update them upon expiration via the 
+open service broker spec.
 
 For example
 
@@ -160,7 +163,7 @@ For example
 	-n my-app \
 	--class my-instance-class \
 	--plan prd \
-	-p VpcId=vpc-123451234512341234,aws_access_key=bacdbcadbcadbcad,aws_secret_key=abcdabcdabcdabcdabcdabcdabcdabcd,aws_session_token=averylongsessssssssssssssssssssiontoken
+	-p VpcId=vpc-123451234512341234,aws_access_key=bacdbcadbcadbcad,aws_secret_key=abcdabcdabcdabcdabcdabcdabcdabcd
   Name:        my-instance-name
   Namespace:   my-app
   Status:
@@ -172,7 +175,6 @@ Parameters:
   VpcId: vpc-123451234512341234
   aws_access_key: bacdbcadbcadbcad
   aws_secret_key: abcdabcdabcdabcdabcdabcdabcdabcd
-  aws_session_token: averylongsessssssssssssssssssssiontoken
 ```
 
 ## Managing Resources Via Assumed Role
