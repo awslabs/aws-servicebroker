@@ -286,47 +286,67 @@ func (db Db) ServiceDefinitionToOsb(sd map[string]interface{}) osb.Service {
 				}
 				plan.Metadata = metadata
 			} else if i.(string) == "parameters" {
-				props := make(map[string]interface{})
-				required := make([]string, 0)
+				propsForCreate := make(map[string]interface{})
+				requiredForCreate := make([]string, 0)
+				propsForUpdate := make(map[string]interface{})
+				requiredForUpdate := make([]string, 0)
 				for _, param := range k.([]interface{}) {
-					name := ""
-					isRequired := false
+					var name string
+					var required, updatable bool
 					pvals := make(map[string]interface{})
 					for pk, pv := range param.(map[interface{}]interface{}) {
-						if pk == "name" {
+						switch pk {
+						case "name":
 							name = pv.(string)
-						} else if pk == "enum" {
-							var enum []string
-							for _, e := range pv.([]interface{}) {
-								enum = append(enum, e.(string))
+						case "required":
+							required = pv.(bool)
+						case "type":
+							switch pv {
+							case "enum":
+								pvals[pk.(string)] = "string"
+							case "int":
+								pvals[pk.(string)] = "integer"
+							default:
+								pvals[pk.(string)] = pv
 							}
-							pvals[pk.(string)] = enum
-						} else if pk == "required" {
-							isRequired = pv.(bool)
-						} else if pk == "type" && pv == "enum" {
-							pvals[pk.(string)] = "string"
-						} else if pk == "type" && pv == "int" {
-							pvals[pk.(string)] = "integer"
-						} else {
+						case "updatable":
+							updatable = pv.(bool)
+						default:
 							pvals[pk.(string)] = pv
 						}
 					}
-					if isRequired {
-						required = append(required, name)
+					propsForCreate[name] = pvals
+					if required {
+						requiredForCreate = append(requiredForCreate, name)
 					}
-					props[name] = pvals
+					if updatable {
+						propsForUpdate[name] = pvals
+						if required {
+							requiredForUpdate = append(requiredForUpdate, name)
+						}
+					}
 				}
 				plan.Schemas = &osb.Schemas{
 					ServiceInstance: &osb.ServiceInstanceSchema{
 						Create: &osb.InputParametersSchema{
 							Parameters: map[string]interface{}{
 								"type":       "object",
-								"properties": props,
+								"properties": propsForCreate,
 								"$schema":    "http://json-schema.org/draft-06/schema#",
-								"required":   required,
+								"required":   requiredForCreate,
 							},
 						},
 					},
+				}
+				if len(propsForUpdate) > 0 {
+					plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
+						Parameters: map[string]interface{}{
+							"type":       "object",
+							"properties": propsForUpdate,
+							"$schema":    "http://json-schema.org/draft-06/schema#",
+							"required":   requiredForUpdate,
+						},
+					}
 				}
 			}
 		}

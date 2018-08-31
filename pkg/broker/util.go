@@ -2,15 +2,27 @@ package broker
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"regexp"
+	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/golang/glog"
-	"os"
-	"regexp"
-	"strings"
+	osb "github.com/pmorie/go-open-service-broker-client/v2"
 )
+
+var nonCfnParams = []string{
+	"aws_access_key",
+	"aws_secret_key",
+	"target_account_id",
+	"target_role_name",
+}
 
 func GetOverridesFromEnv() map[string]string {
 	var Overrides = make(map[string]string)
@@ -151,4 +163,36 @@ func generateRoleArn(params map[string]string, currentAccountId string) string {
 
 func fmtArn(accountId, roleName string) string {
 	return fmt.Sprintf("arn:aws:iam::%s:role/%s", accountId, roleName)
+}
+
+func toCFNParams(params map[string]string) []*cloudformation.Parameter {
+	var cfnParams []*cloudformation.Parameter
+	for k, v := range params {
+		if stringInSlice(k, nonCfnParams) {
+			continue
+		}
+		cfnParams = append(cfnParams, &cloudformation.Parameter{
+			ParameterKey:   aws.String(k),
+			ParameterValue: aws.String(v),
+		})
+	}
+	return cfnParams
+}
+
+func newAsyncError() osb.HTTPStatusCodeError {
+	return newHTTPStatusCodeError(http.StatusUnprocessableEntity, osb.AsyncErrorMessage, osb.AsyncErrorDescription)
+}
+
+func newHTTPStatusCodeError(statusCode int, msg, desc string) osb.HTTPStatusCodeError {
+	err := osb.HTTPStatusCodeError{
+		StatusCode: statusCode,
+	}
+	if msg != "" {
+		err.ErrorMessage = &msg
+	}
+	if desc != "" {
+		err.Description = &desc
+	}
+	glog.Error(err)
+	return err
 }

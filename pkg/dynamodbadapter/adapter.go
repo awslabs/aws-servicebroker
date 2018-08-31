@@ -117,57 +117,45 @@ type ServiceItem struct {
 }
 
 // GetServiceDefinition fetches given catalog service definition from Dynamo
-func (db DdbDataStore) GetServiceDefinition(serviceuuid string) (osb.Service, error) {
-	servicedef := osb.Service{}
-	getInput := dynamodb.GetItemInput{
-		TableName: aws.String(db.Tablename),
+func (db DdbDataStore) GetServiceDefinition(serviceuuid string) (*osb.Service, error) {
+	resp, err := db.Ddb.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id":     {S: aws.String(serviceuuid)},
 			"userid": {S: aws.String(db.Accountuuid.String())},
 		},
-	}
-	result, err := db.Ddb.GetItem(&getInput)
+		TableName: aws.String(db.Tablename),
+	})
 	if err != nil {
-		return servicedef, err
-	}
-	if len(result.Item) == 0 {
-		return servicedef, fmt.Errorf("Service Definition does not exist")
+		return nil, err
+	} else if len(resp.Item) == 0 {
+		return nil, nil
 	}
 
-	item := ServiceItem{}
-	//glog.Infoln("Debug: unmarshalling item")
-	//glog.Infoln(result.Item)
-	dynamodbattribute.UnmarshalMap(result.Item, &item)
-	if err != nil {
-		return servicedef, err
-	}
-	if item.Service.ID == "" {
-		return servicedef, fmt.Errorf("could not unmarshal service definition")
-	}
-	return item.Service, nil
+	var item ServiceItem
+	err = dynamodbattribute.UnmarshalMap(resp.Item, &item)
+	return &item.Service, err
 }
 
 // GetServiceInstance fetches given service instance from Dynamo
-func (db DdbDataStore) GetServiceInstance(sid string) (serviceinstance.ServiceInstance, error) {
-	var si serviceinstance.ServiceInstance
-	input := dynamodb.GetItemInput{
-		TableName: aws.String(db.Tablename),
+func (db DdbDataStore) GetServiceInstance(sid string) (*serviceinstance.ServiceInstance, error) {
+	resp, err := db.Ddb.GetItem(&dynamodb.GetItemInput{
+		ConsistentRead: aws.Bool(true), // Ensure we have the latest version of the service instance
 		Key: map[string]*dynamodb.AttributeValue{
 			"id":     {S: aws.String(sid)},
 			"userid": {S: aws.String(db.Accountuuid.String())},
 		},
-	}
-	outp, err := db.Ddb.GetItem(&input)
+		ProjectionExpression: aws.String("serviceinstance"),
+		TableName:            aws.String(db.Tablename),
+	})
 	if err != nil {
-		panic(err)
-		return si, err
+		return nil, err
+	} else if len(resp.Item) == 0 {
+		return nil, nil
 	}
-	dynamodbattribute.Unmarshal(outp.Item["serviceinstance"], &si)
-	if err != nil {
-		panic(err)
-		return si, err
-	}
-	return si, nil
+
+	var si serviceinstance.ServiceInstance
+	err = dynamodbattribute.Unmarshal(resp.Item["serviceinstance"], &si)
+	return &si, err
 }
 
 // PutServiceInstance stores given service instance in Dynamo

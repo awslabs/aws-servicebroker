@@ -89,8 +89,8 @@ type DataStore interface {
 	PutServiceDefinition(sd osb.Service) error
 	GetParam(paramname string) (value string, err error)
 	PutParam(paramname string, paramvalue string) error
-	GetServiceDefinition(serviceuuid string) (osb.Service, error)
-	GetServiceInstance(sid string) (serviceinstance.ServiceInstance, error)
+	GetServiceDefinition(serviceuuid string) (*osb.Service, error)
+	GetServiceInstance(sid string) (*serviceinstance.ServiceInstance, error)
 	PutServiceInstance(si serviceinstance.ServiceInstance) error
 }
 

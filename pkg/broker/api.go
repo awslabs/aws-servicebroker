@@ -74,7 +74,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 	// Check to see if this is the same instance
 	if err != nil {
 		panic(err)
-	} else if i.ID != "" {
+	} else if i != nil {
 		if i.Match(instance) {
 			response.Exists = true
 			return &response, nil
@@ -127,33 +127,9 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 			instance.Params[k] = v
 		}
 		glog.V(10).Infoln(instance.Params)
-		nonCfnParamarams := []string{
-			"aws_access_key",
-			"aws_secret_key",
-			"SBArtifactS3KeyPrefix",
-			"SBArtifactS3Bucket",
-			"region",
-			"target_role_name",
-			"target_account_id"}
-		for _, k := range nonCfnParamarams {
-			if _, ok := completeparams[k]; ok {
-				delete(completeparams, k)
-			}
-		}
-		var inputParams []*cloudformation.Parameter
-		for k, p := range completeparams {
-			param := cloudformation.Parameter{
-				ParameterKey:   aws.String(k),
-				ParameterValue: aws.String(p),
-			}
-			glog.V(10).Infoln(param)
-			glog.V(10).Infof("%q: %q\n", k, p)
-			inputParams = append(inputParams, &param)
-		}
-		glog.Infof("Input Parmas '%+v'", inputParams)
 		stackInput := cloudformation.CreateStackInput{
 			Capabilities: Cap,
-			Parameters:   inputParams,
+			Parameters:   toCFNParams(completeparams),
 			StackName:    aws.String("CfnServiceBroker-" + servicedef.Name + "-" + instance.ID),
 			Tags:         tags,
 			TemplateURL:  b.generateS3HTTPUrl(servicedef.Name),
@@ -182,7 +158,7 @@ func (b *AwsBroker) Deprovision(request *osb.DeprovisionRequest, c *broker.Reque
 	if err != nil {
 		panic(err)
 	}
-	if si.StackID == "" {
+	if si == nil || si.StackID == "" {
 		errmsg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way, assuming there is nothing to deprovision"
 		glog.Errorln(errmsg)
 		response.Async = false
@@ -212,7 +188,7 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 	}
 	glog.Infoln(si)
 	r := broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "", Description: nil}}
-	if si.StackID == "" {
+	if si == nil || si.StackID == "" {
 		errmsg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way"
 		glog.Errorln(errmsg)
 		r.LastOperationResponse.State = "failed"
@@ -225,7 +201,7 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 	if err != nil {
 		panic(err)
 	}
-	failedstates := []string{"CREATE_FAILED", "ROLLBACK_IN_PROGRESS", "ROLLBACK_FAILED", "ROLLBACK_COMPLETE", "DELETE_FAILED", "UPDATE_ROLLBACK_IN_PROGRESS", "UPDATE_ROLLBACK_FAILED", "UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS"}
+	failedstates := []string{"CREATE_FAILED", "ROLLBACK_IN_PROGRESS", "ROLLBACK_FAILED", "ROLLBACK_COMPLETE", "DELETE_FAILED", "UPDATE_ROLLBACK_IN_PROGRESS", "UPDATE_ROLLBACK_FAILED", "UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS", "UPDATE_ROLLBACK_COMPLETE"}
 	progressingstates := []string{"CREATE_IN_PROGRESS", "DELETE_IN_PROGRESS", "UPDATE_IN_PROGRESS", "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS"}
 	successfulstates := []string{"CREATE_COMPLETE", "DELETE_COMPLETE", "UPDATE_COMPLETE"}
 	status := *response.Stacks[0].StackStatus
@@ -319,13 +295,116 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 	return &broker.UnbindResponse{}, nil
 }
 
-// Update is not supported at present, so is just a skeleton
+// Update is executed when the OSB API receives `PATCH /v2/service_instances/:instance_id`
+// (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#updating-a-service-instance).
 func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.RequestContext) (*broker.UpdateInstanceResponse, error) {
-	// Your logic for updating a service goes here.
-	response := broker.UpdateInstanceResponse{}
-	if request.AcceptsIncomplete {
-		response.Async = true
+	glog.V(10).Infof("request=%+v", *request)
+
+	if !request.AcceptsIncomplete {
+		return nil, newAsyncError()
 	}
+
+	// Get the service instance
+	instance, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service instance %s: %v", request.InstanceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if instance == nil {
+		desc := fmt.Sprintf("The service instance %s was not found.", request.InstanceID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	// Verify that we're not changing the plan (this should never happen since
+	// we're setting `plan_updateable: false`, but better safe than sorry)
+	if request.PlanID != nil && *request.PlanID != instance.PlanID {
+		desc := fmt.Sprintf("The service plan cannot be changed from %s to %s.", instance.PlanID, *request.PlanID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	// Get the service
+	service, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service %s: %v", request.ServiceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if service == nil {
+		desc := fmt.Sprintf("The service %s was not found.", request.ServiceID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	// Get the plan and verify that it has updatable parameters
+	var plan osb.Plan
+	for _, p := range service.Plans {
+		if p.ID == instance.PlanID {
+			plan = p
+			break
+		}
+	}
+	if plan.ID == "" {
+		desc := fmt.Sprintf("The service plan %s was not found.", instance.PlanID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	} else if plan.Schemas.ServiceInstance.Update == nil {
+		desc := fmt.Sprintf("The service plan %s has no updatable parameters.", instance.PlanID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	// Get the parameters
+	params := make(map[string]string)
+	paramsUpdated := false
+	updatableParams := getParams(plan.Schemas.ServiceInstance.Update.Parameters)
+	for k, v := range plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["properties"].(map[string]interface{}) {
+		if d, ok := v.(map[string]interface{})["default"]; ok {
+			params[k] = fmt.Sprintf("%v", d)
+		}
+	}
+	for k, v := range instance.Params {
+		params[k] = v
+	}
+	for k, v := range request.Parameters {
+		newValue := fmt.Sprintf("%v", v)
+		if params[k] != newValue {
+			if !stringInSlice(k, updatableParams) {
+				desc := fmt.Sprintf("The parameter %s is not updatable.", k)
+				return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+			}
+			params[k] = newValue
+			paramsUpdated = true
+		}
+	}
+	if !paramsUpdated {
+		// Nothing to do, so return success (if we try a CFN update, it'll fail)
+		return &broker.UpdateInstanceResponse{}, nil
+	}
+	glog.V(10).Infof("params=%v", params)
+
+	// Update the CFN stack
+	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, params))
+	_, err = cfnSvc.UpdateStack(&cloudformation.UpdateStackInput{
+		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}),
+		Parameters:   toCFNParams(params),
+		StackName:    aws.String(instance.StackID),
+		TemplateURL:  b.generateS3HTTPUrl(service.Name),
+	})
+	if err != nil {
+		desc := fmt.Sprintf("Failed to update the CloudFormation stack %s: %v", instance.StackID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	// Update the params in the DB
+	instance.Params = params
+	err = b.db.DataStorePort.PutServiceInstance(*instance)
+	if err != nil {
+		// Try to cancel the update
+		if _, err := cfnSvc.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{StackName: aws.String(instance.StackID)}); err != nil {
+			glog.Errorf("Failed to cancel updating the CloudFormation stack %s: %v", instance.StackID, err)
+			glog.Errorf("Service instance %s and CloudFormation stack %s may be out of sync!", instance.ID, instance.StackID)
+		}
+
+		desc := fmt.Sprintf("Failed to update the service instance %s: %v", instance.ID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	response := broker.UpdateInstanceResponse{}
+	response.Async = true
 	return &response, nil
 }
 

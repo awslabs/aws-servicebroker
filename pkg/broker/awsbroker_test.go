@@ -111,7 +111,7 @@ func (db mockDataStore) PutServiceDefinition(sd osb.Service) error              
 func (db mockDataStore) GetParam(paramname string) (value string, err error)         { return "some-value", nil }
 func (db mockDataStore) PutParam(paramname string, paramvalue string) error          { return nil }
 func (db mockDataStore) PutServiceInstance(si serviceinstance.ServiceInstance) error { return nil }
-func (db mockDataStore) GetServiceDefinition(serviceuuid string) (osb.Service, error) {
+func (db mockDataStore) GetServiceDefinition(serviceuuid string) (*osb.Service, error) {
 	service := osb.Service{
 		ID:                  "",
 		Name:                "",
@@ -129,9 +129,9 @@ func (db mockDataStore) GetServiceDefinition(serviceuuid string) (osb.Service, e
 		},
 		Metadata: nil,
 	}
-	return service, nil
+	return &service, nil
 }
-func (db mockDataStore) GetServiceInstance(sid string) (serviceinstance.ServiceInstance, error) {
+func (db mockDataStore) GetServiceInstance(sid string) (*serviceinstance.ServiceInstance, error) {
 	si := serviceinstance.ServiceInstance{
 		ID:        "",
 		ServiceID: "",
@@ -139,7 +139,7 @@ func (db mockDataStore) GetServiceInstance(sid string) (serviceinstance.ServiceI
 		Params:    nil,
 		StackID:   "",
 	}
-	return si, nil
+	return &si, nil
 }
 
 func TestNewAwsBroker(t *testing.T) {

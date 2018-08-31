@@ -13,4 +13,5 @@ aws-servicebroker \
     -tableName ${DYNAMO_TABLE:=awssb} \
     -enableBasicAuth \
     -basicAuthUser ${SECURITY_USER_NAME:=admin} \
-    -basicAuthPass ${SECURITY_USER_PASSWORD} 
+    -basicAuthPass ${SECURITY_USER_PASSWORD} \
+    -v=${VERBOSE_LEVEL:=4}
