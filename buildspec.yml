@@ -1,0 +1,26 @@
+version: 0.2
+
+env:
+  variables: 
+    LATEST_TAG: latest
+  parameter-store:
+    DOCKER_REPO: "DockerRepo"
+    DOCKER_REGISTRY: "DockerRegistry"
+    DOCKER_LOGIN: "DockerLogin"
+    DOCKER_USER: "DockerUser"
+    VERSION_TAG: "ImageVersion"
+
+phases:
+  build:
+    commands:
+      - echo Entered the build phase...
+      - DOCKER_PATH="$DOCKER_REGISTRY/$DOCKER_REPO"
+      - echo "DOCKER_PATH=${DOCKER_PATH}"
+      - echo "DOCKER_USER=${DOCKER_USER}"
+      - echo "TAG=${VERSION_TAG}"
+      - TAG="$VERSION_TAG"
+      - docker build -t $DOCKER_PATH:$LATEST_TAG ./
+      - echo $DOCKER_LOGIN | docker login $DOCKER_REGISTRY -u $DOCKER_USER --password-stdin
+      - docker push $DOCKER_PATH:$LATEST_TAG 
+      - docker tag $DOCKER_PATH:$LATEST_TAG $DOCKER_PATH:$TAG
+      - docker push $DOCKER_PATH:$TAG
