@@ -23,15 +23,15 @@ Metadata:
               Statement:
                 - Effect: Allow
                   Action:
-                  - polly:SynthesizeSpeech
                   - polly:DeleteLexicon
                   - polly:GetLexicon
-                  - polly:PutLexicon
                   Resource: !Sub "arn:aws:polly:${AWS::Region}:${AWS::AccountId}:lexicon/${LexiconPrefix}*"
                 - Effect: Allow
                   Action:
+                  - polly:SynthesizeSpeech
                   - polly:ListLexicons
                   - polly:DescribeVoices
+                  - polly:PutLexicon
                   Resource: "*"
       CFNOutputs: []
     ServicePlans:
