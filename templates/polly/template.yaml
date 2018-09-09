@@ -25,7 +25,7 @@ Metadata:
                   Action:
                   - polly:DeleteLexicon
                   - polly:GetLexicon
-                  Resource: !Sub "arn:aws:polly:${AWS::Region}:${AWS::AccountId}:lexicon/${LexiconPrefix}*"
+                  Resource: !Sub "arn:aws:polly:*:${AWS::AccountId}:lexicon/${LexiconPrefix}*"
                 - Effect: Allow
                   Action:
                   - polly:SynthesizeSpeech
