@@ -123,6 +123,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 			response.Exists = true
 			return &response, nil
 		} else {
+			glog.V(10).Infof("i=%+v instance=%+v", *i, *instance)
 			desc := fmt.Sprintf("Service instance %s already exists but with different attributes.", instance.ID)
 			return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 		}
