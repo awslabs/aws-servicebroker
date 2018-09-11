@@ -226,22 +226,31 @@ func getPlanDefaults(plan *osb.Plan) map[string]string {
 }
 
 func getAvailableParams(plan *osb.Plan) (params []string) {
-	for k, _ := range plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["properties"].(map[string]interface{}) {
-		params = append(params, k)
+	properties := plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["properties"]
+	if properties != nil {
+		for k, _ := range properties.(map[string]interface{}) {
+			params = append(params, k)
+		}
 	}
 	return
 }
 
 func getUpdatableParams(plan *osb.Plan) (params []string) {
-	for k, _ := range plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["properties"].(map[string]interface{}) {
-		params = append(params, k)
+	properties := plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["properties"]
+	if properties != nil {
+		for k, _ := range properties.(map[string]interface{}) {
+			params = append(params, k)
+		}
 	}
 	return
 }
 
 func getRequiredParams(plan *osb.Plan) (params []string) {
-	for _, p := range plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"].([]interface{}) {
-		params = append(params, p.(string))
+	required := plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"]
+	if required != nil {
+		for _, p := range required.([]interface{}) {
+			params = append(params, p.(string))
+		}
 	}
 	return
 }
