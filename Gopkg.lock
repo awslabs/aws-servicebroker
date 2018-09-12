@@ -41,8 +41,6 @@
     "service/cloudformation",
     "service/dynamodb",
     "service/dynamodb/dynamodbattribute",
-    "service/dynamodb/dynamodbiface",
-    "service/dynamodb/expression",
     "service/s3",
     "service/s3/s3iface",
     "service/ssm",
@@ -188,17 +186,8 @@
   version = "v1.2.0"
 
 [[projects]]
-  name = "github.com/stretchr/objx"
-  packages = ["."]
-  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
-  version = "v0.1.1"
-
-[[projects]]
   name = "github.com/stretchr/testify"
-  packages = [
-    "assert",
-    "mock"
-  ]
+  packages = ["assert"]
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
@@ -238,6 +227,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1918bd85e6cded76655b9252f60b9201f359f3d79fa8b1a051a8aa3543b9afa7"
+  inputs-digest = "19b0fcd840ce34f3ffc572a0bbec3a2eb4380095da990104b33118cb7c3e6189"
   solver-name = "gps-cdcl"
   solver-version = 1
