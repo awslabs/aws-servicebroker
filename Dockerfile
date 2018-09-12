@@ -3,10 +3,11 @@ FROM deis/go-dev as builder
 ENV PROJECT_DIR=/go/src/github.com/awslabs/aws-service-broker
 RUN mkdir -p $PROJECT_DIR
 WORKDIR $PROJECT_DIR
+ARG SOURCE_DIR="./"
 
-COPY . .
+COPY $SOURCE_DIR .
 
-RUN dep ensure && make linux
+RUN dep ensure && make test && make linux
 
 FROM alpine:latest
 

@@ -196,7 +196,7 @@ func ListingUpdate(l *[]ServiceLastUpdate, c cache.Cache) error {
 			}
 		}
 	}
-	glog.Infof("Updating listings cache with %q", services)
+	glog.Infof("Updating listings cache with %v", services)
 	c.Set("__LISTINGS__", services)
 	return nil
 }
