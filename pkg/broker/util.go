@@ -55,19 +55,6 @@ func toSnakeCase(str string) string {
 	return strings.ToUpper(snake)
 }
 
-func getParams(in interface{}) (keys []string) {
-	p := in.(map[string]interface{})
-	params, ok := p["properties"]
-	if !ok {
-		panic("unable to find properties keys")
-	}
-	innerparams := params.(map[string]interface{})
-	for k := range innerparams {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
 func getOverrides(brokerid string, params []string, space string, service string, cluster string) (overrides map[string]string) {
 	overrides_env := GetOverridesFromEnv()
 
@@ -195,4 +182,82 @@ func newHTTPStatusCodeError(statusCode int, msg, desc string) osb.HTTPStatusCode
 	}
 	glog.Error(err)
 	return err
+}
+
+func getCluster(context map[string]interface{}) string {
+	switch context["platform"] {
+	case osb.PlatformCloudFoundry:
+		return strings.Replace(context["organization_guid"].(string), "-", "", -1)
+	case osb.PlatformKubernetes:
+		return context["clusterid"].(string)
+	default:
+		return "unknown"
+	}
+}
+
+func getNamespace(context map[string]interface{}) string {
+	switch context["platform"] {
+	case osb.PlatformCloudFoundry:
+		return strings.Replace(context["space_guid"].(string), "-", "", -1)
+	case osb.PlatformKubernetes:
+		return context["namespace"].(string)
+	default:
+		return "unknown"
+	}
+}
+
+func getPlan(service *osb.Service, planID string) *osb.Plan {
+	for _, p := range service.Plans {
+		if p.ID == planID {
+			return &p
+		}
+	}
+	return nil
+}
+
+func getPlanDefaults(plan *osb.Plan) map[string]string {
+	defaults := make(map[string]string)
+	for k, v := range plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["properties"].(map[string]interface{}) {
+		if d, ok := v.(map[string]interface{})["default"]; ok {
+			defaults[k] = paramValue(d)
+		}
+	}
+	return defaults
+}
+
+func getAvailableParams(plan *osb.Plan) (params []string) {
+	properties := plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["properties"]
+	if properties != nil {
+		for k, _ := range properties.(map[string]interface{}) {
+			params = append(params, k)
+		}
+	}
+	return
+}
+
+func getUpdatableParams(plan *osb.Plan) (params []string) {
+	properties := plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["properties"]
+	if properties != nil {
+		for k, _ := range properties.(map[string]interface{}) {
+			params = append(params, k)
+		}
+	}
+	return
+}
+
+func getRequiredParams(plan *osb.Plan) (params []string) {
+	required := plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"]
+	if required != nil {
+		for _, p := range required.([]interface{}) {
+			params = append(params, p.(string))
+		}
+	}
+	return
+}
+
+func paramValue(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", v)
 }

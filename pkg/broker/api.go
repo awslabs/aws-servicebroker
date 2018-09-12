@@ -47,106 +47,133 @@ func (b *AwsBroker) GetCatalog(c *broker.RequestContext) (*broker.CatalogRespons
 	return response, nil
 }
 
-// Provision is executed when the osb api receives PUT /v2/service_instances/:instance_id
-// https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#provisioning
+// Provision is executed when the OSB API receives `PUT /v2/service_instances/:instance_id`
+// (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#provisioning).
 func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestContext) (*broker.ProvisionResponse, error) {
-	response := broker.ProvisionResponse{}
+	glog.V(10).Infof("request=%+v", *request)
+
+	if !request.AcceptsIncomplete {
+		return nil, newAsyncError()
+	}
+
+	// Get the context
+	cluster := getCluster(request.Context)
+	namespace := getNamespace(request.Context)
+
+	// Get the service
+	service, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service %s: %v", request.ServiceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if service == nil {
+		desc := fmt.Sprintf("The service %s was not found.", request.ServiceID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	// Get the plan
+	plan := getPlan(service, request.PlanID)
+	if plan == nil {
+		desc := fmt.Sprintf("The service plan %s was not found.", request.PlanID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	// Get the parameters and verify that all required parameters are set
+	params := getPlanDefaults(plan)
+	availableParams := getAvailableParams(plan)
+	for k, v := range getOverrides(b.brokerid, availableParams, namespace, service.Name, cluster) {
+		params[k] = v
+	}
+	for k, v := range request.Parameters {
+		if !stringInSlice(k, availableParams) && !stringInSlice(k, nonCfnParams) {
+			desc := fmt.Sprintf("The parameter %s is not available.", k)
+			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+		}
+		params[k] = paramValue(v)
+	}
+	for _, p := range getRequiredParams(plan) {
+		if _, ok := params[p]; !ok {
+			desc := fmt.Sprintf("The parameter %s is required.", p)
+			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+		}
+	}
+	glog.V(10).Infof("params=%v", params)
+
 	instance := &serviceinstance.ServiceInstance{
 		ID:        request.InstanceID,
 		ServiceID: request.ServiceID,
+		Params:    params,
 		PlanID:    request.PlanID,
 	}
-	if request.AcceptsIncomplete {
-		response.Async = true
-	}
-	servicedef, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
-	var plandef osb.Plan
-	for _, v := range servicedef.Plans {
-		if v.ID == request.PlanID {
-			plandef = v
-		}
-	}
-	if err != nil {
-		panic(err)
-	}
-	i, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
 
-	// Check to see if this is the same instance
+	// Verify that the instance doesn't already exist
+	i, err := b.db.DataStorePort.GetServiceInstance(instance.ID)
 	if err != nil {
-		panic(err)
+		desc := fmt.Sprintf("Failed to get the service instance %s: %v", instance.ID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	} else if i != nil {
+		// TODO: This logic could use some love. The docs state that 200 OK MUST be
+		// returned if the service instance already exists, is fully provisioned,
+		// and the requested parameters are identical to the existing service
+		// instance. Right now, this doesn't check whether the instance is fully
+		// provisioned, and the reflect.DeepEqual check in Match will return false
+		// if the parameter order is different.
 		if i.Match(instance) {
+			glog.Infof("Service instance %s already exists.", instance.ID)
+			response := broker.ProvisionResponse{}
 			response.Exists = true
 			return &response, nil
-		}
-		// Instance ID in use, this is a conflict.
-		description := "InstanceID in use"
-		return nil, osb.HTTPStatusCodeError{
-			StatusCode:  http.StatusConflict,
-			Description: &description,
-		}
-	} else {
-		var tags []*cloudformation.Tag
-		tags = append(tags, &cloudformation.Tag{
-			Key:   aws.String("ServiceBrokerId"),
-			Value: aws.String(b.region + "::" + b.brokerid),
-		})
-		tags = append(tags, &cloudformation.Tag{
-			Key:   aws.String("ServiceBrokerInstanceId"),
-			Value: aws.String(instance.ID),
-		})
-		var Cap []*string
-		Cap = append(Cap, aws.String("CAPABILITY_IAM"))
-		Cap = append(Cap, aws.String("CAPABILITY_NAMED_IAM"))
-		//glog.Infoln(plandef.Schemas.ServiceInstance.Create.Parameters)
-
-		params := getParams(plandef.Schemas.ServiceInstance.Create.Parameters)
-		glog.V(10).Infoln(params)
-		ns := "all"
-		cluster := "all"
-		if _, ok := request.Context["platform"]; ok {
-			if request.Context["platform"].(string) == "cloudfoundry" {
-				ns = request.Context["space_guid"].(string)
-				ns = strings.Replace(ns, "-", "", -1)
-				cluster = request.Context["organization_guid"].(string)
-				cluster = strings.Replace(cluster, "-", "", -1)
-			} else if request.Context["platform"].(string) == "kubernetes" {
-				ns = request.Context["namespace"].(string)
-				cluster = request.Context["clusterid"].(string)
-			}
-		}
-		completeparams := getOverrides(b.brokerid, params, ns, servicedef.Name, cluster)
-		glog.V(10).Infoln(completeparams)
-		for k, p := range request.Parameters {
-			completeparams[k] = p.(string)
-		}
-		glog.V(10).Infoln(completeparams)
-		cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, completeparams))
-		instance.Params = make(map[string]string)
-		for k, v := range completeparams {
-			instance.Params[k] = v
-		}
-		glog.V(10).Infoln(instance.Params)
-		stackInput := cloudformation.CreateStackInput{
-			Capabilities: Cap,
-			Parameters:   toCFNParams(completeparams),
-			StackName:    aws.String("CfnServiceBroker-" + servicedef.Name + "-" + instance.ID),
-			Tags:         tags,
-			TemplateURL:  b.generateS3HTTPUrl(servicedef.Name),
-		}
-		glog.V(10).Infoln(stackInput)
-		results, err := cfnsvc.CreateStack(&stackInput)
-		if err != nil {
-			glog.Errorln(err)
-			return &response, err
-		}
-		instance.StackID = *results.StackId
-		err = b.db.DataStorePort.PutServiceInstance(*instance)
-		if err != nil {
-			glog.Errorln(err)
-			return &response, err
+		} else {
+			glog.V(10).Infof("i=%+v instance=%+v", *i, *instance)
+			desc := fmt.Sprintf("Service instance %s already exists but with different attributes.", instance.ID)
+			return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 		}
 	}
+
+	// Create the CFN stack
+	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, params))
+	resp, err := cfnSvc.CreateStack(&cloudformation.CreateStackInput{
+		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}),
+		Parameters:   toCFNParams(params),
+		StackName:    aws.String(fmt.Sprintf("aws-service-broker-%s-%s", service.Name, instance.ID)), // TODO: Sanitize service.Name and instance.ID so this doesn't result in an invalid stack name.
+		Tags: []*cloudformation.Tag{
+			{
+				Key:   aws.String("aws-service-broker:broker-id"),
+				Value: aws.String(b.brokerid),
+			},
+			{
+				Key:   aws.String("aws-service-broker:instance-id"),
+				Value: aws.String(request.InstanceID),
+			},
+			{
+				Key:   aws.String("aws-service-broker:cluster"),
+				Value: aws.String(cluster),
+			},
+			{
+				Key:   aws.String("aws-service-broker:namespace"),
+				Value: aws.String(namespace),
+			},
+		},
+		TemplateURL: b.generateS3HTTPUrl(service.Name),
+	})
+	if err != nil {
+		desc := fmt.Sprintf("Failed to create the CloudFormation stack: %v", err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	instance.StackID = aws.StringValue(resp.StackId)
+	err = b.db.DataStorePort.PutServiceInstance(*instance)
+	if err != nil {
+		// Try to delete the stack
+		if _, err := cfnSvc.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(instance.StackID)}); err != nil {
+			glog.Errorf("Failed to delete the CloudFormation stack %s: %v", instance.StackID, err)
+		}
+
+		desc := fmt.Sprintf("Failed to create the service instance %s: %v", request.InstanceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	response := broker.ProvisionResponse{}
+	response.Async = true
 	return &response, nil
 }
 
@@ -332,14 +359,8 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 	}
 
 	// Get the plan and verify that it has updatable parameters
-	var plan osb.Plan
-	for _, p := range service.Plans {
-		if p.ID == instance.PlanID {
-			plan = p
-			break
-		}
-	}
-	if plan.ID == "" {
+	plan := getPlan(service, instance.PlanID)
+	if plan == nil {
 		desc := fmt.Sprintf("The service plan %s was not found.", instance.PlanID)
 		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 	} else if plan.Schemas.ServiceInstance.Update == nil {
@@ -348,19 +369,14 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 	}
 
 	// Get the parameters
-	params := make(map[string]string)
+	params := getPlanDefaults(plan)
 	paramsUpdated := false
-	updatableParams := getParams(plan.Schemas.ServiceInstance.Update.Parameters)
-	for k, v := range plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["properties"].(map[string]interface{}) {
-		if d, ok := v.(map[string]interface{})["default"]; ok {
-			params[k] = fmt.Sprintf("%v", d)
-		}
-	}
+	updatableParams := getUpdatableParams(plan)
 	for k, v := range instance.Params {
 		params[k] = v
 	}
 	for k, v := range request.Parameters {
-		newValue := fmt.Sprintf("%v", v)
+		newValue := paramValue(v)
 		if params[k] != newValue {
 			if !stringInSlice(k, updatableParams) {
 				desc := fmt.Sprintf("The parameter %s is not updatable.", k)
