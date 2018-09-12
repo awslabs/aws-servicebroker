@@ -219,7 +219,7 @@ func getPlanDefaults(plan *osb.Plan) map[string]string {
 	defaults := make(map[string]string)
 	for k, v := range plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["properties"].(map[string]interface{}) {
 		if d, ok := v.(map[string]interface{})["default"]; ok {
-			defaults[k] = fmt.Sprintf("%v", d)
+			defaults[k] = paramValue(d)
 		}
 	}
 	return defaults
@@ -253,4 +253,11 @@ func getRequiredParams(plan *osb.Plan) (params []string) {
 		}
 	}
 	return
+}
+
+func paramValue(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", v)
 }

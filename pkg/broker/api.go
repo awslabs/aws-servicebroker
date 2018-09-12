@@ -88,7 +88,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 			desc := fmt.Sprintf("The parameter %s is not available.", k)
 			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 		}
-		params[k] = fmt.Sprintf("%v", v)
+		params[k] = paramValue(v)
 	}
 	for _, p := range getRequiredParams(plan) {
 		if _, ok := params[p]; !ok {
@@ -376,7 +376,7 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 		params[k] = v
 	}
 	for k, v := range request.Parameters {
-		newValue := fmt.Sprintf("%v", v)
+		newValue := paramValue(v)
 		if params[k] != newValue {
 			if !stringInSlice(k, updatableParams) {
 				desc := fmt.Sprintf("The parameter %s is not updatable.", k)
