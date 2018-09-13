@@ -12,6 +12,14 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// Item types
+const (
+	itemTypeParameter       = "parameter"
+	itemTypeService         = "service"
+	itemTypeServiceBinding  = "servicebinding"
+	itemTypeServiceInstance = "serviceinstance"
+)
+
 // DynamoDB implementation of DataStore Adapter
 type DdbDataStore struct {
 	Accountid   string
@@ -39,7 +47,7 @@ func (db DdbDataStore) PutServiceDefinition(sd osb.Service) error {
 			"serviceid":   {S: aws.String(serviceid.String())},
 			"servicename": {S: aws.String(sd.Name)},
 			"service":     si,
-			"type":        {S: aws.String("service")},
+			"type":        {S: aws.String(itemTypeService)},
 		},
 	}
 	_, err = db.Ddb.PutItem(&putInput)
@@ -97,7 +105,7 @@ func (db DdbDataStore) PutParam(paramname string, paramvalue string) error {
 			"id":     {S: aws.String(paramuuid)},
 			"userid": {S: aws.String(db.Accountuuid.String())},
 			"value":  {S: aws.String(paramvalue)},
-			"type":   {S: aws.String("parameter")},
+			"type":   {S: aws.String(itemTypeParameter)},
 		},
 	}
 	_, err := db.Ddb.PutItem(&putInput)
@@ -170,7 +178,7 @@ func (db DdbDataStore) PutServiceInstance(si serviceinstance.ServiceInstance) er
 			"id":              {S: aws.String(si.ID)},
 			"userid":          {S: aws.String(db.Accountuuid.String())},
 			"serviceinstance": msi,
-			"type":            {S: aws.String("serviceinstance")},
+			"type":            {S: aws.String(itemTypeServiceInstance)},
 		},
 	}
 	_, err = db.Ddb.PutItem(&putInput)
@@ -178,4 +186,43 @@ func (db DdbDataStore) PutServiceInstance(si serviceinstance.ServiceInstance) er
 		return err
 	}
 	return nil
+}
+
+// GetServiceBinding returns the specified service binding.
+func (db DdbDataStore) GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error) {
+	resp, err := db.Ddb.GetItem(&dynamodb.GetItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"id":     {S: aws.String(id)},
+			"userid": {S: aws.String(db.Accountuuid.String())},
+		},
+		ProjectionExpression: aws.String("servicebinding"),
+		TableName:            aws.String(db.Tablename),
+	})
+	if err != nil {
+		return nil, err
+	} else if len(resp.Item) == 0 {
+		return nil, nil
+	}
+
+	var sb serviceinstance.ServiceBinding
+	err = dynamodbattribute.Unmarshal(resp.Item["servicebinding"], &sb)
+	return &sb, err
+}
+
+// PutServiceBinding stores the service binding.
+func (db DdbDataStore) PutServiceBinding(sb serviceinstance.ServiceBinding) error {
+	msb, err := dynamodbattribute.Marshal(sb)
+	if err != nil {
+		return err
+	}
+	_, err = db.Ddb.PutItem(&dynamodb.PutItemInput{
+		Item: map[string]*dynamodb.AttributeValue{
+			"id":             {S: aws.String(sb.ID)},
+			"userid":         {S: aws.String(db.Accountuuid.String())},
+			"servicebinding": msb,
+			"type":           {S: aws.String(itemTypeServiceBinding)},
+		},
+		TableName: aws.String(db.Tablename),
+	})
+	return err
 }

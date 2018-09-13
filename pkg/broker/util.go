@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -13,8 +12,17 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/golang/glog"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
+)
+
+const (
+	cfnOutputPolicyArnPrefix = "PolicyArn"
+	cfnOutputSSMValuePrefix  = "ssm:"
+	cfnOutputUserKeyID       = "UserKeyId"
+	cfnOutputUserSecretKey   = "UserSecretKey"
 )
 
 var nonCfnParams = []string{
@@ -45,14 +53,6 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
-}
-
-func toSnakeCase(str string) string {
-	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToUpper(snake)
 }
 
 func getOverrides(brokerid string, params []string, space string, service string, cluster string) (overrides map[string]string) {
@@ -228,7 +228,7 @@ func getPlanDefaults(plan *osb.Plan) map[string]string {
 func getAvailableParams(plan *osb.Plan) (params []string) {
 	properties := plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["properties"]
 	if properties != nil {
-		for k, _ := range properties.(map[string]interface{}) {
+		for k := range properties.(map[string]interface{}) {
 			params = append(params, k)
 		}
 	}
@@ -238,7 +238,7 @@ func getAvailableParams(plan *osb.Plan) (params []string) {
 func getUpdatableParams(plan *osb.Plan) (params []string) {
 	properties := plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["properties"]
 	if properties != nil {
-		for k, _ := range properties.(map[string]interface{}) {
+		for k := range properties.(map[string]interface{}) {
 			params = append(params, k)
 		}
 	}
@@ -260,4 +260,56 @@ func paramValue(v interface{}) string {
 		return ""
 	}
 	return fmt.Sprintf("%v", v)
+}
+
+func getCredentials(outputs []*cloudformation.Output, ssmSvc ssmiface.SSMAPI) (map[string]interface{}, error) {
+	credentials := make(map[string]interface{})
+	var ssmValues []string
+
+	for _, o := range outputs {
+		if strings.HasPrefix(aws.StringValue(o.OutputKey), cfnOutputPolicyArnPrefix) {
+			continue
+		}
+
+		credentials[aws.StringValue(o.OutputKey)] = aws.StringValue(o.OutputValue)
+
+		// If the output value starts with "ssm:", we'll get the actual value from SSM
+		if strings.HasPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix) {
+			ssmValues = append(ssmValues, strings.TrimPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix))
+		} else if aws.StringValue(o.OutputKey) == cfnOutputUserKeyID || aws.StringValue(o.OutputKey) == cfnOutputUserSecretKey { // Legacy
+			ssmValues = append(ssmValues, aws.StringValue(o.OutputValue))
+		}
+	}
+
+	if len(ssmValues) > 0 {
+		resp, err := ssmSvc.GetParameters(&ssm.GetParametersInput{
+			Names:          aws.StringSlice(ssmValues),
+			WithDecryption: aws.Bool(true),
+		})
+		if err != nil {
+			return nil, err
+		} else if len(resp.InvalidParameters) > 0 {
+			return nil, fmt.Errorf("invalid parameters: %v", resp.InvalidParameters)
+		}
+
+		for _, p := range resp.Parameters {
+			for k, v := range credentials {
+				if strings.TrimPrefix(v.(string), cfnOutputSSMValuePrefix) == aws.StringValue(p.Name) {
+					credentials[k] = aws.StringValue(p.Value)
+				}
+			}
+		}
+	}
+
+	return credentials, nil
+}
+
+func getPolicyArn(outputs []*cloudformation.Output, scope string) (string, error) {
+	outputKey := fmt.Sprintf("%s%s", cfnOutputPolicyArnPrefix, scope)
+	for _, o := range outputs {
+		if aws.StringValue(o.OutputKey) == outputKey {
+			return aws.StringValue(o.OutputValue), nil
+		}
+	}
+	return "", fmt.Errorf("output not found: %s", outputKey)
 }

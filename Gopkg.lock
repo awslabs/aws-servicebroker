@@ -41,11 +41,11 @@
     "service/cloudformation",
     "service/dynamodb",
     "service/dynamodb/dynamodbattribute",
-    "service/dynamodb/dynamodbiface",
-    "service/dynamodb/expression",
+    "service/iam",
     "service/s3",
     "service/s3/s3iface",
     "service/ssm",
+    "service/ssm/ssmiface",
     "service/sts",
     "service/sts/stsiface"
   ]
@@ -104,7 +104,7 @@
   branch = "basic_auth"
   name = "github.com/jaymccon/osb-broker-lib"
   packages = ["pkg/server"]
-  revision = "bfb7c3ba100e248179f41094fc8dc94c31299aaa"
+  revision = "18f3aa144f1880846501710964f645fdbcc534b5"
 
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
@@ -188,17 +188,8 @@
   version = "v1.2.0"
 
 [[projects]]
-  name = "github.com/stretchr/objx"
-  packages = ["."]
-  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
-  version = "v0.1.1"
-
-[[projects]]
   name = "github.com/stretchr/testify"
-  packages = [
-    "assert",
-    "mock"
-  ]
+  packages = ["assert"]
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
@@ -238,6 +229,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1918bd85e6cded76655b9252f60b9201f359f3d79fa8b1a051a8aa3543b9afa7"
+  inputs-digest = "2e004bddc9298022a818aefa5bdec1a8df801d792082e6b679aeb00458533675"
   solver-name = "gps-cdcl"
   solver-version = 1
