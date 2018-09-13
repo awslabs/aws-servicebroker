@@ -13,6 +13,11 @@ import (
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 )
 
+const (
+	bindParamRoleName = "RoleName"
+	bindParamScope    = "Scope"
+)
+
 // GetCatalog is executed on a /v2/catalog/ osb api call
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#catalog-management
 func (b *AwsBroker) GetCatalog(c *broker.RequestContext) (*broker.CatalogResponse, error) {
@@ -265,9 +270,9 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 	}
 	for k, v := range request.Parameters {
 		switch k {
-		case "RoleName":
+		case bindParamRoleName:
 			binding.RoleName = paramValue(v)
-		case "Scope":
+		case bindParamScope:
 			binding.Scope = paramValue(v)
 		default:
 			desc := fmt.Sprintf("The parameter %s is not supported.", k)
