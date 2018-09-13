@@ -57,6 +57,7 @@ LifeCyclePrefix|Must contain only lowercase letters, numbers, periods (.), and h
 EnableVersioning|enable versioning|True
 BucketAccessControl|define if the bucket can be accessed from public or private locations|Private
 EnableLogging|enable or discable S3 logging|True
+PreventDeletion|With the PreventDeletion attribute you can preserve a resource when its stack is deleted|True
 <a id="param-custom" />
 
 ## custom
@@ -80,6 +81,7 @@ GlacierLifeCycleTransitionInDays|Define how many days objects should exist befor
 EnableVersioning|enable versioning|False|True, False
 LifeCyclePrefix|Must contain only lowercase letters, numbers, periods (.), and hyphens (-),Cannot end in numbers|Archive|
 BucketAccessControl|define if the bucket can be accessed from public or private locations|Private|Private, PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead, BucketOwnerFullControl, AwsExecRead
+PreventDeletion|With the PreventDeletion attribute you can preserve a resource when its stack is deleted|True|True, False
 
 ### Generic
 
@@ -176,6 +178,7 @@ spec:
     EnableVersioning: False # OPTIONAL
     LifeCyclePrefix: Archive # OPTIONAL
     BucketAccessControl: Private # OPTIONAL
+    PreventDeletion: True # OPTIONAL
 ```
 
 ***NOTE: This documentation is auto-generated using available metadata in the ServiceClass and CloudFormation Template. Please do not PR changes to this file, if a change is needed, update the source metadata and ci will re-generate documentation on merge.***

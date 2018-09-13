@@ -39,13 +39,13 @@ Metadata:
                         "s3:PutObjectTagging"
                     ],
                     "Effect": "Allow",
-                    "Resource": !Sub "${S3bucket.Arn}/*"
+                    "Resource": !If [ RetainBucket, !Sub "${S3BucketRetain.Arn}/*", !Sub "${S3BucketDelete.Arn}/*" ]
                 },
                 {
                     "Action": [
                         "s3:ListBucket"
                     ],
-                    "Resource": !GetAtt S3bucket.Arn,
+                    "Resource": !If [ RetainBucket, !GetAtt S3BucketRetain.Arn, !GetAtt S3BucketDelete.Arn ],
                     "Effect": "Allow"
                 }
             ]
@@ -66,6 +66,7 @@ Metadata:
             EnableVersioning: "True"
             BucketAccessControl: Private
             EnableLogging: "True"
+            PreventDeletion: "True"
         custom:
           DisplayName: "Custom"
           Description: 'S3 Bucket pre-configured with custom configuration'
@@ -84,6 +85,7 @@ Metadata:
           - EnableVersioning
           - LifeCyclePrefix
           - BucketAccessControl
+          - PreventDeletion
     ParameterLabels:
       BucketName:
         default: "BucketName"
@@ -101,6 +103,8 @@ Metadata:
         default: "Enable Logging"
       LoggingPrefix:
         default: "Logging Prefix"
+      PreventDeletion:
+        default: "Prevent Deletion"
 Parameters:
   BucketName:
     Description: >-
@@ -158,6 +162,13 @@ Parameters:
       - BucketOwnerFullControl
       - AwsExecRead
     Default: "Private"
+  PreventDeletion:
+    Description: With the PreventDeletion attribute you can preserve a resource when its stack is deleted
+    Type: String
+    AllowedValues:
+      - 'True'
+      - 'False'
+    Default: "True"
 Conditions:
   UseLogging: !Equals 
     - !Ref EnableLogging
@@ -171,8 +182,14 @@ Conditions:
   AutoBucketName: !Equals
     - !Ref BucketName
     - "Auto"
+  RetainBucket: !Equals
+    - !Ref PreventDeletion
+    - "True"
+  DeleteBucket: !Equals
+    - !Ref PreventDeletion
+    - "False"
 Resources:
-  S3bucket:
+  S3BucketRetain:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !If [ AutoBucketName, !Ref "AWS::NoValue", !Ref BucketName ]
@@ -196,6 +213,32 @@ Resources:
         - Status: Enabled
         - !Ref 'AWS::NoValue'
     DeletionPolicy: Retain
+    Condition: RetainBucket
+  S3BucketDelete:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !If [ AutoBucketName, !Ref "AWS::NoValue", !Ref BucketName ]
+      AccessControl: !Ref BucketAccessControl
+      LifecycleConfiguration:
+        Rules:
+          - Id: GlacierRule
+            Prefix: !Ref LifeCyclePrefix
+            Status: Enabled
+            ExpirationInDays: '365'
+            Transitions:
+              - TransitionInDays: !Ref GlacierLifeCycleTransitionInDays
+                StorageClass: Glacier
+      LoggingConfiguration: !If
+        - UseLogging
+        - DestinationBucketName: !Ref LoggingBucket
+          LogFilePrefix: !Ref LoggingPrefix
+        - !Ref 'AWS::NoValue'
+      VersioningConfiguration: !If
+        - UseVersioning
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+    DeletionPolicy: Delete
+    Condition: DeleteBucket
   LoggingBucket:
     Condition: UseLogging
     Type: 'AWS::S3::Bucket'
@@ -205,10 +248,10 @@ Resources:
       BucketName: !If [ AutoBucketName, !Ref "AWS::NoValue", !Join [ "-", [ !Ref BucketName, 'logging' ] ] ]
 Outputs:
   BucketName:
-    Value: !Ref S3bucket
+    Value: !If [ RetainBucket, !Ref S3BucketRetain, !Ref S3BucketDelete ]
     Description: Name of the sample Amazon S3 bucket.
   BucketArn:
-    Value: !GetAtt S3bucket.Arn
+    Value: !If [ RetainBucket, !GetAtt S3BucketRetain.Arn, !GetAtt S3BucketDelete.Arn]
     Description: Name of the Amazon S3 bucket
   LoggingBucketName:
     Value: !If [ UseLogging, !If [ AutoBucketName, !Ref LoggingBucket, !Join [ "-", [ !Ref BucketName, 'logging' ] ] ], "" ]
