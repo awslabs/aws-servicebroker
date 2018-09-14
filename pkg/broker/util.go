@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -53,6 +54,22 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+// https://gist.github.com/elwinar/14e1e897fdbe4d3432e1
+func toScreamingSnakeCase(s string) string {
+	in := []rune(s)
+
+	var out []rune
+	for i, r := range in {
+		if i > 0 && i < len(in)-1 && // If this is not the first or last rune
+			unicode.IsUpper(r) && (unicode.IsLower(in[i-1]) || unicode.IsLower(in[i+1])) { // And it's an upper preceded or followed by a lower
+			out = append(out, '_')
+		}
+		out = append(out, unicode.ToUpper(r))
+	}
+
+	return string(out)
 }
 
 func getOverrides(brokerid string, params []string, space string, service string, cluster string) (overrides map[string]string) {
@@ -271,7 +288,7 @@ func getCredentials(outputs []*cloudformation.Output, ssmSvc ssmiface.SSMAPI) (m
 			continue
 		}
 
-		credentials[aws.StringValue(o.OutputKey)] = aws.StringValue(o.OutputValue)
+		credentials[toScreamingSnakeCase(aws.StringValue(o.OutputKey))] = aws.StringValue(o.OutputValue)
 
 		// If the output value starts with "ssm:", we'll get the actual value from SSM
 		if strings.HasPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix) {
