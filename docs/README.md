@@ -2,7 +2,7 @@ AWS Service Broker Documentation
 ================================
 
 ![Architecture](/docs/images/architecture.png)
-Illustrates how Application platforms can use the broker to provision and bind to AWS services.
+*Illustrates how Application platforms can use the broker to provision and bind to AWS services.*
 
 ### Installation
 
