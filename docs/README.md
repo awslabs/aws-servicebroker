@@ -1,10 +1,8 @@
 AWS Service Broker Documentation
 ================================
-Documentation for the AWS Service Broker.
 
-* [AWS Service Broker Overview](/docs/Overview.md)
-* [FAQ](/docs/FAQ.md)
-* [Troubleshooting](/docs/Troubleshooting.md)
+![Architecture](/docs/images/architecture.png)
+Illustrates how Application platforms can use the broker to provision and bind to AWS services.
 
 ### Installation
 
