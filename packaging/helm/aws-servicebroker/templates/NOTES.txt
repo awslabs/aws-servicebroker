@@ -1,0 +1,1 @@
+For more information on usage, see https://github.com/awslabs/aws-servicebroker/docs/

@@ -1,0 +1,3 @@
+name: aws-servicebroker
+description: Deploys the AWS Service Broker
+version: 0.0.20

@@ -3,9 +3,9 @@ ifdef USE_SUDO_FOR_DOCKER
 SUDO_CMD = sudo
 endif
 
-IMAGE ?= docker.io/projectheliostest/nextgen-broker
-TAG ?= $(shell git describe --tags --always)
-PULL ?= IfNotPresent
+IMAGE ?= aws-servicebroker:latest
+HELM_URL ?= https://awsservicebroker.s3.amazonaws.com/charts
+S3URI ?= $(shell echo $(HELM_URL)/ | sed 's/https:/s3:/' | sed 's/.s3.amazonaws.com//')
 
 build: ## Builds the starter pack
 	go build -i github.com/awslabs/aws-service-broker/cmd/servicebroker
@@ -32,12 +32,30 @@ cf: ## Builds a PCF tile and bosh release
 	  tile build ; \
 	cd ../../
 
+image: ## Builds docker image
+	docker build . -t $(IMAGE)
+
 clean: ## Cleans up build artifacts
 	rm -f servicebroker
 	rm -f servicebroker-linux
 	rm -f functional-testing/aws-servicebroker
 	rm -rf packaging/cloudfoundry/product
 	rm -rf packaging/cloudfoundry/release
+	rm -f packaging/helm/index.yaml
+	rm -f packaging/helm/aws-servicebroker-*.tgz
+
+helm: ## Creates helm release and repository index file
+	cd packaging/helm/ ; \
+	helm package aws-servicebroker && \
+		helm repo index . --url $(HELM_URL) ; \
+	cd ../../
+
+deploy-chart: ## Deploys helm chart and index file to S3 path specified by HELM_URL
+	make image && \
+	docker push $(IMAGE) && \
+	make helm && \
+	aws s3 cp packaging/helm/aws-servicebroker-*.tgz s3://awsservicebroker/charts/ --acl public-read --profile apbdev && \
+	aws s3 cp packaging/helm/index.yaml s3://awsservicebroker/charts/ --acl public-read --profile apbdev
 
 help: ## Shows the help
 	@echo 'Usage: make <OPTIONS> ... <TARGETS>'
@@ -48,4 +66,4 @@ help: ## Shows the help
         awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ''
 
-.PHONY: build test functional-test linux cf clean help
+.PHONY: build test functional-test linux cf image helm deploy-chart clean help

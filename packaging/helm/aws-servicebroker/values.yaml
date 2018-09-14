@@ -1,0 +1,15 @@
+image: awsservicebroker/aws-servicebroker:stable
+imagePullPolicy: Always
+authenticate: true
+tls:
+  cert:
+  key:
+deployClusterServiceBroker: true
+aws:
+  region: us-west-2
+  bucket: awsservicebroker
+  key: templates/latest
+  s3region: us-east-1
+  tablename: awssb
+  awsAccessKeyId:
+  awsSecretKey:
