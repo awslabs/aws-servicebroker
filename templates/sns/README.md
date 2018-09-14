@@ -43,6 +43,9 @@ These parameters can optionally be declared when provisioning
 Name           | Description     | Default         | Accepted Values
 -------------- | --------------- | --------------- | ---------------
 SubscriptionProtocol|The subscription's protocol. Examples: "http", "https", "email", "email-json", "sms", "sqs", "application", "lambda".|sqs|, http, https, email, email-json, sms, sqs, application, lambda
+SubscriptionNumRetries|Number of retries in the backoff phase|3|
+SubscriptionMinDelayTarget|Defines the delay associated with the first retry attempt in the backoff phase|20|
+SubscriptionMaxDelayTarget|Defines the delay associated with the final retry attempt in the backoff phase|20|
 
 ### Generic
 
@@ -76,6 +79,15 @@ CreateTopic|Should we create a topic or not ?|Yes
 Pricing: https://aws.amazon.com/sns/pricing/
 
 
+### Optional
+
+These parameters can optionally be declared when provisioning
+
+Name           | Description     | Default         | Accepted Values
+-------------- | --------------- | --------------- | ---------------
+SubscriptionNumRetries|Number of retries in the backoff phase|3|
+SubscriptionMinDelayTarget|Defines the delay associated with the first retry attempt in the backoff phase|20|
+SubscriptionMaxDelayTarget|Defines the delay associated with the final retry attempt in the backoff phase|20|
 
 ### Generic
 
@@ -126,6 +138,9 @@ These parameters can optionally be declared when provisioning
 Name           | Description     | Default         | Accepted Values
 -------------- | --------------- | --------------- | ---------------
 SubscriptionProtocol|The subscription's protocol. Examples: "http", "https", "email", "email-json", "sms", "sqs", "application", "lambda".|sqs|, http, https, email, email-json, sms, sqs, application, lambda
+SubscriptionNumRetries|Number of retries in the backoff phase|3|
+SubscriptionMinDelayTarget|Defines the delay associated with the first retry attempt in the backoff phase|20|
+SubscriptionMaxDelayTarget|Defines the delay associated with the final retry attempt in the backoff phase|20|
 
 ### Generic
 
@@ -195,6 +210,9 @@ spec:
   parameters:
     SubscriptionEndPoint: [VALUE] # REQUIRED
     SubscriptionProtocol: sqs # OPTIONAL
+    SubscriptionNumRetries: 3 # OPTIONAL
+    SubscriptionMinDelayTarget: 20 # OPTIONAL
+    SubscriptionMaxDelayTarget: 20 # OPTIONAL
 ```
 <a id="example-topic" />
 
@@ -222,6 +240,9 @@ spec:
   clusterServiceClassExternalName: dh-sns
   clusterServicePlanExternalName: topic
   parameters:
+    SubscriptionNumRetries: 3 # OPTIONAL
+    SubscriptionMinDelayTarget: 20 # OPTIONAL
+    SubscriptionMaxDelayTarget: 20 # OPTIONAL
 ```
 <a id="example-subscription" />
 
@@ -254,6 +275,9 @@ spec:
     SubscriptionEndPoint: [VALUE] # REQUIRED
     ExistingTopicArn: [VALUE] # REQUIRED
     SubscriptionProtocol: sqs # OPTIONAL
+    SubscriptionNumRetries: 3 # OPTIONAL
+    SubscriptionMinDelayTarget: 20 # OPTIONAL
+    SubscriptionMaxDelayTarget: 20 # OPTIONAL
 ```
 
 ***NOTE: This documentation is auto-generated using available metadata in the ServiceClass and CloudFormation Template. Please do not PR changes to this file, if a change is needed, update the source metadata and ci will re-generate documentation on merge.***

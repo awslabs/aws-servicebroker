@@ -123,6 +123,18 @@ Parameters:
     Description: >-
       If not creating a topic, define the arn for an existing topic
     Default: ""
+  SubscriptionNumRetries:
+    Type: Number
+    Description: Number of retries in the backoff phase
+    Default: 3
+  SubscriptionMinDelayTarget:
+    Type: Number
+    Description: Defines the delay associated with the first retry attempt in the backoff phase
+    Default: 20
+  SubscriptionMaxDelayTarget:
+    Type: Number
+    Description: Defines the delay associated with the final retry attempt in the backoff phase
+    Default: 20
 Conditions:
   AddSub: !Not
     - !Equals
@@ -131,6 +143,13 @@ Conditions:
   AddTopic: !Equals
     - !Ref CreateTopic
     - 'Yes'
+  UseHTTP: !Or
+    - !Equals
+      - !Ref SubscriptionProtocol
+      - 'http'
+    - !Equals
+      - !Ref SubscriptionProtocol
+      - 'https'
 Resources:
   SNSTopic:
     Condition: AddTopic
@@ -145,6 +164,13 @@ Resources:
         - AddTopic
         - !Ref SNSTopic
         - !Ref ExistingTopicArn
+      DeliveryPolicy: !If
+        - UseHTTP
+        - healthyRetryPolicy:
+            numRetries: !Ref SubscriptionNumRetries
+            minDelayTarget: !Ref SubscriptionMinDelayTarget
+            maxDelayTarget: !Ref SubscriptionMaxDelayTarget
+        - !Ref 'AWS::NoValue'
 Outputs:
   TopicARN:
     Description: ARN of SNS Topic
