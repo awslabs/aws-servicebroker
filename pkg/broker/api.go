@@ -14,11 +14,6 @@ import (
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 )
 
-const (
-	bindParamRoleName = "RoleName"
-	bindParamScope    = "Scope"
-)
-
 // GetCatalog is executed on a /v2/catalog/ osb api call
 // https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#catalog-management
 func (b *AwsBroker) GetCatalog(c *broker.RequestContext) (*broker.CatalogResponse, error) {

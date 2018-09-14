@@ -19,13 +19,6 @@ import (
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 )
 
-const (
-	cfnOutputPolicyArnPrefix = "PolicyArn"
-	cfnOutputSSMValuePrefix  = "ssm:"
-	cfnOutputUserKeyID       = "UserKeyId"
-	cfnOutputUserSecretKey   = "UserSecretKey"
-)
-
 func GetOverridesFromEnv() map[string]string {
 	var Overrides = make(map[string]string)
 
