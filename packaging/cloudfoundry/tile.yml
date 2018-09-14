@@ -10,7 +10,7 @@ packages:
   manifest:
     path: resources/cfnsb
     buildpack: binary_buildpack
-    command: ./cfnsb -brokerId="${BROKER_ID}" -enableBasicAuth=true -insecure=${INSECURE} -port=${PORT} -region=${AWS_DEFAULT_REGION} -s3Bucket=${S3_BUCKET} -s3Key="${S3_KEY}" -s3Region=${S3_REGION} -tableName=${TABLE_NAME} -templateFilter="${TEMPLATE_FILTER}" -tlsCert="${TLS_CERT}" -tlsKey="${TLS_KEY}" -v="${VERBOSITY}"
+    command: ./cfnsb -logtostderr -brokerId="${BROKER_ID}" -enableBasicAuth=true -insecure=${INSECURE} -port=${PORT} -region=${AWS_DEFAULT_REGION} -s3Bucket=${S3_BUCKET} -s3Key="${S3_KEY}" -s3Region=${S3_REGION} -tableName=${TABLE_NAME} -templateFilter="${TEMPLATE_FILTER}" -tlsCert="${TLS_CERT}" -tlsKey="${TLS_KEY}" -v="${VERBOSITY}"
     memory: 1024M
 forms:
 - name: aws_sb_properties

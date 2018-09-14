@@ -1,0 +1,21 @@
+{{- if .Values.deployClusterServiceBroker }}
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ClusterServiceBroker
+metadata:
+  name: aws-service-broker
+  labels:
+    app: {{ template "fullname" . }}
+    chart: "{{ .Chart.Name }}--{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  url: https://{{ template "fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  insecureSkipTLSVerify: true
+{{- if .Values.authenticate}}
+  authInfo:
+    bearer:
+      secretRef:
+        namespace: {{.Release.Namespace}}
+        name: {{ template "fullname" . }}
+{{- end }}
+{{- end }}

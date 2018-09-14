@@ -26,13 +26,6 @@ const (
 	cfnOutputUserSecretKey   = "UserSecretKey"
 )
 
-var nonCfnParams = []string{
-	"aws_access_key",
-	"aws_secret_key",
-	"target_account_id",
-	"target_role_name",
-}
-
 func GetOverridesFromEnv() map[string]string {
 	var Overrides = make(map[string]string)
 
