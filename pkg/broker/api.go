@@ -3,6 +3,7 @@ package broker
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
@@ -269,12 +270,11 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		InstanceID: request.InstanceID,
 	}
 	for k, v := range request.Parameters {
-		switch k {
-		case bindParamRoleName:
+		if strings.EqualFold(k, bindParamRoleName) {
 			binding.RoleName = paramValue(v)
-		case bindParamScope:
+		} else if strings.EqualFold(k, bindParamScope) {
 			binding.Scope = paramValue(v)
-		default:
+		} else {
 			desc := fmt.Sprintf("The parameter %s is not supported.", k)
 			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 		}

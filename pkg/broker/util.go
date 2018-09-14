@@ -307,7 +307,7 @@ func getCredentials(outputs []*cloudformation.Output, ssmSvc ssmiface.SSMAPI) (m
 func getPolicyArn(outputs []*cloudformation.Output, scope string) (string, error) {
 	outputKey := fmt.Sprintf("%s%s", cfnOutputPolicyArnPrefix, scope)
 	for _, o := range outputs {
-		if aws.StringValue(o.OutputKey) == outputKey {
+		if strings.EqualFold(aws.StringValue(o.OutputKey), outputKey) {
 			return aws.StringValue(o.OutputValue), nil
 		}
 	}
