@@ -48,8 +48,8 @@ func toSnakeCase(str string) string {
 	return strings.ToUpper(snake)
 }
 
-func getOverrides(brokerid string, params []string, space string, service string, cluster string, datastore DataStore) (overrides map[string]string) {
-	overridesEnv := GetOverridesFromEnv()
+func getOverrides(brokerid string, params []string, space string, service string, cluster string) (overrides map[string]string) {
+	overrides_env := GetOverridesFromEnv()
 
 	var services []string
 	var namespaces []string
@@ -72,16 +72,19 @@ func getOverrides(brokerid string, params []string, space string, service string
 			for _, s := range services {
 				for _, p := range params {
 					paramname := brokerid + "_" + c + "_" + n + "_" + s + "_" + p
-					v, err := datastore.GetParam(paramname)
-					if err != nil {
-						glog.V(10).Infof("Unable to fetch parameter override for %#+v", paramname)
-						glog.V(10).Infoln(err.Error())
-					}
-					if v != "" {
-						overrides[p] = v
-					}
-					if _, ok := overridesEnv[paramname]; ok {
-						overrides[p] = overridesEnv[paramname]
+					// removing getting overrides from dynamo for the time being
+					/*
+						v, err := b.db.DataStorePort.GetParam(paramname)
+						if err != nil {
+							glog.Infof("Unable to fetch parameter override for %#+v", paramname)
+							glog.Infoln(err.Error())
+						}
+						if v != "" {
+							overrides[p] = v
+						}
+					*/
+					if _, ok := overrides_env[paramname]; ok {
+						overrides[p] = overrides_env[paramname]
 					}
 				}
 			}

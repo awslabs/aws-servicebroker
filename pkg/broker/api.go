@@ -80,7 +80,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 	// Get the parameters and verify that all required parameters are set
 	params := getPlanDefaults(plan)
 	availableParams := getAvailableParams(plan)
-	for k, v := range getOverrides(b.brokerid, availableParams, namespace, service.Name, cluster, b.db.DataStorePort) {
+	for k, v := range getOverrides(b.brokerid, availableParams, namespace, service.Name, cluster) {
 		params[k] = v
 	}
 	for k, v := range request.Parameters {
