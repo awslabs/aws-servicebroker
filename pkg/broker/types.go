@@ -95,6 +95,7 @@ type DataStore interface {
 	PutServiceInstance(si serviceinstance.ServiceInstance) error
 	GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error)
 	PutServiceBinding(sb serviceinstance.ServiceBinding) error
+	DeleteServiceBinding(id string) error
 }
 
 type GetAwsSession func(keyid string, secretkey string, region string, accountId string, profile string, params map[string]string) *session.Session

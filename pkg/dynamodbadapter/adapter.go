@@ -226,3 +226,15 @@ func (db DdbDataStore) PutServiceBinding(sb serviceinstance.ServiceBinding) erro
 	})
 	return err
 }
+
+// DeleteServiceBinding deletes the service binding.
+func (db DdbDataStore) DeleteServiceBinding(id string) error {
+	_, err := db.Ddb.DeleteItem(&dynamodb.DeleteItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"id":     {S: aws.String(id)},
+			"userid": {S: aws.String(db.Accountuuid.String())},
+		},
+		TableName: aws.String(db.Tablename),
+	})
+	return err
+}

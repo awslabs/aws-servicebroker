@@ -7,6 +7,7 @@ import (
 
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/golang/glog"
@@ -368,10 +369,52 @@ func BindingLastOperation(request *osb.BindingLastOperationRequest, c *broker.Re
 	return &broker.LastOperationResponse{}, nil
 }
 
-// Unbind executed when the osb api receives DELETE /v2/service_instances/:instance_id/service_bindings/:binding_id
-// https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#unbinding
+// Unbind is executed when the OSB API receives `DELETE /v2/service_instances/:instance_id/service_bindings/:binding_id`
+// (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#request-5).
 func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext) (*broker.UnbindResponse, error) {
-	// Your unbind business logic goes here
+	glog.V(10).Infof("request=%+v", *request)
+
+	binding, err := b.db.DataStorePort.GetServiceBinding(request.BindingID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service binding %s: %v", request.BindingID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if binding == nil {
+		desc := fmt.Sprintf("The service binding %s was not found.", binding.ID)
+		return nil, newHTTPStatusCodeError(http.StatusGone, "", desc)
+	}
+
+	if binding.PolicyArn != "" {
+		instance, err := b.db.DataStorePort.GetServiceInstance(binding.InstanceID)
+		if err != nil {
+			desc := fmt.Sprintf("Failed to get the service instance %s: %v", binding.InstanceID, err)
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+		} else if instance == nil {
+			desc := fmt.Sprintf("The service instance %s was not found.", binding.InstanceID)
+			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+		}
+
+		sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params)
+
+		_, err = b.Clients.NewIam(sess).DetachRolePolicy(&iam.DetachRolePolicyInput{
+			PolicyArn: aws.String(binding.PolicyArn),
+			RoleName:  aws.String(binding.RoleName),
+		})
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == iam.ErrCodeNoSuchEntityException {
+				glog.Infof("The policy %s was already detached from role %s.", binding.PolicyArn, binding.RoleName)
+			} else {
+				desc := fmt.Sprintf("Failed to detach the policy %s from role %s: %v", binding.PolicyArn, binding.RoleName, err)
+				return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+			}
+		}
+	}
+
+	err = b.db.DataStorePort.DeleteServiceBinding(binding.ID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to delete the service binding %s: %v", binding.ID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
 	return &broker.UnbindResponse{}, nil
 }
 
