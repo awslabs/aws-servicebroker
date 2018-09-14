@@ -290,6 +290,15 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 	}
 
+	service, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service %s: %v", request.ServiceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if service == nil {
+		desc := fmt.Sprintf("The service %s was not found.", request.ServiceID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
 	instance, err := b.db.DataStorePort.GetServiceInstance(binding.InstanceID)
 	if err != nil {
 		desc := fmt.Sprintf("Failed to get the service instance %s: %v", binding.InstanceID, err)
@@ -309,7 +318,7 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
 
-	credentials, err := getCredentials(resp.Stacks[0].Outputs, b.Clients.NewSsm(sess))
+	credentials, err := getCredentials(service, resp.Stacks[0].Outputs, b.Clients.NewSsm(sess))
 	if err != nil {
 		desc := fmt.Sprintf("Failed to get the credentials for CloudFormation stack %s: %v", instance.StackID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)

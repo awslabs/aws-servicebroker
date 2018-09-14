@@ -265,7 +265,7 @@ func paramValue(v interface{}) string {
 	return fmt.Sprintf("%v", v)
 }
 
-func getCredentials(outputs []*cloudformation.Output, ssmSvc ssmiface.SSMAPI) (map[string]interface{}, error) {
+func getCredentials(service *osb.Service, outputs []*cloudformation.Output, ssmSvc ssmiface.SSMAPI) (map[string]interface{}, error) {
 	credentials := make(map[string]interface{})
 	var ssmValues []string
 
@@ -274,13 +274,17 @@ func getCredentials(outputs []*cloudformation.Output, ssmSvc ssmiface.SSMAPI) (m
 			continue
 		}
 
-		credentials[toScreamingSnakeCase(aws.StringValue(o.OutputKey))] = aws.StringValue(o.OutputValue)
-
-		// If the output value starts with "ssm:", we'll get the actual value from SSM
-		if strings.HasPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix) {
-			ssmValues = append(ssmValues, strings.TrimPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix))
-		} else if aws.StringValue(o.OutputKey) == cfnOutputUserKeyID || aws.StringValue(o.OutputKey) == cfnOutputUserSecretKey { // Legacy
+		// The output keys "UserKeyId" and "UserSecretKey" require special handling for backward compatibility :/
+		if aws.StringValue(o.OutputKey) == cfnOutputUserKeyID || aws.StringValue(o.OutputKey) == cfnOutputUserSecretKey {
+			k := fmt.Sprintf("%s_%s", strings.ToUpper(service.Name), toScreamingSnakeCase(aws.StringValue(o.OutputKey)))
+			credentials[k] = aws.StringValue(o.OutputValue)
 			ssmValues = append(ssmValues, aws.StringValue(o.OutputValue))
+		} else {
+			credentials[toScreamingSnakeCase(aws.StringValue(o.OutputKey))] = aws.StringValue(o.OutputValue)
+			// If the output value starts with "ssm:", we'll get the actual value from SSM
+			if strings.HasPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix) {
+				ssmValues = append(ssmValues, strings.TrimPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix))
+			}
 		}
 	}
 
