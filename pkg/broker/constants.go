@@ -6,9 +6,12 @@ import "time"
 var CacheTTL = 1 * time.Hour
 
 var nonCfnParams = []string{
+	"aws_cloudformation_role_arn",
 	"aws_access_key",
 	"aws_secret_key",
 	"region",
+	"SBArtifactS3Bucket",
+	"SBArtifactS3KeyPrefix",
 	"target_role_name",
 	"target_account_id",
 }

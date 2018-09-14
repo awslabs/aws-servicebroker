@@ -252,7 +252,9 @@ func getRequiredParams(plan *osb.Plan) (params []string) {
 	required := plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"]
 	if required != nil {
 		for _, p := range required.([]interface{}) {
-			params = append(params, p.(string))
+			if !stringInSlice(p.(string), nonCfnParams) {
+				params = append(params, p.(string))
+			}
 		}
 	}
 	return
