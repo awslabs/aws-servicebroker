@@ -19,18 +19,19 @@ import (
 
 // Options cli options
 type Options struct {
-	CatalogPath    string
-	KeyID          string
-	SecretKey      string
-	Profile        string
-	TableName      string
-	S3Bucket       string
-	S3Region       string
-	S3Key          string
-	TemplateFilter string
-	Region         string
-	BrokerID       string
-	RoleArn        string
+	CatalogPath        string
+	KeyID              string
+	SecretKey          string
+	Profile            string
+	TableName          string
+	S3Bucket           string
+	S3Region           string
+	S3Key              string
+	TemplateFilter     string
+	Region             string
+	BrokerID           string
+	RoleArn            string
+	PrescribeOverrides bool
 }
 
 // BucketDetailsRequest describes the details required to fetch metadata and templates from s3
@@ -43,25 +44,26 @@ type BucketDetailsRequest struct {
 // AwsBroker holds configuration, caches and aws service clients
 type AwsBroker struct {
 	sync.RWMutex
-	accountId      string
-	keyid          string
-	secretkey      string
-	profile        string
-	tablename      string
-	s3bucket       string
-	s3region       string
-	s3key          string
-	templatefilter string
-	region         string
-	s3svc          S3Client
-	ssmsvc         ssm.SSM
-	catalogcache   cache.Cache
-	listingcache   cache.Cache
-	instances      map[string]*serviceinstance.ServiceInstance
-	brokerid       string
-	db             Db
-	GetSession     GetAwsSession
-	Clients        AwsClients
+	accountId          string
+	keyid              string
+	secretkey          string
+	profile            string
+	tablename          string
+	s3bucket           string
+	s3region           string
+	s3key              string
+	templatefilter     string
+	region             string
+	s3svc              S3Client
+	ssmsvc             ssm.SSM
+	catalogcache       cache.Cache
+	listingcache       cache.Cache
+	instances          map[string]*serviceinstance.ServiceInstance
+	brokerid           string
+	db                 Db
+	GetSession         GetAwsSession
+	Clients            AwsClients
+	prescribeOverrides bool
 }
 
 // ServiceNeedsUpdate if Update == true the metadata should be refreshed from s3
