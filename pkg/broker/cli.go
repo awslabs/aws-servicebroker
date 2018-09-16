@@ -16,5 +16,5 @@ func AddFlags(o *Options) {
 	flag.StringVar(&o.S3Key, "s3Key", "templates/", "S3 key where templates are stored.")
 	flag.StringVar(&o.TemplateFilter, "templateFilter", "-main.yaml", "only process templates with the defined suffix.")
 	flag.StringVar(&o.CatalogPath, "catalogPath", "", "The path to the catalog.")
-	flag.StringVar(&o.BrokerID, "brokerId", "aws-service-broker", "An ID to use for partitioning broker data in DynamoDb. if multiple brokers are used in the same AWS account, this value must be unique per broker")
+	flag.StringVar(&o.BrokerID, "brokerId", "awsservicebroker", "An ID to use for partitioning broker data in DynamoDb. if multiple brokers are used in the same AWS account, this value must be unique per broker")
 }

@@ -39,14 +39,12 @@ spec:
         - "{{ .Values.tls.key }}"
         {{- end}}
         - -v
-        - "5"
+        - "{{ .Values.brokerconfig.verbosity }}"
         - -logtostderr
         - --tls-cert-file
         - "/var/run/awssb/awssb.crt"
         - --tls-private-key-file
         - "/var/run/awssb/awssb.key"
-        - --region
-        - "{{ .Values.aws.region }}"
         - --s3Bucket
         - "{{ .Values.aws.bucket }}"
         - --s3Key
@@ -55,14 +53,10 @@ spec:
         - "{{ .Values.aws.s3region }}"
         - --tableName
         - "{{ .Values.aws.tablename }}"
-        {{- if .Values.aws.awsAccessKeyId}}
-        - --keyId
-        - "{{ .Values.aws.awsAccessKeyId }}"
-        {{- end}}
-        {{- if .Values.aws.awsSecretKey}}
-        - --secretKey
-        - "{{ .Values.aws.awsSecretKey }}"
-        {{- end}}
+        - --brokerId
+        - "{{ .Values.brokerconfig.brokerid }}"
+        - --prescribeOverrides
+        - "{{ .Values.brokerconfig.prescribeoverrides }}"
         ports:
         - containerPort: 3199
         readinessProbe:
@@ -77,6 +71,33 @@ spec:
         - mountPath: /var/run/awssb
           name: awssb-ssl
           readOnly: true
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "fullname" . }}-credentials
+              key: accesskeyid
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "fullname" . }}-credentials
+              key: secretkey
+        - name: AWS_DEFAULT_REGION
+          value: {{ .Values.aws.region }}
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_aws_access_key
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "fullname" . }}-credentials
+              key: accesskeyid
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_aws_secret_key
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "fullname" . }}-credentials
+              key: secretkey
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_region
+          value: {{ .Values.aws.region }}
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_VpcId
+          value: {{ .Values.aws.vpcid }}
       volumes:
       - name: awssb-ssl
         secret:

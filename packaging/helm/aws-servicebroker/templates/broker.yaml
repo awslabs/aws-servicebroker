@@ -2,7 +2,7 @@
 apiVersion: servicecatalog.k8s.io/v1beta1
 kind: ClusterServiceBroker
 metadata:
-  name: aws-service-broker
+  name: aws-servicebroker
   labels:
     app: {{ template "fullname" . }}
     chart: "{{ .Chart.Name }}--{{ .Chart.Version }}"

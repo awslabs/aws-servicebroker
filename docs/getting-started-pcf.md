@@ -118,14 +118,10 @@ something else you will also need to update this policy to reflect the name.
   prerequisites section of this guide.
   * `AWS Region ` - this is the default region for the broker to deploy services into, and must match the region that the 
   DynamoDB table created in the prerequisisites section of this guide was created in (this will be decoupled in an upcoming update).
-  * `AWS CloudFormation Role ARN` - specify the ARN for the CloudFormation Role created in the Prerequisites section of this guide.
-  * `Amazon S3 Bucket` - specify `awsservicebrokeralpha`
-  * `Amazon S3 Key Prefix` - specify `pcf/templates/`
-  * `Amazon S3 Region` - specify `us-west-2`
+  * `Amazon S3 Bucket` - specify `awsservicebroker`
+  * `Amazon S3 Key Prefix` - specify `templates/latest/`
+  * `Amazon S3 Region` - specify `us-east-1`
   * `Amazon S3 Key Suffix` - specify `-main.yaml`
-  * `Amazon DynamoDB table name` - specify `awssb`
+  * `Amazon DynamoDB table name` - specify the name of the table created in the prerequisites section of this guide, default is `awssb`
 
-### Provisioning and binding services
 
-Documentation for all of the available plans, their parameters and binding outputs are available in the 
-[AWS Service Broker GitHub repository](https://github.com/awslabs/aws-servicebroker/tree/master/templates)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"regexp"
 	"strconv"
 	"syscall"
 
@@ -69,6 +70,11 @@ func runWithContext(ctx context.Context) error {
 		(options.TLSCert == "" || options.TLSKey == "") {
 		fmt.Println("To use TLS with specified cert or key data, both --tlsCert and --tlsKey must be used")
 		return nil
+	}
+
+	matched, _ := regexp.MatchString("^[[:alnum:]]*$", options.BrokerID)
+	if !matched {
+		glog.Fatalln("brokerId can only contain letters and numbers")
 	}
 
 	addr := ":" + strconv.Itoa(options.Port)
