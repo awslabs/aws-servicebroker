@@ -103,7 +103,8 @@ The role/user used for provisioning requires additional permissions for provisio
            "sns:*",
            "sqs:*",
            "ec2:*",
-           "iam:*"
+           "iam:*",
+           "lambda:*"
         ],
         "Resource": [
            "*"

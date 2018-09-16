@@ -4,12 +4,19 @@ AWS Service Broker Documentation
 ![Architecture](/docs/images/architecture.png)
 *Illustrates how application platforms can use the broker to provision and bind to AWS services.*
 
-### Installation
+## Installation
 
 * [Prerequisites](/docs/install_prereqs.md)
 * [Installation on OpenShift](/docs/getting-started-openshift.md)
 * [Installation on Pivotal Cloud Foundry](/docs/getting-started-pcf.md)
 * [Installation on Kubernetes](/docs/getting-started-k8s.md)
+
+## Provisioning and binding services
+
+Documentation for all of the available plans, their parameters and binding outputs are available in the 
+[AWS Service Broker GitHub repository](https://github.com/awslabs/aws-servicebroker/tree/master/templates)
+
+## Configuration tasks
 
 ### Passing In AWS credentials via parameters
 
