@@ -16,4 +16,5 @@ aws:
   vpcid: ""
 brokerconfig:
   verbosity: 10
-  brokerid: aws-service-broker
+  brokerid: awsservicebroker
+  prescribeoverrides: true

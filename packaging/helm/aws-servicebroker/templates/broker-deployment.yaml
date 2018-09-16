@@ -55,6 +55,8 @@ spec:
         - "{{ .Values.aws.tablename }}"
         - --brokerId
         - "{{ .Values.brokerconfig.brokerid }}"
+        - --prescribeOverrides
+        - "{{ .Values.brokerconfig.prescribeoverrides }}"
         ports:
         - containerPort: 3199
         readinessProbe:
@@ -81,21 +83,21 @@ spec:
               name: {{ template "fullname" . }}-credentials
               key: secretkey
         - name: AWS_DEFAULT_REGION
-          value: "{{ .Values.aws.region }}"
-        - name: PARAM_OVERRIDE_aws-service-broker-all_all_all_aws_access_key
+          value: {{ .Values.aws.region }}
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_aws_access_key
           valueFrom:
             secretKeyRef:
               name: {{ template "fullname" . }}-credentials
               key: accesskeyid
-        - name: PARAM_OVERRIDE_aws-service-broker-all_all_all_aws_secret_key
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_aws_secret_key
           valueFrom:
             secretKeyRef:
               name: {{ template "fullname" . }}-credentials
               key: secretkey
-        - name: PARAM_OVERRIDE_aws-service-broker-all_all_all_region
-          value: "{{ .Values.aws.region }}"
-        - name: PARAM_OVERRIDE_aws-service-broker-all_all_all_VpcId
-          value: "{{ .Values.aws.vpcid }}"
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_region
+          value: {{ .Values.aws.region }}
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_VpcId
+          value: {{ .Values.aws.vpcid }}
       volumes:
       - name: awssb-ssl
         secret:
