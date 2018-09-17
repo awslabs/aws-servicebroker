@@ -123,11 +123,10 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 			response := broker.ProvisionResponse{}
 			response.Exists = true
 			return &response, nil
-		} else {
-			glog.V(10).Infof("i=%+v instance=%+v", *i, *instance)
-			desc := fmt.Sprintf("Service instance %s already exists but with different attributes.", instance.ID)
-			return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 		}
+		glog.V(10).Infof("i=%+v instance=%+v", *i, *instance)
+		desc := fmt.Sprintf("Service instance %s already exists but with different attributes.", instance.ID)
+		return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 	}
 
 	// Create the CFN stack
@@ -135,7 +134,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 	resp, err := cfnSvc.CreateStack(&cloudformation.CreateStackInput{
 		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}),
 		Parameters:   toCFNParams(params),
-		StackName:    aws.String(fmt.Sprintf("aws-service-broker-%s-%s", service.Name, instance.ID)), // TODO: Sanitize service.Name and instance.ID so this doesn't result in an invalid stack name.
+		StackName:    aws.String(getStackName(service.Name, instance.ID)),
 		Tags: []*cloudformation.Tag{
 			{
 				Key:   aws.String("aws-service-broker:broker-id"),

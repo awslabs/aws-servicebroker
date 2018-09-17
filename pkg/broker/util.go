@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -149,6 +150,18 @@ func generateRoleArn(params map[string]string, currentAccountId string) string {
 
 	glog.Infof("Params 'target_account_id' not present in params, assuming role in current account '%s'.", currentAccountId)
 	return fmtArn(currentAccountId, targetRoleName)
+}
+
+// getStackName returns the stack name for a service instance. A stack name can
+// contain only alphanumeric characters (case sensitive) and hyphens. It must
+// start with an alphabetic character and cannot be longer than 128 characters.
+func getStackName(serviceName, instanceID string) string {
+	s := fmt.Sprintf("aws-service-broker-%s-%s", serviceName, instanceID)
+	s = regexp.MustCompile("[^a-zA-Z0-9-]").ReplaceAllString(s, "-")
+	if len(s) > 128 {
+		s = s[0:128]
+	}
+	return s
 }
 
 func fmtArn(accountId, roleName string) string {
