@@ -3,7 +3,6 @@ package broker
 import (
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 )
 
@@ -26,10 +25,10 @@ func TestPrescribeOverrides(t *testing.T) {
 		}},
 	}
 
-	os.Setenv("PARAM_OVERRIDE_awsservicebroker_all_all_all_override_param", "overridden")
+	g := map[string]string{"override_param": "overridden"}
 
 	msg := "params should not be modified when prescribeOverrides is false"
-	psvcs := prescribeOverrides(AwsBroker{brokerid: "awsservicebroker", prescribeOverrides: false}, services)
+	psvcs := prescribeOverrides(AwsBroker{brokerid: "awsservicebroker", prescribeOverrides: false, globalOverrides: g}, services)
 	expected := []osb.Service{
 		{ID: "test", Name: "test", Description: "test", Plans: []osb.Plan{
 			{ID: "testplan", Name: "testplan", Description: "testplan", Schemas: &osb.Schemas{
@@ -48,7 +47,7 @@ func TestPrescribeOverrides(t *testing.T) {
 	assertor.Equal(expected, psvcs, msg)
 
 	msg = "override_param should be removed when prescribeOverrides is true"
-	psvcs = prescribeOverrides(AwsBroker{brokerid: "awsservicebroker", prescribeOverrides: true}, services)
+	psvcs = prescribeOverrides(AwsBroker{brokerid: "awsservicebroker", prescribeOverrides: true, globalOverrides: g}, services)
 	expected = []osb.Service{
 		{ID: "test", Name: "test", Description: "test", Plans: []osb.Plan{
 			{ID: "testplan", Name: "testplan", Description: "testplan", Schemas: &osb.Schemas{
@@ -93,7 +92,7 @@ func TestPrescribeOverrides(t *testing.T) {
 	}
 
 	msg = "override_param should be removed from Update params too when prescribeOverrides is true"
-	psvcs = prescribeOverrides(AwsBroker{brokerid: "awsservicebroker", prescribeOverrides: true}, services)
+	psvcs = prescribeOverrides(AwsBroker{brokerid: "awsservicebroker", prescribeOverrides: true, globalOverrides: g}, services)
 	expected = []osb.Service{
 		{ID: "test", Name: "test", Description: "test", Plans: []osb.Plan{
 			{ID: "testplan", Name: "testplan", Description: "testplan", Schemas: &osb.Schemas{

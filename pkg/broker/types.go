@@ -64,6 +64,7 @@ type AwsBroker struct {
 	GetSession         GetAwsSession
 	Clients            AwsClients
 	prescribeOverrides bool
+	globalOverrides    map[string]string
 }
 
 // ServiceNeedsUpdate if Update == true the metadata should be refreshed from s3

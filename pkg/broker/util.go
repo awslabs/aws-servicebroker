@@ -17,6 +17,17 @@ import (
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 )
 
+func getGlobalOverrides(brokerID string) map[string]string {
+	prefix := fmt.Sprintf("%s_all_all_all_", brokerID)
+	overrides := make(map[string]string)
+	for k, v := range GetOverridesFromEnv() {
+		if strings.HasPrefix(k, prefix) {
+			overrides[strings.TrimPrefix(k, prefix)] = v
+		}
+	}
+	return overrides
+}
+
 func prescribeOverrides(b AwsBroker, services []osb.Service) []osb.Service {
 	if !b.prescribeOverrides {
 		return services
@@ -24,10 +35,8 @@ func prescribeOverrides(b AwsBroker, services []osb.Service) []osb.Service {
 		// TODO: Alot of duplication of code with ServiceDefinitionToOsb, should cleanup
 		for s, service := range services {
 			for p, plan := range service.Plans {
-				availableParams := getAvailableParams(&plan)
-				overrides := getOverrides(b.brokerid, availableParams, "all", "all", "all")
 				overrideKeys := make([]string, 0)
-				for o := range overrides {
+				for o := range b.globalOverrides {
 					overrideKeys = append(overrideKeys, o)
 				}
 				glog.Infoln(overrideKeys)

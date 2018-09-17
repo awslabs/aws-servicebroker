@@ -82,6 +82,7 @@ func NewAWSBroker(o Options, awssess GetAwsSession, clients AwsClients, getCalle
 		GetSession:         awssess,
 		Clients:            clients,
 		prescribeOverrides: o.PrescribeOverrides,
+		globalOverrides:    getGlobalOverrides(o.BrokerID),
 	}
 
 	// get catalog and setup periodic updates from S3
