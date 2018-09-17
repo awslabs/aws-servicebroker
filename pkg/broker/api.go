@@ -265,6 +265,8 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		ID:         request.BindingID,
 		InstanceID: request.InstanceID,
 	}
+
+	// Get the binding params
 	for k, v := range request.Parameters {
 		if strings.EqualFold(k, bindParamRoleName) {
 			binding.RoleName = paramValue(v)
@@ -276,6 +278,7 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		}
 	}
 
+	// Verify that the binding doesn't already exist
 	sb, err := b.db.DataStorePort.GetServiceBinding(binding.ID)
 	if err != nil {
 		desc := fmt.Sprintf("Failed to get the service binding %s: %v", binding.ID, err)
@@ -291,6 +294,9 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 	}
 
+	// Get the service (this is only required because the USER_KEY_ID and
+	// USER_SECRET_KEY credentials need to be prefixed with the service name for
+	// backward compatibility)
 	service, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
 	if err != nil {
 		desc := fmt.Sprintf("Failed to get the service %s: %v", request.ServiceID, err)
@@ -300,6 +306,7 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 	}
 
+	// Get the instance
 	instance, err := b.db.DataStorePort.GetServiceInstance(binding.InstanceID)
 	if err != nil {
 		desc := fmt.Sprintf("Failed to get the service instance %s: %v", binding.InstanceID, err)
@@ -311,6 +318,7 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 
 	sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params)
 
+	// Get the CFN stack outputs
 	resp, err := b.Clients.NewCfn(sess).DescribeStacks(&cloudformation.DescribeStacksInput{
 		StackName: aws.String(instance.StackID),
 	})
@@ -319,9 +327,10 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
 
+	// Get the credentials from the CFN stack outputs
 	credentials, err := getCredentials(service, resp.Stacks[0].Outputs, b.Clients.NewSsm(sess))
 	if err != nil {
-		desc := fmt.Sprintf("Failed to get the credentials for CloudFormation stack %s: %v", instance.StackID, err)
+		desc := fmt.Sprintf("Failed to get the credentials from CloudFormation stack %s: %v", instance.StackID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
 
@@ -332,6 +341,7 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 		}
 
+		// Attach the scoped policy to the role
 		_, err = b.Clients.NewIam(sess).AttachRolePolicy(&iam.AttachRolePolicyInput{
 			PolicyArn: aws.String(policyArn),
 			RoleName:  aws.String(binding.RoleName),
@@ -344,9 +354,10 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		binding.PolicyArn = policyArn
 	}
 
+	// Store the binding
 	err = b.db.DataStorePort.PutServiceBinding(*binding)
 	if err != nil {
-		desc := fmt.Sprintf("Failed to create the service binding %s: %v", binding.ID, err)
+		desc := fmt.Sprintf("Failed to store the service binding %s: %v", binding.ID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
 
@@ -374,6 +385,7 @@ func BindingLastOperation(request *osb.BindingLastOperationRequest, c *broker.Re
 func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext) (*broker.UnbindResponse, error) {
 	glog.V(10).Infof("request=%+v", *request)
 
+	// Get the binding
 	binding, err := b.db.DataStorePort.GetServiceBinding(request.BindingID)
 	if err != nil {
 		desc := fmt.Sprintf("Failed to get the service binding %s: %v", request.BindingID, err)
@@ -395,6 +407,7 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 
 		sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params)
 
+		// Detach the scoped policy from the role
 		_, err = b.Clients.NewIam(sess).DetachRolePolicy(&iam.DetachRolePolicyInput{
 			PolicyArn: aws.String(binding.PolicyArn),
 			RoleName:  aws.String(binding.RoleName),
@@ -409,6 +422,7 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 		}
 	}
 
+	// Delete the binding
 	err = b.db.DataStorePort.DeleteServiceBinding(binding.ID)
 	if err != nil {
 		desc := fmt.Sprintf("Failed to delete the service binding %s: %v", binding.ID, err)
