@@ -59,7 +59,7 @@ func toScreamingSnakeCase(s string) string {
 }
 
 func getOverrides(brokerid string, params []string, space string, service string, cluster string) (overrides map[string]string) {
-	overrides_env := GetOverridesFromEnv()
+	overridesEnv := GetOverridesFromEnv()
 
 	var services []string
 	var namespaces []string
@@ -93,8 +93,8 @@ func getOverrides(brokerid string, params []string, space string, service string
 							overrides[p] = v
 						}
 					*/
-					if _, ok := overrides_env[paramname]; ok {
-						overrides[p] = overrides_env[paramname]
+					if _, ok := overridesEnv[paramname]; ok {
+						overrides[p] = overridesEnv[paramname]
 					}
 				}
 			}

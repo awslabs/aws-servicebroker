@@ -1,14 +1,14 @@
 {{- $ca := genCA "svc-cat-ca" 3650 }}
-{{- $cn := printf "%s-awssb" .Release.Name }}
-{{- $altName1 := printf "%s-awssb.%s" .Release.Name .Release.Namespace }}
-{{- $altName2 := printf "%s-awssb.%s.svc" .Release.Name .Release.Namespace }}
+{{- $cn := printf "%s" .Release.Name }}
+{{- $altName1 := printf "%s.%s" .Release.Name .Release.Namespace }}
+{{- $altName2 := printf "%s.%s.svc" .Release.Name .Release.Namespace }}
 {{- $cert := genSignedCert $cn nil (list $altName1 $altName2) 3650 $ca }}
 apiVersion: v1
 kind: Secret
 metadata:
   name: {{ template "fullname" . }}-cert
   labels:
-    app: {{ template "fullname" . }}-awssb
+    app: {{ template "fullname" . }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"

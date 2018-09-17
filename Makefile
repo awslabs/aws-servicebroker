@@ -1,11 +1,12 @@
-# If the USE_SUDO_FOR_DOCKER env var is set, prefix docker commands with 'sudo'
-ifdef USE_SUDO_FOR_DOCKER
-SUDO_CMD = sudo
-endif
-
-IMAGE ?= aws-servicebroker:latest
-HELM_URL ?= https://awsservicebroker.s3.amazonaws.com/charts
+IMAGE ?= my-docker-org/aws-servicebroker:latest
+BUCKET_NAME ?= my-helm-repo-bucket
+BUCKET_PREFIX ?= /charts
+HELM_URL ?= https://$(BUCKET_NAME).s3.amazonaws.com$(BUCKET_PREFIX)
 S3URI ?= $(shell echo $(HELM_URL)/ | sed 's/https:/s3:/' | sed 's/.s3.amazonaws.com//')
+ACL ?= private
+PROFILE_NAME ?= ""
+PROFILE ?= $(shell if [ "${PROFILE_NAME}" != "" ] ; then echo "--profile ${PROFILE_NAME}" ; fi)
+
 
 build: ## Builds the starter pack
 	go build -i github.com/awslabs/aws-service-broker/cmd/servicebroker
@@ -51,11 +52,9 @@ helm: ## Creates helm release and repository index file
 	cd ../../
 
 deploy-chart: ## Deploys helm chart and index file to S3 path specified by HELM_URL
-	make image && \
-	docker push $(IMAGE) && \
 	make helm && \
-	aws s3 cp packaging/helm/aws-servicebroker-*.tgz s3://awsservicebroker/charts/ --acl public-read --profile apbdev && \
-	aws s3 cp packaging/helm/index.yaml s3://awsservicebroker/charts/ --acl public-read --profile apbdev
+	aws s3 cp packaging/helm/aws-servicebroker-*.tgz $(S3URI) --acl $(ACL) $(PROFILE) && \
+	aws s3 cp packaging/helm/index.yaml $(S3URI) --acl $(ACL) $(PROFILE)
 
 help: ## Shows the help
 	@echo 'Usage: make <OPTIONS> ... <TARGETS>'
