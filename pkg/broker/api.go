@@ -85,7 +85,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 		params[k] = v
 	}
 	for k, v := range request.Parameters {
-		if !stringInSlice(k, availableParams) && !stringInSlice(k, nonCfnParams) {
+		if !stringInSlice(k, availableParams) {
 			desc := fmt.Sprintf("The parameter %s is not available.", k)
 			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 		}
