@@ -105,6 +105,12 @@
   revision = "bfb7c3ba100e248179f41094fc8dc94c31299aaa"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/jinzhu/copier"
+  packages = ["."]
+  revision = "7e38e58719c33e0d44d585c4ab477a30f8cb82dd"
+
+[[projects]]
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
   revision = "0b12d6b5"
@@ -227,6 +233,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "19b0fcd840ce34f3ffc572a0bbec3a2eb4380095da990104b33118cb7c3e6189"
+  inputs-digest = "234a976c2e545040c8ae03643b7206baca8b722bca2aa59d08dcefb196edc411"
   solver-name = "gps-cdcl"
   solver-version = 1
