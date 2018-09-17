@@ -131,7 +131,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 
 	// Create the CFN stack
 	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, params))
-	resp, err := cfnSvc.CreateStack(&cloudformation.CreateStackInput{
+	resp, err := cfnSvc.Client.CreateStack(&cloudformation.CreateStackInput{
 		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}),
 		Parameters:   toCFNParams(params),
 		StackName:    aws.String(fmt.Sprintf("aws-service-broker-%s-%s", service.Name, instance.ID)), // TODO: Sanitize service.Name and instance.ID so this doesn't result in an invalid stack name.
@@ -164,7 +164,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 	err = b.db.DataStorePort.PutServiceInstance(*instance)
 	if err != nil {
 		// Try to delete the stack
-		if _, err := cfnSvc.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(instance.StackID)}); err != nil {
+		if _, err := cfnSvc.Client.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(instance.StackID)}); err != nil {
 			glog.Errorf("Failed to delete the CloudFormation stack %s: %v", instance.StackID, err)
 		}
 
@@ -193,7 +193,7 @@ func (b *AwsBroker) Deprovision(request *osb.DeprovisionRequest, c *broker.Reque
 	}
 	glog.V(10).Infoln(si.Params)
 	cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, si.Params))
-	_, err = cfnsvc.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(si.StackID)})
+	_, err = cfnsvc.Client.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(si.StackID)})
 	if err != nil {
 		panic(err)
 	}
@@ -224,7 +224,7 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 	}
 	glog.V(10).Infoln(si.Params)
 	cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, si.Params))
-	response, err := cfnsvc.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: aws.String(si.StackID)})
+	response, err := cfnsvc.Client.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: aws.String(si.StackID)})
 	if err != nil {
 		panic(err)
 	}
@@ -268,7 +268,7 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 	sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, si.Params)
 	cfnsvc := b.Clients.NewCfn(sess)
 	ssmsvc := b.Clients.NewSsm(sess)
-	cfnresponse, err := cfnsvc.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: aws.String(si.StackID)})
+	cfnresponse, err := cfnsvc.Client.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: aws.String(si.StackID)})
 	if err != nil {
 		panic(err)
 	}
@@ -394,7 +394,7 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 
 	// Update the CFN stack
 	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, params))
-	_, err = cfnSvc.UpdateStack(&cloudformation.UpdateStackInput{
+	_, err = cfnSvc.Client.UpdateStack(&cloudformation.UpdateStackInput{
 		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}),
 		Parameters:   toCFNParams(params),
 		StackName:    aws.String(instance.StackID),
@@ -410,7 +410,7 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 	err = b.db.DataStorePort.PutServiceInstance(*instance)
 	if err != nil {
 		// Try to cancel the update
-		if _, err := cfnSvc.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{StackName: aws.String(instance.StackID)}); err != nil {
+		if _, err := cfnSvc.Client.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{StackName: aws.String(instance.StackID)}); err != nil {
 			glog.Errorf("Failed to cancel updating the CloudFormation stack %s: %v", instance.StackID, err)
 			glog.Errorf("Service instance %s and CloudFormation stack %s may be out of sync!", instance.ID, instance.StackID)
 		}

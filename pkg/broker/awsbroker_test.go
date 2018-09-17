@@ -2,6 +2,7 @@ package broker
 
 import (
 	"errors"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -48,8 +49,10 @@ func mockGetAwsSession(keyid string, secretkey string, region string, accountId 
 	return sess.Copy(conf)
 }
 
-func mockAwsCfnClientGetter(sess *session.Session) *cloudformation.CloudFormation {
-	return &cloudformation.CloudFormation{Client: mock.NewMockClient(aws.NewConfig())}
+func mockAwsCfnClientGetter(sess *session.Session) CfnClient {
+	conf := aws.NewConfig()
+	conf.Region = sess.Config.Region
+	return CfnClient{cloudformationiface.CloudFormationAPI(&cloudformation.CloudFormation{Client: mock.NewMockClient(conf)})}
 }
 
 func mockAwsStsClientGetter(sess *session.Session) *sts.STS {
@@ -220,6 +223,7 @@ func TestUpdateCatalog(t *testing.T) {
 			v.TemplateFilter,
 		}
 	}
+
 	bl.db.DataStorePort = mockDataStore{}
 
 	err := UpdateCatalog(bl.listingcache, bl.catalogcache, *bd, bl.s3svc, bl.db, *bl, mockListTemplates, mockListingUpdate, mockMetadataUpdate)

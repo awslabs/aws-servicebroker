@@ -3,6 +3,7 @@ package broker
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -15,7 +16,7 @@ import (
 
 // Create AWS Session
 func AwsSessionGetter(keyid string, secretkey string, region string, accountId string, profile string, params map[string]string) *session.Session {
-	creds := AwsCredentialsGetter(keyid, secretkey, profile, params)
+	creds := AwsCredentialsGetter(keyid, secretkey, profile, params, ec2metadata.New(session.Must(session.NewSession())))
 	cfg := aws.NewConfig().WithCredentials(&creds).WithRegion(region)
 	currentAccountSession := session.Must(session.NewSession(cfg))
 	sess, err := assumeTargetRole(currentAccountSession, params, region, accountId)
@@ -25,8 +26,8 @@ func AwsSessionGetter(keyid string, secretkey string, region string, accountId s
 	return sess
 }
 
-func AwsCfnClientGetter(sess *session.Session) *cloudformation.CloudFormation {
-	return cloudformation.New(sess)
+func AwsCfnClientGetter(sess *session.Session) CfnClient {
+	return CfnClient{cloudformation.New(sess)}
 }
 
 func AwsSsmClientGetter(sess *session.Session) *ssm.SSM {

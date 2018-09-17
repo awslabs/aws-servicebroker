@@ -42,6 +42,7 @@
     "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
     "service/cloudformation",
+    "service/cloudformation/cloudformationiface",
     "service/dynamodb",
     "service/dynamodb/dynamodbattribute",
     "service/s3",
