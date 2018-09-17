@@ -379,7 +379,7 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 		desc := fmt.Sprintf("Failed to get the service binding %s: %v", request.BindingID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	} else if binding == nil {
-		desc := fmt.Sprintf("The service binding %s was not found.", binding.ID)
+		desc := fmt.Sprintf("The service binding %s was not found.", request.BindingID)
 		return nil, newHTTPStatusCodeError(http.StatusGone, "", desc)
 	}
 
