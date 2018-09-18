@@ -141,6 +141,11 @@ func (db mockDataStore) GetServiceInstance(sid string) (*serviceinstance.Service
 	}
 	return &si, nil
 }
+func (db mockDataStore) GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error) {
+	return nil, nil
+}
+func (db mockDataStore) PutServiceBinding(sb serviceinstance.ServiceBinding) error { return nil }
+func (db mockDataStore) DeleteServiceBinding(id string) error                      { return nil }
 
 func TestNewAwsBroker(t *testing.T) {
 	assert := assert.New(t)
