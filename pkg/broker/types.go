@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -95,6 +96,9 @@ type DataStore interface {
 	GetServiceDefinition(serviceuuid string) (*osb.Service, error)
 	GetServiceInstance(sid string) (*serviceinstance.ServiceInstance, error)
 	PutServiceInstance(si serviceinstance.ServiceInstance) error
+	GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error)
+	PutServiceBinding(sb serviceinstance.ServiceBinding) error
+	DeleteServiceBinding(id string) error
 }
 
 type GetAwsSession func(keyid string, secretkey string, region string, accountId string, profile string, params map[string]string) *session.Session
@@ -104,6 +108,7 @@ type GetSsmClient func(sess *session.Session) *ssm.SSM
 type GetS3Client func(sess *session.Session) S3Client
 type GetDdbClient func(sess *session.Session) *dynamodb.DynamoDB
 type GetStsClient func(sess *session.Session) *sts.STS
+type GetIamClient func(sess *session.Session) *iam.IAM
 
 type AwsClients struct {
 	NewCfn GetCfnClient
@@ -111,6 +116,7 @@ type AwsClients struct {
 	NewS3  GetS3Client
 	NewDdb GetDdbClient
 	NewSts GetStsClient
+	NewIam GetIamClient
 }
 
 type S3Client struct {

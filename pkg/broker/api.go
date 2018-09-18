@@ -7,8 +7,9 @@ import (
 
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/golang/glog"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
@@ -84,7 +85,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 		params[k] = v
 	}
 	for k, v := range request.Parameters {
-		if !stringInSlice(k, availableParams) && !stringInSlice(k, nonCfnParams) {
+		if !stringInSlice(k, availableParams) {
 			desc := fmt.Sprintf("The parameter %s is not available.", k)
 			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 		}
@@ -122,11 +123,10 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 			response := broker.ProvisionResponse{}
 			response.Exists = true
 			return &response, nil
-		} else {
-			glog.V(10).Infof("i=%+v instance=%+v", *i, *instance)
-			desc := fmt.Sprintf("Service instance %s already exists but with different attributes.", instance.ID)
-			return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 		}
+		glog.V(10).Infof("i=%+v instance=%+v", *i, *instance)
+		desc := fmt.Sprintf("Service instance %s already exists but with different attributes.", instance.ID)
+		return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 	}
 
 	// Create the CFN stack
@@ -134,7 +134,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 	resp, err := cfnSvc.Client.CreateStack(&cloudformation.CreateStackInput{
 		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}),
 		Parameters:   toCFNParams(params),
-		StackName:    aws.String(fmt.Sprintf("aws-service-broker-%s-%s", service.Name, instance.ID)), // TODO: Sanitize service.Name and instance.ID so this doesn't result in an invalid stack name.
+		StackName:    aws.String(getStackName(service.Name, instance.ID)),
 		Tags: []*cloudformation.Tag{
 			{
 				Key:   aws.String("aws-service-broker:broker-id"),
@@ -255,52 +255,117 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 	}
 }
 
-// Bind executed when the osb api receives PUT /v2/service_instances/:instance_id/service_bindings/:binding_id
-// https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#request-4
+// Bind is executed when the OSB API receives `PUT /v2/service_instances/:instance_id/service_bindings/:binding_id`
+// (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#request-4).
 func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*broker.BindResponse, error) {
+	glog.V(10).Infof("request=%+v", *request)
 
-	si, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
-	service, err := b.db.DataStorePort.GetServiceDefinition(si.ServiceID)
-	if err != nil {
-		panic(err)
+	binding := &serviceinstance.ServiceBinding{
+		ID:         request.BindingID,
+		InstanceID: request.InstanceID,
 	}
-	glog.Infoln(si)
-	sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, si.Params)
-	cfnsvc := b.Clients.NewCfn(sess)
-	ssmsvc := b.Clients.NewSsm(sess)
-	cfnresponse, err := cfnsvc.Client.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: aws.String(si.StackID)})
-	if err != nil {
-		panic(err)
-	}
-	outputs := make(map[string]interface{})
-	for _, o := range cfnresponse.Stacks[0].Outputs {
-		fmt.Println(o)
-		if *o.OutputKey == "UserKeyId" || *o.OutputKey == "UserSecretKey" {
-			ssmInput := ssm.GetParameterInput{
-				Name:           aws.String(*o.OutputValue),
-				WithDecryption: aws.Bool(true),
-			}
 
-			ssmresponse, err := ssmsvc.GetParameter(&ssmInput)
-			if err != nil {
-				panic(err)
-			}
-			pname := strings.ToUpper(service.Name) + "_" + toSnakeCase(*o.OutputKey)
-			outputs[pname] = ssmresponse.Parameter.Value
+	// Get the binding params
+	for k, v := range request.Parameters {
+		if strings.EqualFold(k, bindParamRoleName) {
+			binding.RoleName = paramValue(v)
+		} else if strings.EqualFold(k, bindParamScope) {
+			binding.Scope = paramValue(v)
 		} else {
-			outputs[toSnakeCase(*o.OutputKey)] = o.OutputValue
+			desc := fmt.Sprintf("The parameter %s is not supported.", k)
+			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 		}
 	}
-	glog.Infoln(outputs)
-	response := broker.BindResponse{
+
+	// Verify that the binding doesn't already exist
+	sb, err := b.db.DataStorePort.GetServiceBinding(binding.ID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service binding %s: %v", binding.ID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if sb != nil {
+		if sb.Match(binding) {
+			glog.Infof("Service binding %s already exists.", binding.ID)
+			response := broker.BindResponse{}
+			response.Exists = true
+			return &response, nil
+		}
+		desc := fmt.Sprintf("Service binding %s already exists but with different attributes.", binding.ID)
+		return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
+	}
+
+	// Get the service (this is only required because the USER_KEY_ID and
+	// USER_SECRET_KEY credentials need to be prefixed with the service name for
+	// backward compatibility)
+	service, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
+
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service %s: %v", request.ServiceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if service == nil {
+		desc := fmt.Sprintf("The service %s was not found.", request.ServiceID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	// Get the instance
+	instance, err := b.db.DataStorePort.GetServiceInstance(binding.InstanceID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service instance %s: %v", binding.InstanceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if instance == nil {
+		desc := fmt.Sprintf("The service instance %s was not found.", binding.InstanceID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params)
+
+	// Get the CFN stack outputs
+	resp, err := b.Clients.NewCfn(sess).Client.DescribeStacks(&cloudformation.DescribeStacksInput{
+		StackName: aws.String(instance.StackID),
+	})
+	if err != nil {
+		desc := fmt.Sprintf("Failed to describe the CloudFormation stack %s: %v", instance.StackID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	// Get the credentials from the CFN stack outputs
+	credentials, err := getCredentials(service, resp.Stacks[0].Outputs, b.Clients.NewSsm(sess))
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the credentials from CloudFormation stack %s: %v", instance.StackID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	if binding.RoleName != "" {
+		policyArn, err := getPolicyArn(resp.Stacks[0].Outputs, binding.Scope)
+		if err != nil {
+			desc := fmt.Sprintf("The CloudFormation stack %s does not support binding with scope '%s': %v", instance.StackID, binding.Scope, err)
+			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+		}
+
+		// Attach the scoped policy to the role
+		_, err = b.Clients.NewIam(sess).AttachRolePolicy(&iam.AttachRolePolicyInput{
+			PolicyArn: aws.String(policyArn),
+			RoleName:  aws.String(binding.RoleName),
+		})
+		if err != nil {
+			desc := fmt.Sprintf("Failed to attach the policy %s to role %s: %v", policyArn, binding.RoleName, err)
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+		}
+
+		binding.PolicyArn = policyArn
+	}
+
+	// Store the binding
+	err = b.db.DataStorePort.PutServiceBinding(*binding)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to store the service binding %s: %v", binding.ID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	return &broker.BindResponse{
 		BindResponse: osb.BindResponse{
-			Credentials: outputs,
+			Credentials: credentials,
 		},
-	}
-	if request.AcceptsIncomplete {
-		response.Async = false
-	}
-	return &response, nil
+	}, nil
 }
 
 func (b *AwsBroker) GetBinding(request *osb.GetBindingRequest, c *broker.RequestContext) (*broker.GetBindingResponse, error) {
@@ -315,10 +380,55 @@ func BindingLastOperation(request *osb.BindingLastOperationRequest, c *broker.Re
 	return &broker.LastOperationResponse{}, nil
 }
 
-// Unbind executed when the osb api receives DELETE /v2/service_instances/:instance_id/service_bindings/:binding_id
-// https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#unbinding
+// Unbind is executed when the OSB API receives `DELETE /v2/service_instances/:instance_id/service_bindings/:binding_id`
+// (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#request-5).
 func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext) (*broker.UnbindResponse, error) {
-	// Your unbind business logic goes here
+	glog.V(10).Infof("request=%+v", *request)
+
+	// Get the binding
+	binding, err := b.db.DataStorePort.GetServiceBinding(request.BindingID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service binding %s: %v", request.BindingID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if binding == nil {
+		desc := fmt.Sprintf("The service binding %s was not found.", request.BindingID)
+		return nil, newHTTPStatusCodeError(http.StatusGone, "", desc)
+	}
+
+	if binding.PolicyArn != "" {
+		instance, err := b.db.DataStorePort.GetServiceInstance(binding.InstanceID)
+		if err != nil {
+			desc := fmt.Sprintf("Failed to get the service instance %s: %v", binding.InstanceID, err)
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+		} else if instance == nil {
+			desc := fmt.Sprintf("The service instance %s was not found.", binding.InstanceID)
+			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+		}
+
+		sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params)
+
+		// Detach the scoped policy from the role
+		_, err = b.Clients.NewIam(sess).DetachRolePolicy(&iam.DetachRolePolicyInput{
+			PolicyArn: aws.String(binding.PolicyArn),
+			RoleName:  aws.String(binding.RoleName),
+		})
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == iam.ErrCodeNoSuchEntityException {
+				glog.Infof("The policy %s was already detached from role %s.", binding.PolicyArn, binding.RoleName)
+			} else {
+				desc := fmt.Sprintf("Failed to detach the policy %s from role %s: %v", binding.PolicyArn, binding.RoleName, err)
+				return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+			}
+		}
+	}
+
+	// Delete the binding
+	err = b.db.DataStorePort.DeleteServiceBinding(binding.ID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to delete the service binding %s: %v", binding.ID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
 	return &broker.UnbindResponse{}, nil
 }
 

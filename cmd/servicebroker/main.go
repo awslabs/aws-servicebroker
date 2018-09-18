@@ -4,14 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
-	prom "github.com/prometheus/client_golang/prometheus"
 	"os"
 	"os/signal"
 	"path"
 	"regexp"
 	"strconv"
 	"syscall"
+
+	"github.com/golang/glog"
+	prom "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/awslabs/aws-service-broker/pkg/broker"
 	"github.com/jaymccon/osb-broker-lib/pkg/server"
@@ -85,6 +86,7 @@ func runWithContext(ctx context.Context) error {
 		NewSsm: broker.AwsSsmClientGetter,
 		NewSts: broker.AwsStsClientGetter,
 		NewDdb: broker.AwsDdbClientGetter,
+		NewIam: broker.AwsIamClientGetter,
 	}
 
 	awsBroker, err := broker.NewAWSBroker(options.Options, broker.AwsSessionGetter, clients, broker.GetCallerId, broker.UpdateCatalog, broker.PollUpdate)
