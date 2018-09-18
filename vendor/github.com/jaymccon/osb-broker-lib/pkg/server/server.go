@@ -8,11 +8,11 @@ import (
 	"time"
 
 	auth "github.com/abbot/go-http-auth"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/pmorie/osb-broker-lib/pkg/rest"
 )
