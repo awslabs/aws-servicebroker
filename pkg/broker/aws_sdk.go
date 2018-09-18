@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -43,6 +44,10 @@ func AwsDdbClientGetter(sess *session.Session) *dynamodb.DynamoDB {
 
 func AwsStsClientGetter(sess *session.Session) *sts.STS {
 	return sts.New(sess)
+}
+
+func AwsIamClientGetter(sess *session.Session) *iam.IAM {
+	return iam.New(sess)
 }
 
 func GetCallerId(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error) {

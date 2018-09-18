@@ -12,3 +12,15 @@ var nonCfnParams = []string{
 	"target_role_name",
 	"target_account_id",
 }
+
+const (
+	bindParamRoleName = "RoleName"
+	bindParamScope    = "Scope"
+)
+
+const (
+	cfnOutputPolicyArnPrefix = "PolicyArn"
+	cfnOutputSSMValuePrefix  = "ssm:"
+	cfnOutputUserKeyID       = "UserKeyId"
+	cfnOutputUserSecretKey   = "UserSecretKey"
+)
