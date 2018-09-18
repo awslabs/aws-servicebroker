@@ -4,6 +4,8 @@ import (
 	"errors"
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 	"github.com/stretchr/testify/assert"
@@ -97,6 +99,12 @@ func (db mockDataStoreProvision) GetServiceInstance(sid string) (*serviceinstanc
 	return nil, nil
 }
 func (db mockDataStoreProvision) GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error) {
+	if id == "exists" {
+		return &serviceinstance.ServiceBinding{
+			ID:         "exists",
+			InstanceID: "exists",
+		}, nil
+	}
 	return nil, nil
 }
 func (db mockDataStoreProvision) PutServiceBinding(sb serviceinstance.ServiceBinding) error {
@@ -215,6 +223,9 @@ func TestDeprovision(t *testing.T) {
 	assertor.Equal(nil, err, "err should be nil")
 	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
 
+	bl.accountId = "test"
+	bl.secretkey = "testkey"
+
 	deprovReq.InstanceID = "exists"
 	expected.Async = true
 	actual, err = bl.Deprovision(deprovReq, reqContext)
@@ -246,11 +257,119 @@ func TestLastOperation(t *testing.T) {
 	actual, err := bl.LastOperation(loReq, reqContext)
 	assertor.Equal(nil, err, "err should be nil")
 	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
-	/*
-		expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "", Description: nil}}
-		loReq.InstanceID = "exists"
-		actual, err = bl.LastOperation(loReq, reqContext)
-		assertor.Equal(nil, err, "err should be nil")
-		assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
-	*/
+
+	mockClients.NewCfn = func(sess *session.Session) CfnClient {
+		return CfnClient{mockCfn{
+			DescribeStacksResponse: cloudformation.DescribeStacksOutput{
+				NextToken: nil,
+				Stacks: []*cloudformation.Stack{
+					{
+						StackStatus: aws.String("CREATE_IN_PROGRESS"),
+					},
+				},
+			},
+		}}
+	}
+	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl.db.DataStorePort = mockDataStoreProvision{}
+	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "in progress", Description: nil}}
+	loReq.InstanceID = "exists"
+	actual, err = bl.LastOperation(loReq, reqContext)
+	assertor.Equal(nil, err, "err should be nil")
+	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
+
+	mockClients.NewCfn = func(sess *session.Session) CfnClient {
+		return CfnClient{mockCfn{
+			DescribeStacksResponse: cloudformation.DescribeStacksOutput{
+				NextToken: nil,
+				Stacks: []*cloudformation.Stack{
+					{
+						StackStatus: aws.String("CREATE_FAILED"),
+					},
+				},
+			},
+		}}
+	}
+	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl.db.DataStorePort = mockDataStoreProvision{}
+	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "failed", Description: nil}}
+	loReq.InstanceID = "exists"
+	actual, err = bl.LastOperation(loReq, reqContext)
+	assertor.Equal(nil, err, "err should be nil")
+	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
+
+	mockClients.NewCfn = func(sess *session.Session) CfnClient {
+		return CfnClient{mockCfn{
+			DescribeStacksResponse: cloudformation.DescribeStacksOutput{
+				NextToken: nil,
+				Stacks: []*cloudformation.Stack{
+					{
+						StackStatus: aws.String("CREATE_COMPLETE"),
+					},
+				},
+			},
+		}}
+	}
+	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl.db.DataStorePort = mockDataStoreProvision{}
+	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "succeeded", Description: nil}}
+	loReq.InstanceID = "exists"
+	actual, err = bl.LastOperation(loReq, reqContext)
+	assertor.Equal(nil, err, "err should be nil")
+	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
+}
+
+func TestBind(t *testing.T) {
+	assertor := assert.New(t)
+
+	opts := Options{
+		TableName:          "testtable",
+		S3Bucket:           "abucket",
+		S3Region:           "us-east-1",
+		S3Key:              "tempates/test",
+		Region:             "us-east-1",
+		BrokerID:           "awsservicebroker",
+		PrescribeOverrides: true,
+	}
+	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl.db.DataStorePort = mockDataStoreProvision{}
+
+	bindReq := &osb.BindRequest{
+		BindingID:         "test-bind-id",
+		InstanceID:        "exists",
+		AcceptsIncomplete: true,
+		ServiceID:         "test-service-id",
+	}
+	reqContext := &broker.RequestContext{}
+
+	expected := &broker.BindResponse{BindResponse: osb.BindResponse{Credentials: map[string]interface{}{}}}
+	actual, err := bl.Bind(bindReq, reqContext)
+	assertor.Equal(nil, err, "err should be nil")
+	assertor.Equal(expected, actual, "should succeed")
+
+}
+
+func TestUnbind(t *testing.T) {
+	assertor := assert.New(t)
+
+	opts := Options{
+		TableName:          "testtable",
+		S3Bucket:           "abucket",
+		S3Region:           "us-east-1",
+		S3Key:              "tempates/test",
+		Region:             "us-east-1",
+		BrokerID:           "awsservicebroker",
+		PrescribeOverrides: true,
+	}
+	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl.db.DataStorePort = mockDataStoreProvision{}
+
+	unbindReq := &osb.UnbindRequest{BindingID: "exists"}
+	reqContext := &broker.RequestContext{}
+
+	expected := &broker.UnbindResponse{UnbindResponse: osb.UnbindResponse{}}
+	actual, err := bl.Unbind(unbindReq, reqContext)
+	assertor.Equal(nil, err, "err should be nil")
+	assertor.Equal(expected, actual, "should succeed")
+
 }

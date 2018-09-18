@@ -50,9 +50,9 @@ func mockGetAwsSession(keyid string, secretkey string, region string, accountId 
 }
 
 func mockAwsCfnClientGetter(sess *session.Session) CfnClient {
-	conf := aws.NewConfig()
-	conf.Region = sess.Config.Region
-	return CfnClient{cloudformationiface.CloudFormationAPI(&cloudformation.CloudFormation{Client: mock.NewMockClient(conf)})}
+	return CfnClient{mockCfn{
+		DescribeStacksResponse: cloudformation.DescribeStacksOutput{},
+	}}
 }
 
 func mockAwsStsClientGetter(sess *session.Session) *sts.STS {
@@ -254,6 +254,25 @@ type mockS3 struct {
 
 func (m mockS3) GetObject(in *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
 	return &m.GetObjectResp, nil
+}
+
+type mockCfn struct {
+	cloudformationiface.CloudFormationAPI
+	DescribeStacksResponse cloudformation.DescribeStacksOutput
+	CreateStackResponse    cloudformation.CreateStackOutput
+	DeleteStackResponse    cloudformation.DeleteStackOutput
+}
+
+func (m mockCfn) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+	return &m.DescribeStacksResponse, nil
+}
+
+func (m mockCfn) CreateStack(in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error) {
+	return &m.CreateStackResponse, nil
+}
+
+func (m mockCfn) DeleteStack(in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+	return &m.DeleteStackResponse, nil
 }
 
 func TestMetadataUpdate(t *testing.T) {
