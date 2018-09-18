@@ -22,7 +22,7 @@ func (b *AwsBroker) GetCatalog(c *broker.RequestContext) (*broker.CatalogRespons
 
 	var services []osb.Service
 	l, _ := b.listingcache.Get("__LISTINGS__")
-	glog.Infoln(l)
+	glog.V(10).Infoln(l)
 	for _, s := range l.([]ServiceNeedsUpdate) {
 		sd, err := b.catalogcache.Get(s.Name)
 		if err != nil {
@@ -39,7 +39,7 @@ func (b *AwsBroker) GetCatalog(c *broker.RequestContext) (*broker.CatalogRespons
 			}
 		}
 	}
-	osbResponse := &osb.CatalogResponse{Services: services}
+	osbResponse := &osb.CatalogResponse{Services: prescribeOverrides(*b, services)}
 
 	//glog.Infof("catalog response: %#+v", osbResponse)
 

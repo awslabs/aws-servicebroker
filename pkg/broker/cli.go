@@ -17,4 +17,5 @@ func AddFlags(o *Options) {
 	flag.StringVar(&o.TemplateFilter, "templateFilter", "-main.yaml", "only process templates with the defined suffix.")
 	flag.StringVar(&o.CatalogPath, "catalogPath", "", "The path to the catalog.")
 	flag.StringVar(&o.BrokerID, "brokerId", "awsservicebroker", "An ID to use for partitioning broker data in DynamoDb. if multiple brokers are used in the same AWS account, this value must be unique per broker")
+	flag.BoolVar(&o.PrescribeOverrides, "prescribeOverrides", false, "Plan properties that are globally overridden will be removed from service plan parameters, this enforces their values for users and simplifies the list of required parameters. Common overrides are aws_access_key, aws_secret_key, region and VpcId")
 }

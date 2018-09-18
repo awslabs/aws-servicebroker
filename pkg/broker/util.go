@@ -20,6 +20,88 @@ import (
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 )
 
+func getGlobalOverrides(brokerID string) map[string]string {
+	prefix := fmt.Sprintf("%s_all_all_all_", brokerID)
+	overrides := make(map[string]string)
+	for k, v := range GetOverridesFromEnv() {
+		if strings.HasPrefix(k, prefix) {
+			overrides[strings.TrimPrefix(k, prefix)] = v
+		}
+	}
+	return overrides
+}
+
+func prescribeOverrides(b AwsBroker, services []osb.Service) []osb.Service {
+	if !b.prescribeOverrides {
+		return services
+	} else {
+		// TODO: Alot of duplication of code with ServiceDefinitionToOsb, should cleanup
+		for s, service := range services {
+			for p, plan := range service.Plans {
+				overrideKeys := make([]string, 0)
+				for o := range b.globalOverrides {
+					overrideKeys = append(overrideKeys, o)
+				}
+				glog.Infoln(overrideKeys)
+				schemas := map[string]map[string]interface{}{
+					"create": plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{}),
+				}
+				if plan.Schemas.ServiceInstance.Update != nil {
+					schemas["update"] = plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})
+				}
+				for schemaName, schema := range schemas {
+					props := make(map[string]interface{})
+					required := make([]string, 0)
+					for k, v := range schema {
+						switch k {
+						case "properties":
+							for pk, pv := range v.(map[string]interface{}) {
+								if !stringInSlice(pk, overrideKeys) {
+									props[pk] = pv
+								}
+							}
+						case "required":
+							glog.Infoln(v)
+							for _, r := range v.([]string) {
+								if !stringInSlice(r, overrideKeys) {
+									required = append(required, r)
+								}
+							}
+						}
+					}
+					if schemaName == "create" {
+						plan.Schemas = &osb.Schemas{
+							ServiceInstance: &osb.ServiceInstanceSchema{
+								Create: &osb.InputParametersSchema{
+									Parameters: map[string]interface{}{
+										"type":       "object",
+										"properties": props,
+										"$schema":    "http://json-schema.org/draft-06/schema#",
+										"required":   required,
+									},
+								},
+							},
+						}
+					} else if schemaName == "update" {
+						if len(props) > 0 {
+							plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
+								Parameters: map[string]interface{}{
+									"type":       "object",
+									"properties": props,
+									"$schema":    "http://json-schema.org/draft-06/schema#",
+									"required":   required,
+								},
+							}
+						}
+					}
+				}
+				services[s].Plans[p] = plan
+			}
+		}
+		return services
+	}
+}
+
 func GetOverridesFromEnv() map[string]string {
 	var Overrides = make(map[string]string)
 
@@ -27,8 +109,10 @@ func GetOverridesFromEnv() map[string]string {
 		envvar := strings.Split(item, "=")
 		if strings.HasPrefix(envvar[0], "PARAM_OVERRIDE_") {
 			key := strings.TrimPrefix(envvar[0], "PARAM_OVERRIDE_")
-			Overrides[key] = envvar[1]
-			glog.V(10).Infof("%q=%q\n", key, envvar[1])
+			if envvar[1] != "" {
+				Overrides[key] = envvar[1]
+				glog.V(10).Infof("%q=%q\n", key, envvar[1])
+			}
 		}
 	}
 	return Overrides
