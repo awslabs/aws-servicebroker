@@ -297,7 +297,6 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 	// USER_SECRET_KEY credentials need to be prefixed with the service name for
 	// backward compatibility)
 	service, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
-
 	if err != nil {
 		desc := fmt.Sprintf("Failed to get the service %s: %v", request.ServiceID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)

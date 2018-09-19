@@ -252,7 +252,7 @@ func TestToCFNParams(t *testing.T) {
 			ParameterValue: aws.String("pval"),
 		},
 	}
-	assertor.Equal(expected, actual, "should return input mashalled into []*cloudformation.Parameter ")
+	assertor.Equal(expected, actual, "should return input marshalled into []*cloudformation.Parameter ")
 }
 
 func TestNewHTTPStatusCodeError(t *testing.T) {
