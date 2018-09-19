@@ -70,27 +70,33 @@ func prescribeOverrides(b AwsBroker, services []osb.Service) []osb.Service {
 						}
 					}
 					if schemaName == "create" {
+						params := map[string]interface{}{
+							"type":       "object",
+							"properties": props,
+							"$schema":    "http://json-schema.org/draft-06/schema#",
+						}
+						if len(required) > 0 {
+							params["required"] = required
+						}
 						plan.Schemas = &osb.Schemas{
 							ServiceInstance: &osb.ServiceInstanceSchema{
 								Create: &osb.InputParametersSchema{
-									Parameters: map[string]interface{}{
-										"type":       "object",
-										"properties": props,
-										"$schema":    "http://json-schema.org/draft-06/schema#",
-										"required":   required,
-									},
+									Parameters: params,
 								},
 							},
 						}
 					} else if schemaName == "update" {
+						params := map[string]interface{}{
+							"type":       "object",
+							"properties": props,
+							"$schema":    "http://json-schema.org/draft-06/schema#",
+						}
+						if len(required) > 0 {
+							params["required"] = required
+						}
 						if len(props) > 0 {
 							plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
-								Parameters: map[string]interface{}{
-									"type":       "object",
-									"properties": props,
-									"$schema":    "http://json-schema.org/draft-06/schema#",
-									"required":   required,
-								},
+								Parameters: params,
 							}
 						}
 					}
