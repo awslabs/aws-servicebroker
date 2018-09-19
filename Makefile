@@ -6,7 +6,7 @@ S3URI ?= $(shell echo $(HELM_URL)/ | sed 's/https:/s3:/' | sed 's/.s3.amazonaws.
 ACL ?= private
 PROFILE_NAME ?= ""
 PROFILE ?= $(shell if [ "${PROFILE_NAME}" != "" ] ; then echo "--profile ${PROFILE_NAME}" ; fi)
-
+VERSION ?= $(shell cat ./version)
 
 build: ## Builds the starter pack
 	go build -i github.com/awslabs/aws-service-broker/cmd/servicebroker
@@ -30,7 +30,7 @@ cf: ## Builds a PCF tile and bosh release
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
     go build -o packaging/cloudfoundry/resources/cfnsb --ldflags="-s" github.com/awslabs/aws-service-broker/cmd/servicebroker && \
 	cd packaging/cloudfoundry/ ; \
-	  tile build ; \
+	  tile build $(VERSION); \
 	cd ../../
 
 image: ## Builds docker image
@@ -47,7 +47,7 @@ clean: ## Cleans up build artifacts
 
 helm: ## Creates helm release and repository index file
 	cd packaging/helm/ ; \
-	helm package aws-servicebroker && \
+	helm package aws-servicebroker --version $(VERSION) && \
 		helm repo index . --url $(HELM_URL) ; \
 	cd ../../
 
