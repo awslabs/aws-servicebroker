@@ -1,0 +1,93 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Role and policy to allow for aws-service-broker to assume and create roles in this account",
+  "Parameters": {
+    "ServiceBrokerAccountId": {
+      "Type": "String",
+      "Description": "12 digit AWS account id (no spaces) of account where the AWS Service Broker will run."
+    },
+    "RoleName": {
+      "Type": "String",
+      "Description": "Name of role.",
+      "Default": "aws-service-broker-worker"
+    }
+  },
+  "Resources": {
+    "AwsServiceBrokerWorkerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Ref": "RoleName"
+        },
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Ref": "ServiceBrokerAccountId"
+                }
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "AwsServiceBrokerWorkerPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "DependsOn": "AwsServiceBrokerWorkerRole",
+      "Properties": {
+        "PolicyName": "aws-service-broker-worker",
+        "Roles": [
+          {
+            "Ref": "RoleName"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "NotAction": [
+                "iam:*",
+                "organizations:*"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "iam:Add*",
+                "iam:Attach*",
+                "iam:Create*",
+                "iam:Delete*",
+                "iam:Detach*",
+                "iam:Get*",
+                "iam:List*",
+                "iam:PassRole",
+                "iam:Put*",
+                "iam:Remove*",
+                "iam:Update*",
+                "iam:Upload*",
+                "organizations:DescribeOrganization"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "RoleArn": {
+      "Description": "ARN of the role.",
+      "Value": {
+        "Fn::GetAtt": ["AwsServiceBrokerWorkerRole", "Arn"]
+      }
+    }
+  }
+}

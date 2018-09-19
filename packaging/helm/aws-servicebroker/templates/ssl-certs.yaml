@@ -1,0 +1,19 @@
+{{- $ca := genCA "svc-cat-ca" 3650 }}
+{{- $cn := printf "%s" .Release.Name }}
+{{- $altName1 := printf "%s.%s" .Release.Name .Release.Namespace }}
+{{- $altName2 := printf "%s.%s.svc" .Release.Name .Release.Namespace }}
+{{- $cert := genSignedCert $cn nil (list $altName1 $altName2) 3650 $ca }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ template "fullname" . }}-cert
+  labels:
+    app: {{ template "fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+type: Opaque
+data:
+  tls.crt: {{ b64enc $cert.Cert }}
+  tls.key: {{ b64enc $cert.Key }}
+  

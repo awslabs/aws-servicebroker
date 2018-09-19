@@ -1,3 +1,13 @@
+/servicebroker
+/servicebroker-linux
+/functional-testing/aws-servicebroker
+.idea/
+/packaging/cloudfoundry/product/
+/packaging/cloudfoundry/release/
+/packaging/cloudfoundry/resources/cfnsb
+/packaging/helm/aws-servicebroker-*.tgz
+/packaging/helm/index.yaml
+
 # General ignores
 .DS_Store
 *.zip
@@ -107,3 +117,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+

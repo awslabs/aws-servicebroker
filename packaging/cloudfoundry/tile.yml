@@ -1,0 +1,106 @@
+---
+name: aws-service-broker
+icon_file: resources/sb.png 
+label: AWS Service Broker
+description: The AWS Service Broker is an open source project which allows native AWS services to be exposed directly through Cloud Foundry, and provides simple integration of AWS Services directly within the application platform.
+packages:
+- name: aws_sb
+  type: app-broker
+  label: AWS Service Broker 
+  manifest:
+    path: resources/cfnsb
+    buildpack: binary_buildpack
+    command: >
+      export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_aws_access_key=${AWS_ACCESS_KEY_ID} ;
+      export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_aws_secret_key=${AWS_SECRET_ACCESS_KEY} ;
+      export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_region=${AWS_DEFAULT_REGION} ;
+      ./cfnsb
+      -logtostderr
+      -brokerId="${BROKER_ID}"
+      -enableBasicAuth=true
+      -insecure=${INSECURE}
+      -port=${PORT}
+      -region=${AWS_DEFAULT_REGION}
+      -s3Bucket=${S3_BUCKET}
+      -s3Key="${S3_KEY}"
+      -s3Region=${S3_REGION}
+      -tableName=${TABLE_NAME}
+      -templateFilter="${TEMPLATE_FILTER}"
+      -tlsCert="${TLS_CERT}"
+      -tlsKey="${TLS_KEY}"
+      -prescribeOverrides ${PRESCRIBE}
+      -v="${VERBOSITY}"
+    memory: 1024M
+forms:
+- name: aws_sb_properties
+  label: AWS Service Broker Configuration
+  description: Required configuration to run the AWS service broker
+  properties:
+  - name: BROKER_ID
+    type: string
+    default: "awsservicebroker"
+    label: Broker ID
+    description: An ID to use for partitioning broker data in DynamoDb. if multiple brokers are used in the same AWS account, this value must be unique per broker
+  - name: AWS_ACCESS_KEY_ID
+    type: string
+    label: AWS Access Key ID
+    description: AWS IAM User Key ID to use, if left blank will attempt to use a role, if defined secret-key must also be defined
+  - name: AWS_SECRET_ACCESS_KEY
+    type: secret
+    label: AWS Secret Access Key
+    description: AWS IAM User Secret Key to use, if left blank will attempt to use a role, if defined key-id must also be defined
+  - name: AWS_DEFAULT_REGION
+    type: string
+    label: AWS Region
+    default: us-east-1
+    description: AWS Region to deploy services into
+  - name: S3_BUCKET
+    type: string
+    label: Amazon S3 Bucket 
+    default: awsservicebroker
+    description: S3 bucket containing service definititions
+  - name: S3_KEY
+    type: string
+    label: Amazon S3 Key Prefix
+    default: templates/latest
+    description: S3 key prefix to use when scanning for service definitions
+  - name: TEMPLATE_FILTER
+    type: string
+    label: Amazon S3 Key Suffix
+    default: -main.yaml
+    description: only process templates with the defined suffix.
+  - name: PRESCRIBE
+    type: boolean
+    label: Prescribe Global Overrides
+    default: true
+    description: parameters that are overridden globally will not be available in service plans
+  - name: S3_REGION
+    type: string
+    label: Amazon S3 Region
+    default: us-east-1
+    description: Region that S3 bucket resides in, if different from region to deploy resources into
+  - name: TABLE_NAME
+    type: string
+    label: Amazon DynamoDB table name
+    default: awssb
+    description: DynamoDB table name where broker state is stored. Multiple brokers can use the same table, but must use distinct Broker ID's to prevent them from sharing state
+  - name: TLS_CERT
+    type: string
+    label: TLS Certificate
+    description: base-64 encoded PEM block to use as the certificate for TLS.
+    optional: true
+  - name: TLS_KEY
+    type: string
+    label: TLS Key
+    optional: true
+    description: base-64 encoded PEM block to use as the private key matching the TLS certificate
+  - name: INSECURE
+    type: boolean
+    label: Disable SSL
+    default: false
+    description: use HTTP vs HTTPS
+  - name: VERBOSITY
+    type: integer
+    label: Log Verbosity
+    default: 5 
+    description: log level for V logs
