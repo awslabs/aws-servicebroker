@@ -1,0 +1,2 @@
+recursive-include sb_cfn_package/data *
+recursive-include sb_cfn_package/functions *

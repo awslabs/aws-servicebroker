@@ -1,0 +1,50 @@
+Conditions:
+  AutoPassword: !Equals
+    - !Ref MasterUserPassword
+    - "Auto"
+Resources:
+  AWSSBInjectedGeneratePasswordRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "cfn_utility_get_cidrs"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+  AWSSBInjectedGeneratePasswordLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: "lambda_function.handler"
+      Role:
+        Fn::GetAtt:
+          - "AWSSBInjectedGeneratePasswordRole"
+          - "Arn"
+      Code:
+        ZipFile: null
+      Runtime: "python3.6"
+      Timeout: "60"
+  AWSSBInjectedGeneratePassword:
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGeneratePasswordLambda.Arn
+      Length: 32

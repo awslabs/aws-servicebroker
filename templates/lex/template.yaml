@@ -1,0 +1,260 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "AWS Service Broker - Amazon Lex (qs-1ob09h6a4)"
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - Lex
+      - Bot
+      - NLU
+      - chatbot
+    Name: lex
+    DisplayName: "Amazon Lex"
+    LongDescription: "Amazon Lex is a service for building conversational interfaces into any application using voice and text. Amazon Lex provides the advanced deep learning functionalities of automatic speech recognition (ASR) for converting speech to text, and natural language understanding (NLU) to recognize the intent of the text, to enable you to build applications with highly engaging user experiences and lifelike conversational interactions."
+    ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonLex_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/lex/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: True
+        Policies:
+          - PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                  - lex:PostContent
+                  - lex:PostText
+                  Resource: "*"
+      CFNOutputs: []
+    ServicePlans:
+        default:
+          DisplayName: "Standard"
+          Description: 'Amazon Lex'
+          LongDescription: "Creates an Amazon Lex bot"
+          Cost: "https://aws.amazon.com/lex/pricing/"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "AWS Service Broker Configuration"
+        Parameters:
+          - SBArtifactS3Bucket
+          - SBArtifactS3KeyPrefix
+      - Label:
+          default: "Lex Model Configuration"
+        Parameters:
+          - LexS3Bucket
+          - CustomSlotTypesKey
+          - IntentsKey
+          - BotKey
+    ParameterLabels:
+      LexS3Bucket:
+        default: "Lex S3 Bucket"
+      CustomSlotTypesKey:
+        default: "Custom Slot Types S3 Key"
+      IntentsKey:
+        default: "Intents S3 Key"
+      BotKey:
+        default: "Bot S3 Key"
+      SBArtifactS3Bucket:
+        default: "AWS Service Broker Artifact S3 Bucket"
+      SBArtifactS3KeyPrefix:
+        default: "AWS Service Broker Artifact S3 Key Prefix"
+Parameters:
+  SBArtifactS3Bucket:
+    Default: awsservicebroker
+    Type: String
+    Description: >-
+     Name of the S3 bucket containing the AWS Service Broker Assets
+  SBArtifactS3KeyPrefix:
+    Default: ""
+    Type: String
+    Description: >-
+     Name of the S3 key prefix containing the AWS Service Broker Assets,
+     leave empty if assets are in the root of the bucket
+  LexS3Bucket:
+    Default: ""
+    Type: String
+    Description: >-
+     Name of the S3 bucket containing the bot and (optionally) intent/custom slot type json documents
+  IntentsKey:
+    Default: ""
+    Type: String
+    Description: >-
+     S3 key to a json document containing a list of Lex intents to create
+     for example: [{"name": "intent1", ...}, {"name": "intent2", ...}] . For more information on the intent structure,
+     see https://docs.aws.amazon.com/lex/latest/dg/API_PutIntent.html.
+     If no intents are required leave this field empty
+  CustomSlotTypesKey:
+    Default: ""
+    Type: String
+    Description: >-
+     S3 key to a json document containing a list of Lex custom slot types to create
+     for example: [{"name": "slot1", ...}, {"name": "slot2", ...}] . For more information on the slot type structure,
+     see https://docs.aws.amazon.com/lex/latest/dg/API_PutSlotType.html.
+     If no custom slot types are required leave this field empty
+  BotKey:
+    Type: String
+    Description: >-
+     S3 key to a json document containing a Lex bot definition to create. For more information on the bot structure,
+     see https://docs.aws.amazon.com/lex/latest/dg/API_PutBot.html.
+Resources:
+  LexIntentsRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Path: /
+      Policies:
+      - PolicyName: lambda-lex-intents
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: [ "lex:PutIntent", "lex:DeleteIntent", "s3:GetObject" ]
+            Resource: [ "*" ]
+  LexIntentsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: Creates Amazon Lex Intents
+      Handler: lambda_function.handler
+      Runtime: python2.7
+      Role: !GetAtt LexIntentsRole.Arn
+      Timeout: 240
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: "functions/lex_intent/lambda_function.zip"
+  LexCustomSlotTypesRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Path: /
+      Policies:
+      - PolicyName: lambda-lex-CustomSlotTypes
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: [ "lex:PutSlotType", "lex:DeleteSlotType", "s3:GetObject" ]
+            Resource: [ "*" ]
+  LexCustomSlotTypesLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: Creates Amazon Lex Custom Slot Types
+      Handler: lambda_function.handler
+      Runtime: python2.7
+      Role: !GetAtt LexCustomSlotTypesRole.Arn
+      Timeout: 240
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: "functions/lex_custom_slot_type/lambda_function.zip"
+  LexBotRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Path: /
+      Policies:
+      - PolicyName: lambda-lex-bot
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: [ "lex:PutBot", "lex:DeleteBot", "s3:GetObject" ]
+            Resource: [ "*" ]
+  LexBotLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: Creates Amazon Lex Bot
+      Handler: lambda_function.handler
+      Runtime: python2.7
+      Role: !GetAtt LexBotRole.Arn
+      Timeout: 240
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: "functions/lex_bot/lambda_function.zip"
+  IamServiceLinkedRoleRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Path: /
+      Policies:
+      - PolicyName: lambda-iam-service-linked-role
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: [ "iam:GetRole", "iam:CreateServiceLinkedRole", "iam:DeleteServiceLinkedRole" ]
+            Resource: [ "*" ]
+  IamServiceLinkedRoleLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: Creates IAM service linked role
+      Handler: lambda_function.handler
+      Runtime: python2.7
+      Role: !GetAtt IamServiceLinkedRoleRole.Arn
+      Timeout: 240
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: "functions/iam_service_linked_role/lambda_function.zip"
+  IamServiceLinkedRole:
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt IamServiceLinkedRoleLambda.Arn
+      ServiceName: "lex"
+  LexCustomSlotTypes:
+    DependsOn: IamServiceLinkedRole
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt LexCustomSlotTypesLambda.Arn
+      Bucket: !Ref LexS3Bucket
+      Key: !Ref CustomSlotTypesKey
+  LexIntents:
+    DependsOn: LexCustomSlotTypes
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt LexIntentsLambda.Arn
+      Bucket: !Ref LexS3Bucket
+      Key: !Ref IntentsKey
+  LexBot:
+    DependsOn: LexIntents
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt LexBotLambda.Arn
+      Bucket: !Ref LexS3Bucket
+      Key: !Ref BotKey

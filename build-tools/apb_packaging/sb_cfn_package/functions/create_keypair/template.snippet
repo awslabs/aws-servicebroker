@@ -1,0 +1,74 @@
+Resources:
+  AWSSBInjectedIAMUserRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "iam_user_creation"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "iam:CreateAccessKey"
+                  - "iam:PutUserPolicy"
+                  - "iam:ListAttachedUserPolicies"
+                  - "iam:DeleteUserPolicy"
+                  - "iam:AttachUserPolicy"
+                  - "iam:DeleteUser"
+                  - "iam:ListUserPolicies"
+                  - "iam:DetachUserPolicy"
+                  - "iam:CreateUser"
+                  - "iam:DeleteAccessKey"
+                  - "iam:ListAccessKeys"
+                  - "ssm:DeleteParameters"
+                  - "ssm:PutParameter"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+  AWSSBInjectedIAMUserLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: "index.handler"
+      Role:
+        Fn::GetAtt:
+          - "AWSSBInjectedIAMUserRole"
+          - "Arn"
+      Code:
+        ZipFile: null
+      Runtime: "python2.7"
+      Timeout: "60"
+  AWSSBInjectedIAMUser:
+    Type: "AWS::IAM::User"
+    Properties:
+      ManagedPolicyArns: []
+  AWSSBInjectedIAMUserCreator:
+    Type: "AWS::CloudFormation::CustomResource"
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedIAMUserLambda.Arn
+      Username: !Ref AWSSBInjectedIAMUser
+  AWSSBInjectedIAMUserPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName:
+      Users:
+      - !Ref AWSSBInjectedIAMUser
+      PolicyDocument:
+Outputs:
+  UserKeyId:
+    Value: !GetAtt AWSSBInjectedIAMUserCreator.asb-access-key-id
+  UserSecretKey:
+    Value: !GetAtt AWSSBInjectedIAMUserCreator.asb-secret-access-key

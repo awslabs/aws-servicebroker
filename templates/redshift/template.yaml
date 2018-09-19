@@ -1,0 +1,541 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'AWS Service Broker - Amazon Redshift (qs-1nt0fs932)'
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - Redshift
+      - Data Warehouse
+      - database
+    Name: redshift
+    DisplayName: "Amazon Redshift"
+    LongDescription: >-
+      Amazon Redshift is a fast, fully managed, petabyte-scale data warehouse service that makes
+      it simple and cost-effective to efficiently analyze all your data using your existing
+      business intelligence tools. It is optimized for datasets ranging from a few hundred
+      gigabytes to a petabyte or more and costs less than $1,000 per terabyte per year, a tenth
+      the cost of most traditional data warehousing solutions.
+    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/Database_AmazonRedshift_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/redshift/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: False
+    ServicePlans:
+        production:
+          DisplayName: "Production"
+          Description: 'Configuration designed for production deployments'
+          LongDescription: "Creates an Amazon Redshift database optimised for production use"
+          Cost: "https://aws.amazon.com/redshift/pricing/"
+          ParameterValues:
+            DBName: "Auto"
+            MasterUsername: "master"
+            MasterUserPassword: "Auto"
+            AllowVersionUpgrade: "False"
+            PortNumber: 15439
+            NumberOfAvailabilityZones: "2"
+            AvailabilityZones: "Auto"
+            CidrSize: "27"
+            CidrBlocks: "Auto"
+            BackupRetentionPeriod: 35
+            ClusterType: multi-node
+            # TODO: Build bucket into the template and remove this param
+            LogBucketName: ''
+            StorageEncrypted: "True"
+        custom:
+          DisplayName: "Custom"
+          Description: 'Custom configuration for advanced deployments'
+          LongDescription: "Creates an Amazon Redhift database with a custom configuration"
+          Cost: "https://aws.amazon.com/redshift/pricing/"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "Database Instance Specifications"
+        Parameters:
+          - NodeType
+          - NumberOfNodes
+          - ClusterType
+          - LogBucketName
+      - Label:
+          default: "Database Options"
+        Parameters:
+          - DBName
+          - MasterUsername
+          - MasterUserPassword
+          - AllowVersionUpgrade
+      - Label:
+          default: "Network and Security"
+        Parameters:
+          - PortNumber
+          - VpcId
+          - PubliclyAccessible
+          - AccessCidr
+          - CidrBlocks
+          - CidrSize
+          - AvailabilityZones
+          - NumberOfAvailabilityZones
+          - StorageEncrypted
+          - UseElasticIP
+      - Label:
+          default: "Backup"
+        Parameters:
+          - BackupRetentionPeriod
+      - Label:
+          default: "Maintenance"
+        Parameters:
+          - PreferredMaintenanceWindowDay
+          - PreferredMaintenanceWindowStartTime
+          - PreferredMaintenanceWindowEndTime
+    ParameterLabels:
+      ClusterType:
+        default: "Cluster Type"
+      LogBucketName:
+        default: "Log Bucket Name"
+      DBName:
+        default: "DB Name"
+      MasterUsername:
+        default: "Master Username"
+      MasterUserPassword:
+        default: "Master User Password"
+      UseElasticIP:
+        default: "Use Elastic IP"
+      CidrBlocks:
+        default: "CIDR Blocks"
+      CidrSize:
+        default: "CIDR Size"
+      AvailabilityZones:
+        default: "Availability Zones"
+      NumberOfAvailabilityZones:
+        default: "Number Of Availability Zones"
+      NumberOfNodes:
+        default: "Number Of Nodes"
+      PortNumber:
+        default: "Port Number"
+      NodeType:
+        default: "Node Type"
+      StorageEncrypted:
+        default: "Storage Encrypted"
+      AllowVersionUpgrade:
+        default: "Allow Version Upgrade"
+      PortNumber:
+        default: "Port Number"
+      VpcId:
+        default: "VPC Id"
+      PubliclyAccessible:
+        default: "Publicly Accessible"
+      AccessCidr:
+        default: "Access CIDR"
+      BackupRetentionPeriod:
+        default: "Backup Retention Period"
+      PreferredMaintenanceWindowDay:
+        default: "Preferred Maintenance Window Day"
+      PreferredMaintenanceWindowStartTime:
+        default: "Preferred MaintenanceWindow Start Time"
+      PreferredMaintenanceWindowEndTime:
+        default: "Preferred Maintenance Window End Time"
+Parameters:
+  VpcId:
+    Description: The ID of the VPC to launch the RDS instance into
+    Type: 'AWS::EC2::VPC::Id'
+  NumberOfAvailabilityZones:
+    Description: >-
+      Quantity of subnets to use, if selecting more than 2 the region this stack
+      is in must have at least that many Availability Zones
+    Type: String
+    Default: '3'
+    AllowedValues:
+      - '2'
+      - '3'
+      - '4'
+      - '5'
+  PreferredMaintenanceWindowDay:
+    Description: The day of the week which RDS maintenance will be performed
+    Type: String
+    Default: Mon
+    AllowedValues:
+      - Mon
+      - Tue
+      - Wed
+      - Thu
+      - Fri
+      - Sat
+      - Sun
+  PreferredMaintenanceWindowStartTime:
+    Description: >-
+      The weekly start time in UTC for the RDS maintenance window, must be less
+      than PreferredMaintenanceWindowEndTime and cannot overlap with
+      PreferredBackupWindow
+    Type: String
+    Default: '04:00'
+    AllowedValues:
+      - '00:00'
+      - '01:00'
+      - '02:00'
+      - '03:00'
+      - '04:00'
+      - '05:00'
+      - '06:00'
+      - '07:00'
+      - '08:00'
+      - '09:00'
+      - '10:00'
+      - '11:00'
+      - '12:00'
+      - '13:00'
+      - '14:00'
+      - '15:00'
+      - '16:00'
+      - '17:00'
+      - '18:00'
+      - '19:00'
+      - '20:00'
+      - '21:00'
+      - '22:00'
+  PreferredMaintenanceWindowEndTime:
+    Description: >-
+      The weekly end time in UTC for the RDS maintenance window, must be more
+      than PreferredMaintenanceWindowEndTime and cannot overlap with
+      PreferredBackupWindow
+    Type: String
+    Default: '06:00'
+    AllowedValues:
+      - '00:00'
+      - '01:00'
+      - '02:00'
+      - '03:00'
+      - '04:00'
+      - '05:00'
+      - '06:00'
+      - '07:00'
+      - '08:00'
+      - '09:00'
+      - '10:00'
+      - '11:00'
+      - '12:00'
+      - '13:00'
+      - '14:00'
+      - '15:00'
+      - '16:00'
+      - '17:00'
+      - '18:00'
+      - '19:00'
+      - '20:00'
+      - '21:00'
+      - '22:00'
+  AvailabilityZones:
+    Description: >-
+      list of availability zones to use, must be the same quantity as specified
+      in NumberOfAvailabilityZones
+    Type: 'CommaDelimitedList'
+    Default: "Auto"
+  CidrBlocks:
+    Description: >-
+      comma seperated list of CIDR blocks to place RDS into, must be the same
+      quantity as specified in NumberOfAvailabilityZones
+    Type: CommaDelimitedList
+    Default: 'Auto'
+  CidrSize:
+    Description: Size of Cidr block to allocate if CidrBlocks is set to Auto.
+    Type: String
+    Default: 27
+  AccessCidr:
+    Description: CIDR block to allow to connect to database
+    Type: String
+  MasterUsername:
+    Description: Master Cluster Username
+    Type: String
+  NodeType:
+    Description: The node type that is provisioned for this cluster.
+    Type: String
+    AllowedValues:
+      - dc1.large
+      - dc1.8xlarge
+      - ds1.xlarge
+      - ds1.8xlarge
+      - ds2.xlarge
+      - ds2.8xlarge
+    Default: dc1.large
+  NumberOfNodes:
+    Description: >-
+      The number of compute nodes in the cluster. If you specify multi-node for
+      the ClusterType parameter, you must specify a number greater than 1. You
+      can not specify this parameter for a single-node cluster. min 2 max 32
+    Type: String
+    Default: '3'
+  MasterUserPassword:
+    Description: Master user Cluster Password
+    Type: String
+    NoEcho: 'true'
+    Default: "Auto"
+  ClusterType:
+    Description: >-
+      The type of cluster. Specify single-node or multi-node (default).  Number
+      of nodes must be greater than 1 for multi-node
+    Type: String
+    AllowedValues:
+      - single-node
+      - multi-node
+    Default: multi-node
+  AllowVersionUpgrade:
+    Description: >-
+      When a new version of Amazon Redshift is released, tells whether upgrades
+      can be applied to the engine that is running on the cluster. The upgrades
+      are applied during the maintenance window. The default value is True.
+    Type: String
+    Default: 'True'
+    AllowedValues:
+      - 'True'
+      - 'False'
+  StorageEncrypted:
+    Description: Indicates whether the Cluster storage is encrypted.
+    Type: String
+    Default: 'True'
+    AllowedValues:
+      - 'True'
+      - 'False'
+  BackupRetentionPeriod:
+    Description: >-
+      The number of days during which automatic DB snapshots are retained.
+      Setting 0 disables automatic snapshots, maximum value is 35
+    Type: Number
+    Default: '35'
+    MinValue: '0'
+    MaxValue: '35'
+  PortNumber:
+    Description: The port number for the Cluster to listen on
+    Type: Number
+    Default: '5439'
+    MinValue: '1150'
+    MaxValue: '65535'
+  PubliclyAccessible:
+    Description: Indicates whether the Cluster is an Internet-facing instance.
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+  UseElasticIP:
+    Description: 'For public accessable clusters which require a static IP, assign a EIP'
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+  LogBucketName:
+    Description: >-
+      Must be a valid S3 Bucket in same Region, if no bucket is provided audit
+      logging will not be enabled for this cluster
+    Type: String
+  DBName:
+    Description: The name of the database to create when the DB instance is created.
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '^[a-zA-Z0-9]*$'
+    ConstraintDescription: must contain from 1 to 64 alphanumeric characters.
+    Default: "Auto"
+Conditions:
+  3az: !Or
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '3'
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '4'
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '5'
+  4az: !Or
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '4'
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '5'
+  5az: !Equals
+    - !Ref NumberOfAvailabilityZones
+    - '5'
+  UseEIP: !Equals
+    - !Ref UseElasticIP
+    - 'True'
+  EncryptStorage: !Equals
+    - !Ref StorageEncrypted
+    - 'True'
+  EnableLogging: !Not
+    - !Equals
+      - !Ref LogBucketName
+      - ''
+Resources:
+  KMSKey:
+    Condition: EncryptStorage
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: !Sub 'Database ${DBName}'
+      Enabled: 'true'
+      EnableKeyRotation: 'true'
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - 'kms:Create*'
+              - 'kms:Describe*'
+              - 'kms:Enable*'
+              - 'kms:List*'
+              - 'kms:Put*'
+              - 'kms:Update*'
+              - 'kms:Revoke*'
+              - 'kms:Disable*'
+              - 'kms:Get*'
+              - 'kms:Delete*'
+              - 'kms:ScheduleKeyDeletion'
+              - 'kms:CancelKeyDeletion'
+              - 'kms:GenerateDataKey'
+              - 'kms:GenerateDataKeyWithoutPlaintext'
+              - 'kms:GenerateRandom'
+            Resource: '*'
+  ClusterParameterGroup:
+    Type: 'AWS::Redshift::ClusterParameterGroup'
+    Properties:
+      ParameterGroupFamily: redshift-1.0
+      Description: !Sub 'Database ${DBName}'
+      Parameters:
+        - ParameterName: enable_user_activity_logging
+          ParameterValue: 'true'
+  ClusterSubnetGroup:
+    Type: 'AWS::Redshift::ClusterSubnetGroup'
+    Properties:
+      Description: !Sub 'Database ${DBName}'
+      SubnetIds:
+        - !Ref ClusterSubnet1
+        - !Ref ClusterSubnet2
+        - !If
+          - 3az
+          - !Ref ClusterSubnet3
+          - !Ref 'AWS::NoValue'
+        - !If
+          - 4az
+          - !Ref ClusterSubnet4
+          - !Ref 'AWS::NoValue'
+        - !If
+          - 5az
+          - !Ref ClusterSubnet5
+          - !Ref 'AWS::NoValue'
+  ClusterSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock: !Select
+        - 0
+        - !Ref CidrBlocks
+  ClusterSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock: !Select
+        - 1
+        - !Ref CidrBlocks
+  ClusterSubnet3:
+    Condition: 3az
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select
+        - 2
+        - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock: !Select
+        - 2
+        - !Ref CidrBlocks
+  ClusterSubnet4:
+    Condition: 4az
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select
+        - 3
+        - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock: !Select
+        - 3
+        - !Ref CidrBlocks
+  ClusterSubnet5:
+    Condition: 5az
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select
+        - 4
+        - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock: !Select
+        - 4
+        - !Ref CidrBlocks
+  ClusterSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: !Sub >-
+        Allow Client connections to Cluster ${DBName}
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref PortNumber
+          ToPort: !Ref PortNumber
+          CidrIp: !Ref AccessCidr
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: '-1'
+          ToPort: '-1'
+          CidrIp: 0.0.0.0/0
+  Cluster:
+    Type: 'AWS::Redshift::Cluster'
+    Properties:
+      AllowVersionUpgrade: !Ref AllowVersionUpgrade
+      AutomatedSnapshotRetentionPeriod: !Ref BackupRetentionPeriod
+      ClusterParameterGroupName: !Ref ClusterParameterGroup
+      ClusterSubnetGroupName: !Ref ClusterSubnetGroup
+      ClusterType: !Ref ClusterType
+      DBName: !Ref DBName
+      ElasticIp: !If
+        - UseEIP
+        - !Ref ClusterEIP
+        - !Ref 'AWS::NoValue'
+      Encrypted: !Ref StorageEncrypted
+      KmsKeyId: !If
+        - EncryptStorage
+        - !GetAtt
+          - KMSKey
+          - Arn
+        - !Ref 'AWS::NoValue'
+      LoggingProperties: !If
+        - EnableLogging
+        - BucketName: !Ref LogBucketName
+        - !Ref 'AWS::NoValue'
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      NodeType: !Ref NodeType
+      NumberOfNodes: !Ref NumberOfNodes
+      Port: !Ref PortNumber
+      PreferredMaintenanceWindow: !Sub >-
+        ${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}
+      PubliclyAccessible: !Ref PubliclyAccessible
+      VpcSecurityGroupIds:
+        - !Ref ClusterSecurityGroup
+  ClusterEIP:
+    Condition: UseEIP
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: VPC
+Outputs:
+  EndpointAddress:
+    Value: !GetAtt
+      - Cluster
+      - Endpoint.Address

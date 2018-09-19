@@ -1,0 +1,588 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-secret
+stringData:
+  aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
+  aws_secret_key: "{{ AWS_SECRET_ACCESS_KEY }}"
+  aws_cloudformation_role_arn: "{{  AWS_CFN_ROLE_ARN  }}"
+  region: "{{ AWS_REGION }}"
+  VpcId: "{{ AWS_VPC_ID }}"
+  SBArtifactS3Bucket: "{{ AWS_SB_ARTIFACT_BUCKET }}"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: awssb
+  namespace: aws-service-broker
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: awssb-auth
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["create", "delete"]
+- apiGroups: ["authorization.openshift.io"]
+  resources: ["subjectrulesreview"]
+  verbs: ["create"]
+- apiGroups: ["authorization.k8s.io"]
+  resources: ["subjectaccessreviews"]
+  verbs: ["create"]
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews"]
+  verbs: ["create"]
+- apiGroups: ["networking.k8s.io", ""]
+  attributeRestrictions: null
+  resources: ["networkpolicies"]
+  verbs: ["create", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: awssb-auth-bind
+subjects:
+- kind: ServiceAccount
+  name: awssb
+  namespace: aws-service-broker
+roleRef:
+  kind: ClusterRole
+  name: awssb-auth
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: awssb
+subjects:
+- kind: ServiceAccount
+  name: awssb
+  namespace: aws-service-broker
+roleRef:
+  kind: ClusterRole
+  name: admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: access-awssb-role
+rules:
+- nonResourceURLs: ["/aws-service-broker", "/aws-service-broker/*"]
+  verbs: ["get", "post", "put", "patch", "delete"]
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: awssb-auth-secret
+  namespace: aws-service-broker
+data:
+  username: "YWRtaW4="
+  password: "YWRtaW4="
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+   name: awssb
+   namespace: aws-service-broker
+   labels:
+     app: aws-service-broker
+     service: awssb
+spec:
+  ports:
+    - name: port-1338
+      port: 1338
+      targetPort: 1338
+      protocol: TCP
+  selector:
+    app: aws-service-broker
+    service: awssb
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: etcd
+  namespace: aws-service-broker
+spec:
+  capacity:
+    storage: "10Gi"
+  accessModes:
+    - "ReadWriteOnce"
+  hostPath:
+    path: "/tmp/etcd"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: etcd
+  namespace: aws-service-broker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+   name: awssb-etcd
+   namespace: aws-service-broker
+   labels:
+     app: etcd
+     service: awssb-etcd
+spec:
+  ports:
+    - name: etcd-advertise
+      port: 2379
+  selector:
+    app: etcd
+    service: awssb-etcd
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: broker-config
+  namespace: aws-service-broker
+  labels:
+    app: aws-service-broker
+data:
+  broker-config: |
+    registry:
+      - type: "dockerhub"
+        name: "dh"
+        url: "https://registry.hub.docker.com"
+        org: "awsservicebrokeralpha"
+        tag: "latest"
+        white_list:
+          - ".*-apb$"
+    dao:
+      etcd_host: awssb-etcd
+      etcd_port: 2379
+    log:
+      logfile: /var/log/ansible-service-broker/asb.log
+      stdout: true
+      level: debug
+      color: true
+    openshift:
+      host: ""
+      ca_file: ""
+      bearer_token_file: ""
+      image_pull_policy: "IfNotPresent"
+      sandbox_role: "edit"
+      namespace: aws-service-broker
+      keep_namespace: false
+      keep_namespace_on_error: true
+    broker:
+      dev_broker: true
+      bootstrap_on_startup: true
+      refresh_interval: "600s"
+      launch_apb_on_bind: false
+      output_request: true
+      recovery: true
+      ssl_cert_key: /etc/tls/private/tls.key
+      ssl_cert: /etc/tls/private/tls.crt
+      auto_escalate: true
+      cluster_url: aws-service-broker
+      auth:
+        - type: basic
+          enabled: false
+    secrets:
+      - {apb_name: dh-sqs, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-sns, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-route53, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-rdsmysql, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-emr, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-redshift, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-elasticache, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-dynamodb, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-s3, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-athena, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-kinesis, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-kms, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-lex, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-polly, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-rdsmariadb, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-rdspostgresql, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-rekognition, secret: aws-secret, title: aws-secret}
+      - {apb_name: dh-translate, secret: aws-secret, title: aws-secret}
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: awssb-etcd
+  namespace: aws-service-broker
+  labels:
+    app: etcd
+    service: awssb-etcd
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: etcd
+        service: awssb-etcd
+    spec:
+      restartPolicy: Always
+      containers:
+        - image: "quay.io/coreos/etcd:latest"
+          name: main
+          imagePullPolicy: IfNotPresent
+          workingDir: /etcd
+          args:
+            - /usr/local/bin/etcd
+            - --data-dir=/data
+            - --listen-client-urls=http://0.0.0.0:2379
+            - --advertise-client-urls=http://0.0.0.0:2379
+          ports:
+          - containerPort: 2379
+            protocol: TCP
+          env:
+          - name: ETCDCTL_API
+            value: "3"
+          volumeMounts:
+            - mountPath: /data
+              name: etcd
+      volumes:
+        - name: etcd
+          persistentVolumeClaim:
+            claimName: etcd
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: awssb
+  namespace: aws-service-broker
+  labels:
+    app: aws-service-broker
+    service: awssb
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: aws-service-broker
+        service: awssb
+    spec:
+      serviceAccount: awssb
+      restartPolicy: Always
+      containers:
+        - image: "awsservicebrokeralpha/aws-service-broker:develop"
+          name: awssb
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/aws-service-broker
+            - name: awssb-tls
+              mountPath: /etc/tls/private
+            - name: awssb-auth-volume
+              mountPath: /var/run/asb-auth
+          ports:
+            - containerPort: 1338
+              protocol: TCP
+              hostPort: 1338
+          env:
+          - name: BROKER_CONFIG
+            value: "/etc/aws-service-broker/config.yaml"
+          - name: INSECURE
+            value: "true"
+          resources: {}
+          terminationMessagePath: /tmp/termination-log
+      volumes:
+        - name: config-volume
+          configMap:
+            name: broker-config
+            items:
+            - key: broker-config
+              path: config.yaml
+        - name: awssb-tls
+          secret:
+            secretName: awssb-tls
+        - name: awssb-auth-volume
+          secret:
+            secretName: awssb-auth-secret
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: awsservicebroker-client
+  namespace: aws-service-broker
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: awsservicebroker-client
+subjects:
+- kind: ServiceAccount
+  name: awsservicebroker-client
+  namespace: aws-service-broker
+roleRef:
+  kind: ClusterRole
+  name: access-awssb-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: awsservicebroker-client
+  annotations:
+    kubernetes.io/service-account.name: awsservicebroker-client
+type: kubernetes.io/service-account-token
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: bundles.automationbroker.io
+spec:
+  group: automationbroker.io
+  version: v1
+  scope: Namespaced
+  names:
+    plural: bundles
+    singular: bundle
+    kind: Bundle
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            runtime:
+              type: integer
+              minimum: 1
+              maximum: 2
+            version:
+              type: string
+              pattern: '^[\d]+.[\d*]+$'
+            fqName:
+              type: string
+            image:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            bindable:
+              type: boolean
+            description:
+              type: string
+            metadata:
+              type: string
+            async:
+              type: string
+              pattern: '^(optional|required|unsupported)$'
+            plans:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  metadata:
+                    type: string
+                  free:
+                    type: boolean
+                  bindable:
+                    type: boolean
+                  updatesTo:
+                    type: array
+                    items:
+                      type: string
+                  parameters:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        title:
+                          type: string
+                        type:
+                          type: string
+                        description:
+                          type: string
+                        default:
+                          type: string
+                        deprecateMaxLength:
+                          type: integer
+                        maxLength:
+                          type: integer
+                        minLength:
+                          type: integer
+                        pattern:
+                          type: string
+                        multipleOf:
+                          type: float
+                        maximum:
+                          type: float
+                        exclusiveMaximum:
+                          type: float
+                        minimum:
+                          type: float
+                        exclusiveMinimum:
+                          type: float
+                        enum:
+                          type: array
+                        items:
+                          type: string
+                        required:
+                          type: boolean
+                        updatable:
+                          type: boolean
+                        displayType:
+                          type: string
+                        displayGroup:
+                          type: string
+                  bindParameters:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      title:
+                        type: string
+                      type:
+                        type: string
+                      description:
+                        type: string
+                      default:
+                        type: object
+                      deprecateMaxLength:
+                        type: integer
+                      maxLength:
+                        type: integer
+                      minLength:
+                        type: integer
+                      pattern:
+                        type: string
+                      multipleOf:
+                        type: float
+                      maximum:
+                        type: float
+                      exclusiveMaximum:
+                        type: float
+                      minimum:
+                        type: float
+                      exclusiveMinimum:
+                        type: float
+                      enum:
+                        type: array
+                      items:
+                        type: string
+                      required:
+                        type: boolean
+                      updatable:
+                        type: boolean
+                      displayType:
+                        type: string
+                      displayGroup:
+                        type: string
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: jobstates.automationbroker.io
+spec:
+  group: automationbroker.io
+  version: v1
+  scope: Namespaced
+  names:
+    plural: jobstates
+    singular: jobstate
+    kind: JobState
+  validation:
+    openAPIV3Schema:
+      properties:
+        state:
+          type: string
+        podName:
+          type: string
+        method:
+          type: string
+        error:
+          type: string
+        description:
+          type: string
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: servicebindings.automationbroker.io
+spec:
+  group: automationbroker.io
+  version: v1
+  scope: Namespaced
+  names:
+    plural: servicebindings
+    singular: servicebinding
+    kind: ServiceBinding
+  validation:
+    openAPIV3Schema:
+      serviceInstanceId:
+        type: string
+      parameters:
+        type: string
+      JobToken:
+        type: string
+
+--- 
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: serviceinstances.automationbroker.io
+spec:
+  group: automationbroker.io
+  version: v1
+  scope: Namespaced
+  names:
+    plural: serviceinstances
+    singular: serviceinstance
+    kind: ServiceInstance
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            specId:
+              type: string
+            context:
+              type: object
+              properties:
+                plateform:
+                  type: string
+                namespace:
+                  type: string
+            parameters:
+              type: string
+            bindingIds:
+              type: array
+              items:
+                type: string

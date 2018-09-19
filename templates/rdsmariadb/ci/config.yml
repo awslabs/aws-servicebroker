@@ -1,0 +1,13 @@
+global:
+  parameters: {}
+  regions:
+    - us-east-1
+
+plans:
+  dev:
+    parameters:
+      DBInstanceClass: db.t2.large
+      AllocatedStorageAndIops: "100 GB / 1,000 IOPS"
+      MysqlServerTimezone: "UTC"
+      PubliclyAccessible: "false"
+      AccessCidr: "10.0.0.0/16"

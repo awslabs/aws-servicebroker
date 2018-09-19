@@ -1,0 +1,1 @@
+application_name: "{{ namespace }}::{{ _apb_plan_id }}::{{ _apb_service_class_id }}::{{ _apb_service_instance_id }}"

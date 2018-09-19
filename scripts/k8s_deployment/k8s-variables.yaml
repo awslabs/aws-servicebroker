@@ -1,0 +1,61 @@
+# AWS Account Settings
+
+# If your cluster is not on ec2 with a suitable IAM role enabled then you can supply IAM user credentials here,
+# if use-role is specified the broker will attempt to use the EC2 instance profile associated with the node the pod is
+# running on. required IAM permissions are documented here:
+# https://github.com/awslabs/aws-servicebroker-documentation/blob/master/Overview.md
+aws_access_key_id: use-role
+aws_secret_access_key: use-role
+
+# A CloudFormation IAM service role is required for the broker to launch AWS services, this role must have all the
+# permissions required to manage the resources supported by the broker, as well as the ability to manage IAM users,
+# vpc resources and kms keys
+aws_cloudformation_role_arn:
+
+# specify an aws region that resources should be launched into
+region: us-west-2
+
+# specify a VPC ID, resources that are inside VPC will launch into this VPC, it is recommended you use the same VPC
+# that the cluster is in if your cluster is running in ec2
+vpc_id:
+
+
+######################################################################################
+# Advanced Options - there should be no need to change these under most circumstances
+######################################################################################
+artifact_bucket: awsservicebroker
+dockerhub_org: awsservicebroker
+broker_image: "awsservicebroker/aws-service-broker:latest"
+etcd_image: "quay.io/coreos/etcd:latest"
+etcd_path: /usr/local/bin/etcd
+broker_config: /etc/aws-service-broker/config.yaml
+# Broker SSL with Kubernetes isn't supported, but will be in the future
+# insecure: "true"
+tag: latest
+broker_url_prefix: "aws-service-broker"
+registry_type: dockerhub
+registry_name: dh
+registry_url: https://registry.hub.docker.com
+dev_broker: "true"
+sandbox_role: "edit"
+auto_escalate: "true"
+keep_namespace: "false"
+keep_namespace_on_error: "true"
+launch_apb_on_bind: "false"
+bootstrap_on_startup: "true"
+refresh_interval: "600s"
+output_request: "true"
+recovery: "true"
+image_pull_policy: "IfNotPresent"
+enable_basic_auth: "false"
+broker_pass: YWRtaW4=
+broker_user: YWRtaW4=
+############################################################
+# NOTE: Default behavior for these are going to use the kubernetes
+# InClusterConfig. These are typically overridden for running
+# the broker outside of a cluster. Under normal circumstances,
+# you probably want to leave these blank.
+############################################################
+ca_file: ""
+bearer_token_file: ""
+cluster_auth_host: ""

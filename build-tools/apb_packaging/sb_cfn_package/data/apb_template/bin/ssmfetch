@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+from sys import argv
+import boto3
+
+param_name = argv[1]
+region = argv[2]
+
+ssm_client = boto3.client('ssm', region_name=region)
+print(ssm_client.get_parameters(Names=[param_name], WithDecryption=True)['Parameters'][0]['Value'])

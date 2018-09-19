@@ -1,0 +1,19 @@
+version: 1.0
+name: emr-sample-app-apb
+description: deploys a sample web application
+bindable: false
+async: optional
+metadata:
+  displayName: "Amazon EMR Sample Application (APB)"
+  longDescription: A sample APB which deploys a containerized sample web application
+  imageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/emr_sample.png"
+  providerDisplayName: "Amazon Web Services"
+plans:
+  - name: emr-sample
+    description: A sample APB which deploys a Python web application to expose a RESTful api to an AWS APB
+    free: True
+    metadata:
+      displayName: EMR REST Sample
+      longDescription: This plan deploys a Python web application to expose a RESTful api to an AWS APB
+      cost: $0.00
+    parameters: []

@@ -1,0 +1,15 @@
+global:
+  parameters: {}
+  regions:
+    - us-east-1
+
+plans:
+  dynamodb-hashrange:
+    parameters:
+      HashAttributeName: test
+      HashAttributeType: S
+      RangeAttributeName: test2
+      RangeAttributeType: S
+      ReadCapacityUnits: 5
+      WriteCapacityUnits: 5
+    sample_app: dynamodb-sample-app-apb

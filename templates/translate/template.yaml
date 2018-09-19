@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "AWS Service Broker - Amazon Translate (qs-1ob09h6at)"
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - Translate
+      - Language
+    Name: translate
+    DisplayName: "Amazon Translate"
+    LongDescription: "[PREVIEW] You must have already signed up for the preview in order to use this service. Amazon Translate is a neural machine translation service that delivers fast, high-quality, and affordable language translation. Neural machine translation is a form of language translation automation that uses machine learning and deep learning models to deliver more accurate and more natural sounding translation than traditional statistical and rule-based translation algorithms."
+    ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AWSPreview_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/translate/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: True
+        Policies:
+          - PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                  - "translate:TranslateText"
+                  Resource: "*"
+      CFNOutputs: []
+    ServicePlans:
+        default:
+          DisplayName: "Standard"
+          Description: 'AWS Translate'
+          LongDescription: "Enables use of AWS Translate"
+          Cost: "https://aws.amazon.com/translate/pricing/"
+Resources: {}

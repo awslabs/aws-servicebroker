@@ -1,0 +1,86 @@
+Async:
+  Default: optional
+  Required: false
+  Type: &str !!python/name:builtins.str ''
+Bindable:
+  Default: true
+  Required: false
+  Type: &bool !!python/name:builtins.bool ''
+Bindings:
+  Default: Function::build_bindings
+  Required: False
+  Type: &dict !!python/name:builtins.dict ''
+  SubType: *str
+Description:
+  Default: Template::Description
+  Required: false
+  Type: *str
+DisplayName:
+  Default: null
+  Required: true
+  Type: *str
+DocumentationUrl:
+  Default: null
+  Required: true
+  Type: *str
+ImageUrl:
+  Default: null
+  Required: true
+  Type: *str
+LongDescription:
+  Default: null
+  Required: true
+  Type: *str
+Name:
+  Default: null
+  Required: true
+  Type: *str
+ProviderDisplayName:
+  Default: null
+  Required: true
+  Type: *str
+ServicePlans:
+  Default: Function::build_plan
+  Required: false
+  SubSpec:
+    ::UseKey:
+      Default: Default
+      Required: false
+      SubSpec:
+        Cost:
+          Default: ''
+          Required: false
+          Type: *str
+        Description:
+          Default: ''
+          Required: false
+          Type: *str
+        DisplayName:
+          Default: ServicePlans[self].::UseKey
+          Required: false
+          Type: *str
+        Free:
+          Default: false
+          Required: false
+          Type: *bool
+        LongDescription:
+          Default: ''
+          Required: false
+          Type: *str
+        ParameterValues:
+          Default: Function::build_plan_parameters
+          Required: false
+          SubType: *str
+          Type: *dict
+      Type: *dict
+  Type: *dict
+Tags:
+  Default:
+  - AWS
+  Required: false
+  SubType: *str
+  Type: !!python/name:builtins.list ''
+Version:
+  Default: '1.0'
+  Required: false
+  Type: *str

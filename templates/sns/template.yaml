@@ -1,0 +1,180 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'AWS Service Broker - Amazon SNS (qs-1nt0fs93c)'
+Metadata:
+  'AWS::ServiceBroker::Specification':
+    Version: 1.0
+    Tags:
+      - AWS
+      - SNS
+      - notifications
+    Name: sns
+    DisplayName: "Amazon SNS"
+    LongDescription: "Amazon Simple Notification Service (Amazon SNS) is a web service that enables applications, end-users, and devices to instantly send and receive notifications from the cloud."
+    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/Messaging_AmazonSNS_LARGE.png"
+    DocumentationUrl: 'https://aws.amazon.com/documentation/sns/'
+    ProviderDisplayName: "Amazon Web Services"
+    Bindings:
+      IAM:
+        AddKeypair: True
+        Policies:
+          - PolicyDocument: {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Resource": "*",
+                    "Action": [
+                        "sns:Unsubscribe",
+                        "sns:ListSubscriptionsByTopic",
+                        "sns:GetSubscriptionAttributes",
+                        "sns:SetSubscriptionAttributes"
+                    ]
+                },
+                {
+                    "Effect": "Allow",
+                    "Resource": !If [ AddTopic, !Ref SNSTopic, !Ref ExistingTopicArn ],
+                    "Action": [
+                        "sns:Publish",
+                        "sns:Subscribe"
+                    ]
+                }
+            ]
+        }
+    ServicePlans:
+        topicwithsub:
+          DisplayName: "Topic and Subscription"
+          Description: 'Deploys an SNS Topic and subscribes an endpoint to it'
+          LongDescription: ""
+          Cost: "https://aws.amazon.com/sns/pricing/"
+          ParameterValues:
+            ExistingTopicArn: ""
+            CreateTopic: "Yes"
+        topic:
+          DisplayName: "Topic"
+          Description: 'Deploys an SNS Topic'
+          LongDescription: ""
+          Cost: "https://aws.amazon.com/sns/pricing/"
+          ParameterValues:
+            ExistingTopicArn: ""
+            CreateTopic: "Yes"
+            SubscriptionProtocol: ""
+            SubscriptionEndPoint: ""
+        subscription:
+          DisplayName: "Subscription"
+          Description: 'Deploys an SNS Subscription to an existing topic'
+          LongDescription: ""
+          Cost: "https://aws.amazon.com/sns/pricing/"
+          ParameterValues:
+            CreateTopic: "No"
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: "SNS Configuration"
+        Parameters:
+          - SubscriptionEndPoint
+          - SubscriptionProtocol
+          - CreateTopic
+          - ExistingTopicArn
+    ParameterLabels:
+      SubscriptionEndPoint:
+        default: "Subscription EndPoint"
+      SubscriptionProtocol:
+        default: "Subscription Protocol"
+      CreateTopic:
+        default: "Create Topic"
+      ExistingTopicArn:
+        default: "Existing Topic ARN"
+Parameters:
+  SubscriptionEndPoint:
+    Type: String
+    Description: >-
+      The endpoint that receives notifications from the Amazon SNS topic.
+      If left blank no subscription will be added to the topic.
+      The endpoint value depends on the protocol that you specify. This could be a
+      URL, ARN or SMS-capable telephone number.
+    Default: ""
+  SubscriptionProtocol:
+    Type: String
+    Description: >-
+      The subscription's protocol.
+      Examples: "http", "https", "email", "email-json", "sms", "sqs", "application", "lambda".
+    Default: ""
+    AllowedValues:
+      - ""
+      - http
+      - https
+      - email
+      - email-json
+      - sms
+      - sqs
+      - application
+      - lambda
+    Default: sqs
+  CreateTopic:
+    Type: String
+    Description: >-
+      Should we create a topic or not ?
+    AllowedValues:
+      - 'Yes'
+      - 'No'
+    Default: 'Yes'
+  ExistingTopicArn:
+    Type: String
+    Description: >-
+      If not creating a topic, define the arn for an existing topic
+    Default: ""
+  SubscriptionNumRetries:
+    Type: Number
+    Description: Number of retries in the backoff phase
+    Default: 3
+  SubscriptionMinDelayTarget:
+    Type: Number
+    Description: Defines the delay associated with the first retry attempt in the backoff phase
+    Default: 20
+  SubscriptionMaxDelayTarget:
+    Type: Number
+    Description: Defines the delay associated with the final retry attempt in the backoff phase
+    Default: 20
+Conditions:
+  AddSub: !Not
+    - !Equals
+      - !Ref SubscriptionEndPoint
+      - ''
+  AddTopic: !Equals
+    - !Ref CreateTopic
+    - 'Yes'
+  UseHTTP: !Or
+    - !Equals
+      - !Ref SubscriptionProtocol
+      - 'http'
+    - !Equals
+      - !Ref SubscriptionProtocol
+      - 'https'
+Resources:
+  SNSTopic:
+    Condition: AddTopic
+    Type: 'AWS::SNS::Topic'
+  SNSSubscription:
+    Condition: AddSub
+    Type: 'AWS::SNS::Subscription'
+    Properties:
+      Endpoint: !Ref SubscriptionEndPoint
+      Protocol: !Ref SubscriptionProtocol
+      TopicArn: !If
+        - AddTopic
+        - !Ref SNSTopic
+        - !Ref ExistingTopicArn
+      DeliveryPolicy: !If
+        - UseHTTP
+        - healthyRetryPolicy:
+            numRetries: !Ref SubscriptionNumRetries
+            minDelayTarget: !Ref SubscriptionMinDelayTarget
+            maxDelayTarget: !Ref SubscriptionMaxDelayTarget
+        - !Ref 'AWS::NoValue'
+Outputs:
+  TopicARN:
+    Description: ARN of SNS Topic
+    Value: !If
+      - AddTopic
+      - !Ref SNSTopic
+      - !Ref ExistingTopicArn
