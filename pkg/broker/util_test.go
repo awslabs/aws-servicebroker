@@ -1,6 +1,10 @@
 package broker
 
 import (
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
@@ -11,9 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"strings"
-	"testing"
 )
 
 func clearOverrides() {

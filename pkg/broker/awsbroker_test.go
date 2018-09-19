@@ -2,7 +2,6 @@ package broker
 
 import (
 	"errors"
-	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/awstesting/mock"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
