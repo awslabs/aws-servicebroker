@@ -4,11 +4,11 @@ env:
   variables: 
     LATEST_TAG: latest
   parameter-store:
-    DOCKER_REPO: "DockerRepo"
-    DOCKER_REGISTRY: "DockerRegistry"
-    DOCKER_LOGIN: "DockerLogin"
-    DOCKER_USER: "DockerUser"
-    VERSION_TAG: "ImageVersion"
+    DOCKER_REPO: "/k8s/aws-servicebroker/docker-repo"
+    DOCKER_REGISTRY: "/k8s/aws-servicebroker/docker-registry"
+    DOCKER_LOGIN: "/k8s/aws-servicebroker/docker-login"
+    DOCKER_USER: "/k8s/aws-servicebroker/docker-user"
+    VERSION_TAG: "/k8s/aws-servicebroker/image-version"
 
 phases:
   build:
