@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -196,7 +195,7 @@ func getOverrides(brokerid string, params []string, space string, service string
 }
 
 // Build aws credentials using global or override keys, or the credential chain
-func AwsCredentialsGetter(keyid string, secretkey string, profile string, params map[string]string) credentials.Credentials {
+func AwsCredentialsGetter(keyid string, secretkey string, profile string, params map[string]string, client *ec2metadata.EC2Metadata) credentials.Credentials {
 	if _, ok := params["aws_access_key"]; ok {
 		keyid = params["aws_access_key"]
 		glog.V(10).Infof("Using override credentials with keyid %q\n", keyid)
@@ -216,7 +215,7 @@ func AwsCredentialsGetter(keyid string, secretkey string, profile string, params
 		[]credentials.Provider{
 			&credentials.EnvProvider{},
 			&credentials.SharedCredentialsProvider{},
-			&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.Must(session.NewSession()))},
+			&ec2rolecreds.EC2RoleProvider{Client: client},
 		})
 }
 

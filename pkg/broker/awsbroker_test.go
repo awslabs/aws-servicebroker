@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/awstesting/mock"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
@@ -48,8 +49,10 @@ func mockGetAwsSession(keyid string, secretkey string, region string, accountId 
 	return sess.Copy(conf)
 }
 
-func mockAwsCfnClientGetter(sess *session.Session) *cloudformation.CloudFormation {
-	return &cloudformation.CloudFormation{Client: mock.NewMockClient(aws.NewConfig())}
+func mockAwsCfnClientGetter(sess *session.Session) CfnClient {
+	return CfnClient{mockCfn{
+		DescribeStacksResponse: cloudformation.DescribeStacksOutput{},
+	}}
 }
 
 func mockAwsStsClientGetter(sess *session.Session) *sts.STS {
@@ -225,6 +228,7 @@ func TestUpdateCatalog(t *testing.T) {
 			v.TemplateFilter,
 		}
 	}
+
 	bl.db.DataStorePort = mockDataStore{}
 
 	err := UpdateCatalog(bl.listingcache, bl.catalogcache, *bd, bl.s3svc, bl.db, *bl, mockListTemplates, mockListingUpdate, mockMetadataUpdate)
@@ -250,6 +254,25 @@ type mockS3 struct {
 
 func (m mockS3) GetObject(in *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
 	return &m.GetObjectResp, nil
+}
+
+type mockCfn struct {
+	cloudformationiface.CloudFormationAPI
+	DescribeStacksResponse cloudformation.DescribeStacksOutput
+	CreateStackResponse    cloudformation.CreateStackOutput
+	DeleteStackResponse    cloudformation.DeleteStackOutput
+}
+
+func (m mockCfn) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+	return &m.DescribeStacksResponse, nil
+}
+
+func (m mockCfn) CreateStack(in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error) {
+	return &m.CreateStackResponse, nil
+}
+
+func (m mockCfn) DeleteStack(in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+	return &m.DeleteStackResponse, nil
 }
 
 func TestMetadataUpdate(t *testing.T) {

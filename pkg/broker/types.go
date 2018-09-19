@@ -6,7 +6,7 @@ import (
 
 	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 )
 
 // Options cli options
@@ -103,7 +103,7 @@ type DataStore interface {
 
 type GetAwsSession func(keyid string, secretkey string, region string, accountId string, profile string, params map[string]string) *session.Session
 
-type GetCfnClient func(sess *session.Session) *cloudformation.CloudFormation
+type GetCfnClient func(sess *session.Session) CfnClient
 type GetSsmClient func(sess *session.Session) *ssm.SSM
 type GetS3Client func(sess *session.Session) S3Client
 type GetDdbClient func(sess *session.Session) *dynamodb.DynamoDB
@@ -121,6 +121,10 @@ type AwsClients struct {
 
 type S3Client struct {
 	Client s3iface.S3API
+}
+
+type CfnClient struct {
+	Client cloudformationiface.CloudFormationAPI
 }
 
 type GetCallerIder func(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error)
