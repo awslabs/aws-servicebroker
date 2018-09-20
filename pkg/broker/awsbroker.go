@@ -71,7 +71,7 @@ func NewAWSBroker(o Options, awssess GetAwsSession, clients AwsClients, getCalle
 		tablename:          o.TableName,
 		s3bucket:           o.S3Bucket,
 		s3region:           o.S3Region,
-		s3key:              AddTrailingSlash(o.S3Key),
+		s3key:              addTrailingSlash(o.S3Key),
 		templatefilter:     o.TemplateFilter,
 		region:             o.Region,
 		s3svc:              s3svc,

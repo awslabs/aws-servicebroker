@@ -148,14 +148,14 @@ func TestGetOverridesFromEnv(t *testing.T) {
 	clearOverrides()
 
 	msg := "should return empty map if there are no overrides set"
-	output := GetOverridesFromEnv()
+	output := getOverridesFromEnv()
 	assertor.Equal(make(map[string]string), output, msg)
 
 	msg = "should return map with all the found overrides, excluding any environment variables not prefixed with PARAM_OVERRIDE_"
 	os.Setenv("PARAM_OVERRIDE_awsservicebroker_all_all_all_test_param1", "testval1")
 	os.Setenv("PARAM_OVERRIDE_awsservicebroker_all_all_all_test_param2", "testval2")
 	os.Setenv("NOTMATCHPARAM_OVERRIDE_awsservicebroker_all_all_all_test_param3", "testval3")
-	output = GetOverridesFromEnv()
+	output = getOverridesFromEnv()
 	assertor.Equal(map[string]string{
 		"awsservicebroker_all_all_all_test_param1": "testval1",
 		"awsservicebroker_all_all_all_test_param2": "testval2",
@@ -215,7 +215,7 @@ func TestAwsCredentialsGetter(t *testing.T) {
 	keyid, secretkey, profile := "", "", ""
 	params := make(map[string]string)
 	client := ec2metadata.New(session.Must(session.NewSession()))
-	actual := AwsCredentialsGetter(keyid, secretkey, profile, params, client)
+	actual := awsCredentialsGetter(keyid, secretkey, profile, params, client)
 	expected := *credentials.NewChainCredentials(
 		[]credentials.Provider{
 			&credentials.EnvProvider{},
@@ -226,18 +226,18 @@ func TestAwsCredentialsGetter(t *testing.T) {
 
 	keyid, secretkey, profile = "testid", "testkey", ""
 	expected = *credentials.NewStaticCredentials(keyid, secretkey, "")
-	actual = AwsCredentialsGetter(keyid, secretkey, profile, params, client)
+	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client)
 	assertor.Equal(expected, actual, "should return static creds")
 
 	keyid, secretkey, profile = "", "", "test"
 	expected = *credentials.NewChainCredentials([]credentials.Provider{&credentials.SharedCredentialsProvider{Profile: profile}})
-	actual = AwsCredentialsGetter(keyid, secretkey, profile, params, client)
+	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client)
 	assertor.Equal(expected, actual, "should return shared creds")
 
 	keyid, secretkey, profile = "", "", ""
 	params = map[string]string{"aws_access_key": "testKeyId", "aws_secret_key": "testSecretKey"}
 	expected = *credentials.NewStaticCredentials("testKeyId", "testSecretKey", "")
-	actual = AwsCredentialsGetter(keyid, secretkey, profile, params, client)
+	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client)
 	assertor.Equal(expected, actual, "should return static creds")
 }
 

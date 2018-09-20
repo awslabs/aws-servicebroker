@@ -17,7 +17,7 @@ import (
 
 // Create AWS Session
 func AwsSessionGetter(keyid string, secretkey string, region string, accountId string, profile string, params map[string]string) *session.Session {
-	creds := AwsCredentialsGetter(keyid, secretkey, profile, params, ec2metadata.New(session.Must(session.NewSession())))
+	creds := awsCredentialsGetter(keyid, secretkey, profile, params, ec2metadata.New(session.Must(session.NewSession())))
 	cfg := aws.NewConfig().WithCredentials(&creds).WithRegion(region)
 	currentAccountSession := session.Must(session.NewSession(cfg))
 	sess, err := assumeTargetRole(currentAccountSession, params, region, accountId)
