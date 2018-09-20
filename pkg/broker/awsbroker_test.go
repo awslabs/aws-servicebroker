@@ -168,7 +168,7 @@ func TestNewAwsBroker(t *testing.T) {
 		assert.Equal(v.TableName, bl.tablename)
 		assert.Equal(v.S3Bucket, bl.s3bucket)
 		assert.Equal(v.S3Region, bl.s3region)
-		assert.Equal(AddTrailingSlash(v.S3Key), bl.s3key)
+		assert.Equal(addTrailingSlash(v.S3Key), bl.s3key)
 		assert.Equal(v.TemplateFilter, bl.templatefilter)
 		assert.Equal(v.Region, bl.region)
 		assert.Equal(v.BrokerID, bl.brokerid)

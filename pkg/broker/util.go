@@ -22,7 +22,7 @@ import (
 func getGlobalOverrides(brokerID string) map[string]string {
 	prefix := fmt.Sprintf("%s_all_all_all_", brokerID)
 	overrides := make(map[string]string)
-	for k, v := range GetOverridesFromEnv() {
+	for k, v := range getOverridesFromEnv() {
 		if strings.HasPrefix(k, prefix) {
 			overrides[strings.TrimPrefix(k, prefix)] = v
 		}
@@ -33,81 +33,80 @@ func getGlobalOverrides(brokerID string) map[string]string {
 func prescribeOverrides(b AwsBroker, services []osb.Service) []osb.Service {
 	if !b.prescribeOverrides {
 		return services
-	} else {
-		// TODO: Alot of duplication of code with ServiceDefinitionToOsb, should cleanup
-		for s, service := range services {
-			for p, plan := range service.Plans {
-				overrideKeys := make([]string, 0)
-				for o := range b.globalOverrides {
-					overrideKeys = append(overrideKeys, o)
-				}
-				glog.Infoln(overrideKeys)
-				schemas := map[string]map[string]interface{}{
-					"create": plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{}),
-				}
-				if plan.Schemas.ServiceInstance.Update != nil {
-					schemas["update"] = plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})
-				}
-				for schemaName, schema := range schemas {
-					props := make(map[string]interface{})
-					required := make([]string, 0)
-					for k, v := range schema {
-						switch k {
-						case "properties":
-							for pk, pv := range v.(map[string]interface{}) {
-								if !stringInSlice(pk, overrideKeys) {
-									props[pk] = pv
-								}
-							}
-						case "required":
-							glog.Infoln(v)
-							for _, r := range v.([]string) {
-								if !stringInSlice(r, overrideKeys) {
-									required = append(required, r)
-								}
-							}
-						}
-					}
-					if schemaName == "create" {
-						params := map[string]interface{}{
-							"type":       "object",
-							"properties": props,
-							"$schema":    "http://json-schema.org/draft-06/schema#",
-						}
-						if len(required) > 0 {
-							params["required"] = required
-						}
-						plan.Schemas = &osb.Schemas{
-							ServiceInstance: &osb.ServiceInstanceSchema{
-								Create: &osb.InputParametersSchema{
-									Parameters: params,
-								},
-							},
-						}
-					} else if schemaName == "update" {
-						params := map[string]interface{}{
-							"type":       "object",
-							"properties": props,
-							"$schema":    "http://json-schema.org/draft-06/schema#",
-						}
-						if len(required) > 0 {
-							params["required"] = required
-						}
-						if len(props) > 0 {
-							plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
-								Parameters: params,
-							}
-						}
-					}
-				}
-				services[s].Plans[p] = plan
-			}
-		}
-		return services
 	}
+	// TODO: Alot of duplication of code with ServiceDefinitionToOsb, should cleanup
+	for s, service := range services {
+		for p, plan := range service.Plans {
+			overrideKeys := make([]string, 0)
+			for o := range b.globalOverrides {
+				overrideKeys = append(overrideKeys, o)
+			}
+			glog.Infoln(overrideKeys)
+			schemas := map[string]map[string]interface{}{
+				"create": plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{}),
+			}
+			if plan.Schemas.ServiceInstance.Update != nil {
+				schemas["update"] = plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})
+			}
+			for schemaName, schema := range schemas {
+				props := make(map[string]interface{})
+				required := make([]string, 0)
+				for k, v := range schema {
+					switch k {
+					case "properties":
+						for pk, pv := range v.(map[string]interface{}) {
+							if !stringInSlice(pk, overrideKeys) {
+								props[pk] = pv
+							}
+						}
+					case "required":
+						glog.Infoln(v)
+						for _, r := range v.([]string) {
+							if !stringInSlice(r, overrideKeys) {
+								required = append(required, r)
+							}
+						}
+					}
+				}
+				if schemaName == "create" {
+					params := map[string]interface{}{
+						"type":       "object",
+						"properties": props,
+						"$schema":    "http://json-schema.org/draft-06/schema#",
+					}
+					if len(required) > 0 {
+						params["required"] = required
+					}
+					plan.Schemas = &osb.Schemas{
+						ServiceInstance: &osb.ServiceInstanceSchema{
+							Create: &osb.InputParametersSchema{
+								Parameters: params,
+							},
+						},
+					}
+				} else if schemaName == "update" {
+					params := map[string]interface{}{
+						"type":       "object",
+						"properties": props,
+						"$schema":    "http://json-schema.org/draft-06/schema#",
+					}
+					if len(required) > 0 {
+						params["required"] = required
+					}
+					if len(props) > 0 {
+						plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
+							Parameters: params,
+						}
+					}
+				}
+			}
+			services[s].Plans[p] = plan
+		}
+	}
+	return services
 }
 
-func GetOverridesFromEnv() map[string]string {
+func getOverridesFromEnv() map[string]string {
 	var Overrides = make(map[string]string)
 
 	for _, item := range os.Environ() {
@@ -149,7 +148,7 @@ func toScreamingSnakeCase(s string) string {
 }
 
 func getOverrides(brokerid string, params []string, space string, service string, cluster string) (overrides map[string]string) {
-	overridesEnv := GetOverridesFromEnv()
+	overridesEnv := getOverridesFromEnv()
 
 	var services []string
 	var namespaces []string
@@ -195,7 +194,7 @@ func getOverrides(brokerid string, params []string, space string, service string
 }
 
 // Build aws credentials using global or override keys, or the credential chain
-func AwsCredentialsGetter(keyid string, secretkey string, profile string, params map[string]string, client *ec2metadata.EC2Metadata) credentials.Credentials {
+func awsCredentialsGetter(keyid string, secretkey string, profile string, params map[string]string, client *ec2metadata.EC2Metadata) credentials.Credentials {
 	if _, ok := params["aws_access_key"]; ok {
 		keyid = params["aws_access_key"]
 		glog.V(10).Infof("Using override credentials with keyid %q\n", keyid)
@@ -220,25 +219,25 @@ func AwsCredentialsGetter(keyid string, secretkey string, profile string, params
 }
 
 // add trailing / if needed
-func AddTrailingSlash(s string) string {
+func addTrailingSlash(s string) string {
 	if strings.HasSuffix(s, "/") == false {
 		s = s + "/"
 	}
 	return s
 }
 
-func generateRoleArn(params map[string]string, currentAccountId string) string {
+func generateRoleArn(params map[string]string, currentAccountID string) string {
 	targetRoleName := params["target_role_name"]
 
 	if _, ok := params["target_account_id"]; ok {
-		targetAccountId := params["target_account_id"]
+		targetAccountID := params["target_account_id"]
 
-		glog.Infof("Params 'target_account_id' present in params, assuming role in target account '%s'.", targetAccountId)
-		return fmtArn(targetAccountId, targetRoleName)
+		glog.Infof("Params 'target_account_id' present in params, assuming role in target account '%s'.", targetAccountID)
+		return fmtArn(targetAccountID, targetRoleName)
 	}
 
-	glog.Infof("Params 'target_account_id' not present in params, assuming role in current account '%s'.", currentAccountId)
-	return fmtArn(currentAccountId, targetRoleName)
+	glog.Infof("Params 'target_account_id' not present in params, assuming role in current account '%s'.", currentAccountID)
+	return fmtArn(currentAccountID, targetRoleName)
 }
 
 // getStackName returns the stack name for a service instance. A stack name can
@@ -253,8 +252,8 @@ func getStackName(serviceName, instanceID string) string {
 	return s
 }
 
-func fmtArn(accountId, roleName string) string {
-	return fmt.Sprintf("arn:aws:iam::%s:role/%s", accountId, roleName)
+func fmtArn(accountID, roleName string) string {
+	return fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
 }
 
 func toCFNParams(params map[string]string) []*cloudformation.Parameter {
