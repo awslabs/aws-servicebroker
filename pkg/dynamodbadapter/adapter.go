@@ -3,10 +3,10 @@ package dynamodbadapter
 import (
 	"fmt"
 
-	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
 	"github.com/golang/glog"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	uuid "github.com/satori/go.uuid"

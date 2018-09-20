@@ -14,7 +14,7 @@ import (
 	"github.com/golang/glog"
 	prom "github.com/prometheus/client_golang/prometheus"
 
-	"github.com/awslabs/aws-service-broker/pkg/broker"
+	"github.com/awslabs/aws-servicebroker/pkg/broker"
 	"github.com/jaymccon/osb-broker-lib/pkg/server"
 	"github.com/pmorie/osb-broker-lib/pkg/metrics"
 	"github.com/pmorie/osb-broker-lib/pkg/rest"

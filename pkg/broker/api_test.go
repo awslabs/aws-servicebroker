@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 	"github.com/stretchr/testify/assert"

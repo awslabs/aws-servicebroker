@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/awslabs/aws-service-broker/pkg/serviceinstance"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/awstesting/mock"
@@ -19,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
 	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	uuid "github.com/satori/go.uuid"

@@ -6,7 +6,7 @@ name=$1
 version=$2
 
 region=us-west-2
-path=$GOPATH/src/github.com/awslabs/aws-service-broker
+path=$GOPATH/src/github.com/awslabs/aws-servicebroker
 
 function help {
     echo "USAGE: $0 NAME VERSION"

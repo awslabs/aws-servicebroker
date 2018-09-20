@@ -9,14 +9,14 @@ PROFILE ?= $(shell if [ "${PROFILE_NAME}" != "" ] ; then echo "--profile ${PROFI
 VERSION ?= $(shell cat ./version)
 
 build: ## Builds the starter pack
-	go build -i github.com/awslabs/aws-service-broker/cmd/servicebroker
+	go build -i github.com/awslabs/aws-servicebroker/cmd/servicebroker
 
 test: ## Runs the tests
 	go test -v $(shell go list ./... | grep -v /vendor/ | grep -v /test/)
 
 functional-test: ## Builds and execs a minikube image for functional testing
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-    go build -o functional-testing/aws-servicebroker --ldflags="-s" github.com/awslabs/aws-service-broker/cmd/servicebroker && \
+    go build -o functional-testing/aws-servicebroker --ldflags="-s" github.com/awslabs/aws-servicebroker/cmd/servicebroker && \
     cd functional-testing ; \
       docker build -t aws-sb:functest . && \
       docker run --privileged -it --rm aws-sb:functest /start.sh ; \
@@ -24,11 +24,11 @@ functional-test: ## Builds and execs a minikube image for functional testing
 
 linux: ## Builds a Linux executable
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-	go build -o servicebroker-linux --ldflags="-s" github.com/awslabs/aws-service-broker/cmd/servicebroker
+	go build -o servicebroker-linux --ldflags="-s" github.com/awslabs/aws-servicebroker/cmd/servicebroker
 
 cf: ## Builds a PCF tile and bosh release
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-    go build -o packaging/cloudfoundry/resources/cfnsb --ldflags="-s" github.com/awslabs/aws-service-broker/cmd/servicebroker && \
+    go build -o packaging/cloudfoundry/resources/cfnsb --ldflags="-s" github.com/awslabs/aws-servicebroker/cmd/servicebroker && \
 	cd packaging/cloudfoundry/ ; \
 	  tile build $(VERSION); \
 	cd ../../
