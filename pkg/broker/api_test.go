@@ -456,7 +456,7 @@ func TestBind(t *testing.T) {
 			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the credentials from CloudFormation stack an-id: invalid parameters: [/k8s/an-id/BucketSecretAccessKey]"),
 		},
 		{
-			name: "credentials",
+			name: "get_credentials",
 			request: &osb.BindRequest{
 				BindingID:  "test-binding-id",
 				InstanceID: "exists",
@@ -478,7 +478,7 @@ func TestBind(t *testing.T) {
 			},
 		},
 		{
-			name: "legacy_credentials",
+			name: "get_legacy_credentials",
 			request: &osb.BindRequest{
 				BindingID:  "test-binding-id",
 				InstanceID: "exists",
