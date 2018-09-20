@@ -367,18 +367,6 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 	}, nil
 }
 
-func (b *AwsBroker) GetBinding(request *osb.GetBindingRequest, c *broker.RequestContext) (*broker.GetBindingResponse, error) {
-	glog.V(10).Infoln(request)
-	glog.V(10).Infoln(c)
-	return &broker.GetBindingResponse{}, nil
-}
-
-func BindingLastOperation(request *osb.BindingLastOperationRequest, c *broker.RequestContext) (*broker.LastOperationResponse, error) {
-	glog.V(10).Infoln(request)
-	glog.V(10).Infoln(c)
-	return &broker.LastOperationResponse{}, nil
-}
-
 // Unbind is executed when the OSB API receives `DELETE /v2/service_instances/:instance_id/service_bindings/:binding_id`
 // (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#request-5).
 func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext) (*broker.UnbindResponse, error) {
@@ -533,6 +521,12 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 	return &response, nil
 }
 
+// BindingLastOperation is not implemented, as async binding is not supported.
 func (b *AwsBroker) BindingLastOperation(request *osb.BindingLastOperationRequest, c *broker.RequestContext) (*broker.LastOperationResponse, error) {
-	return &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "", Description: nil}}, nil
+	panic("not implemented")
+}
+
+// GetBinding is not implemented, as async binding is not supported.
+func (b *AwsBroker) GetBinding(request *osb.GetBindingRequest, c *broker.RequestContext) (*broker.GetBindingResponse, error) {
+	panic("not implemented")
 }
