@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
@@ -92,21 +93,29 @@ func (db mockDataStoreProvision) GetServiceDefinition(serviceuuid string) (*osb.
 	return nil, nil
 }
 func (db mockDataStoreProvision) GetServiceInstance(sid string) (*serviceinstance.ServiceInstance, error) {
-	if sid == "err" {
+	switch sid {
+	case "err":
 		return nil, errors.New("test failure")
-	} else if sid == "exists" {
+	case "err-stack":
+		return &serviceinstance.ServiceInstance{StackID: "err"}, nil
+	case "exists":
 		return &serviceinstance.ServiceInstance{StackID: "an-id"}, nil
+	default:
+		return nil, nil
 	}
-	return nil, nil
 }
 func (db mockDataStoreProvision) GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error) {
-	if id == "exists" {
+	switch id {
+	case "err":
+		return nil, errors.New("test failure")
+	case "exists":
 		return &serviceinstance.ServiceBinding{
 			ID:         "exists",
 			InstanceID: "exists",
 		}, nil
+	default:
+		return nil, nil
 	}
-	return nil, nil
 }
 func (db mockDataStoreProvision) PutServiceBinding(sb serviceinstance.ServiceBinding) error {
 	return nil
@@ -320,34 +329,255 @@ func TestLastOperation(t *testing.T) {
 	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
 }
 
+func toDescribeStacksOutput(outputs map[string]string) cloudformation.DescribeStacksOutput {
+	var cfnOutputs []*cloudformation.Output
+	for k, v := range outputs {
+		cfnOutputs = append(cfnOutputs, &cloudformation.Output{
+			OutputKey:   aws.String(k),
+			OutputValue: aws.String(v),
+		})
+	}
+	return cloudformation.DescribeStacksOutput{
+		Stacks: []*cloudformation.Stack{
+			{
+				Outputs: cfnOutputs,
+			},
+		},
+	}
+}
+
 func TestBind(t *testing.T) {
-	assertor := assert.New(t)
-
-	opts := Options{
-		TableName:          "testtable",
-		S3Bucket:           "abucket",
-		S3Region:           "us-east-1",
-		S3Key:              "tempates/test",
-		Region:             "us-east-1",
-		BrokerID:           "awsservicebroker",
-		PrescribeOverrides: true,
+	tests := []struct {
+		name           string
+		request        *osb.BindRequest
+		cfnOutputs     map[string]string
+		ssmParams      map[string]string
+		expectedCreds  map[string]interface{}
+		expectedExists bool
+		expectedErr    error
+	}{
+		{
+			name: "unsupported_parameter",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+				Parameters: map[string]interface{}{"foo": "bar"},
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The parameter foo is not supported."),
+		},
+		{
+			name: "error_getting_binding",
+			request: &osb.BindRequest{
+				BindingID:  "err",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service binding err: test failure"),
+		},
+		{
+			name: "existing_binding",
+			request: &osb.BindRequest{
+				BindingID:  "exists",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+			},
+			expectedExists: true,
+		},
+		{
+			name: "conflicting_binding",
+			request: &osb.BindRequest{
+				BindingID:  "exists",
+				InstanceID: "foo",
+				ServiceID:  "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusConflict, "", "Service binding exists already exists but with different attributes."),
+		},
+		{
+			name: "error_getting_service",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "err",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service err: test failure"),
+		},
+		{
+			name: "service_not_found",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "foo",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service foo was not found."),
+		},
+		{
+			name: "error_getting_instance",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "err",
+				ServiceID:  "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service instance err: test failure"),
+		},
+		{
+			name: "instance_not_found",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "foo",
+				ServiceID:  "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service instance foo was not found."),
+		},
+		{
+			name: "error_describing_stack",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "err-stack",
+				ServiceID:  "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to describe the CloudFormation stack err: test failure"),
+		},
+		{
+			name: "error_getting_credentials",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+			},
+			cfnOutputs: map[string]string{
+				"BucketName":            "mystack-mybucket-kdwwxmddtr2g",
+				"BucketAccessKeyId":     "ssm:/k8s/an-id/BucketAccessKeyId",
+				"BucketSecretAccessKey": "ssm:/k8s/an-id/BucketSecretAccessKey",
+			},
+			ssmParams: map[string]string{
+				"/k8s/an-id/BucketAccessKeyId": "foo",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the credentials from CloudFormation stack an-id: invalid parameters: [/k8s/an-id/BucketSecretAccessKey]"),
+		},
+		{
+			name: "credentials",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+			},
+			cfnOutputs: map[string]string{
+				"BucketName":            "mystack-mybucket-kdwwxmddtr2g",
+				"BucketAccessKeyId":     "ssm:/k8s/an-id/BucketAccessKeyId",
+				"BucketSecretAccessKey": "ssm:/k8s/an-id/BucketSecretAccessKey",
+			},
+			ssmParams: map[string]string{
+				"/k8s/an-id/BucketAccessKeyId":     "foo",
+				"/k8s/an-id/BucketSecretAccessKey": "bar",
+			},
+			expectedCreds: map[string]interface{}{
+				"BUCKET_NAME":              "mystack-mybucket-kdwwxmddtr2g",
+				"BUCKET_ACCESS_KEY_ID":     "foo",
+				"BUCKET_SECRET_ACCESS_KEY": "bar",
+			},
+		},
+		{
+			name: "legacy_credentials",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+			},
+			cfnOutputs: map[string]string{
+				"BucketName":    "mystack-mybucket-kdwwxmddtr2g",
+				"UserKeyId":     "/k8s/an-id/UserKeyId",
+				"UserSecretKey": "/k8s/an-id/UserSecretKey",
+			},
+			ssmParams: map[string]string{
+				"/k8s/an-id/UserKeyId":     "foo",
+				"/k8s/an-id/UserSecretKey": "bar",
+			},
+			expectedCreds: map[string]interface{}{
+				"BUCKET_NAME":                       "mystack-mybucket-kdwwxmddtr2g",
+				"TEST-SERVICE-NAME_USER_KEY_ID":     "foo",
+				"TEST-SERVICE-NAME_USER_SECRET_KEY": "bar",
+			},
+		},
+		{
+			name: "unsupported_scope",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+				Parameters: map[string]interface{}{
+					"RoleName": "foo",
+					"Scope":    "ReadOnly",
+				},
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The CloudFormation stack an-id does not support binding with scope 'ReadOnly': output not found: PolicyArnReadOnly"),
+		},
+		{
+			name: "error_attaching_role_policy",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+				Parameters: map[string]interface{}{
+					"rOlEnAmE": "exists", // Also verify that RoleName is case-insensitive
+				},
+			},
+			cfnOutputs: map[string]string{
+				"PolicyArn": "err",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to attach the policy err to role exists: test failure"),
+		},
+		{
+			name: "attach_role_policy",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-service-id",
+				Parameters: map[string]interface{}{
+					"RoleName": "exists",
+					"sCoPe":    "ReadWrite", // Also verify that Scope is case-insensitive
+				},
+			},
+			cfnOutputs: map[string]string{
+				"PolicyArnReadWrite": "exists",
+			},
+			expectedCreds: make(map[string]interface{}),
+		},
 	}
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
-	bl.db.DataStorePort = mockDataStoreProvision{}
 
-	bindReq := &osb.BindRequest{
-		BindingID:         "test-bind-id",
-		InstanceID:        "exists",
-		AcceptsIncomplete: true,
-		ServiceID:         "test-service-id",
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clients := AwsClients{
+				NewCfn: func(sess *session.Session) CfnClient {
+					return CfnClient{
+						Client: mockCfn{
+							DescribeStacksResponse: toDescribeStacksOutput(tt.cfnOutputs),
+						},
+					}
+				},
+				NewDdb: mockAwsDdbClientGetter,
+				NewIam: mockAwsIamClientGetter,
+				NewS3:  mockAwsS3ClientGetter,
+				NewSsm: func(sess *session.Session) ssmiface.SSMAPI {
+					return &mockSSM{
+						params: tt.ssmParams,
+					}
+				},
+				NewSts: mockAwsStsClientGetter,
+			}
+
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+			b.db.DataStorePort = mockDataStoreProvision{}
+
+			resp, err := b.Bind(tt.request, &broker.RequestContext{})
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else if assert.NoError(t, err) {
+				assert.Equal(t, tt.expectedExists, resp.Exists)
+				assert.Equal(t, tt.expectedCreds, resp.Credentials)
+			}
+		})
 	}
-	reqContext := &broker.RequestContext{}
-
-	expected := &broker.BindResponse{BindResponse: osb.BindResponse{Credentials: map[string]interface{}{}}}
-	actual, err := bl.Bind(bindReq, reqContext)
-	assertor.Equal(nil, err, "err should be nil")
-	assertor.Equal(expected, actual, "should succeed")
-
 }
 
 func TestUnbind(t *testing.T) {
