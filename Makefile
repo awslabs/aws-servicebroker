@@ -1,4 +1,5 @@
-IMAGE ?= my-docker-org/aws-servicebroker:latest
+IMAGE ?= my-docker-org/aws-servicebroker
+TAG  ?= latest
 BUCKET_NAME ?= my-helm-repo-bucket
 BUCKET_PREFIX ?= /charts
 HELM_URL ?= https://$(BUCKET_NAME).s3.amazonaws.com$(BUCKET_PREFIX)
@@ -34,7 +35,7 @@ cf: ## Builds a PCF tile and bosh release
 	cd ../../
 
 image: ## Builds docker image
-	docker build . -t $(IMAGE)
+	docker build . -t $(IMAGE):$(TAG)
 
 clean: ## Cleans up build artifacts
 	rm -f servicebroker
@@ -44,6 +45,7 @@ clean: ## Cleans up build artifacts
 	rm -rf packaging/cloudfoundry/release
 	rm -f packaging/helm/index.yaml
 	rm -f packaging/helm/aws-servicebroker-*.tgz
+	rm -rf release/
 
 helm: ## Creates helm release and repository index file
 	cd packaging/helm/ ; \
@@ -56,6 +58,23 @@ deploy-chart: ## Deploys helm chart and index file to S3 path specified by HELM_
 	aws s3 cp packaging/helm/aws-servicebroker-*.tgz $(S3URI) --acl $(ACL) $(PROFILE) && \
 	aws s3 cp packaging/helm/index.yaml $(S3URI) --acl $(ACL) $(PROFILE)
 
+release: ## Package and deploy requirements for a release
+	make clean && \
+	mkdir -p release/$(VERSION) && \
+	make build && \
+	mv ./servicebroker release/$(VERSION)/aws-servicebroker-$(VERSION)-OSX && \
+	make linux && \
+	mv ./servicebroker-linux release/$(VERSION)/aws-servicebroker-$(VERSION)-linux && \
+	make image && \
+	docker push $(IMAGE):$(TAG) && \
+	docker tag $(IMAGE):$(TAG) $(IMAGE):$(VERSION) && \
+	docker push $(IMAGE):$(VERSION) && \
+	make helm && \
+	mv ./packaging/helm/aws-servicebroker-$(VERSION).tgz ./release/$(VERSION)/ && \
+	make deploy-chart && \
+	make cf && \
+	mv ./packaging/cloudfoundry/product/aws-service-broker-$(VERSION).pivotal ./release/$(VERSION)/
+
 help: ## Shows the help
 	@echo 'Usage: make <OPTIONS> ... <TARGETS>'
 	@echo ''
@@ -65,4 +84,4 @@ help: ## Shows the help
         awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ''
 
-.PHONY: build test functional-test linux cf image helm deploy-chart clean help
+.PHONY: build test functional-test linux cf image helm deploy-chart release clean help
