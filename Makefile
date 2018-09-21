@@ -62,9 +62,9 @@ release: ## Package and deploy requirements for a release
 	make clean && \
 	mkdir -p release/$(VERSION) && \
 	make build && \
-	mv ./servicebroker release/$(version)/aws-servicebroker-$(VERSION)-OSX && \
+	mv ./servicebroker release/$(VERSION)/aws-servicebroker-$(VERSION)-OSX && \
 	make linux && \
-	mv ./servicebroker-linux release/$(version)/aws-servicebroker-$(VERSION)-linux && \
+	mv ./servicebroker-linux release/$(VERSION)/aws-servicebroker-$(VERSION)-linux && \
 	make image && \
 	docker push $(IMAGE):$(TAG) && \
 	docker tag $(IMAGE):$(TAG) $(IMAGE):$(VERSION) && \
