@@ -73,7 +73,7 @@ release: ## Package and deploy requirements for a release
 	mv ./packaging/helm/aws-servicebroker-$(VERSION).tgz ./release/$(VERSION)/ && \
 	make deploy-chart && \
 	make cf && \
-	mv ./packaging/cloudfoundry/product/aws-service-broker-$(VERSION).pivotal ./release/$(version)/
+	mv ./packaging/cloudfoundry/product/aws-service-broker-$(VERSION).pivotal ./release/$(VERSION)/
 
 help: ## Shows the help
 	@echo 'Usage: make <OPTIONS> ... <TARGETS>'
