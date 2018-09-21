@@ -31,78 +31,37 @@ func getGlobalOverrides(brokerID string) map[string]string {
 }
 
 func prescribeOverrides(b AwsBroker, services []osb.Service) []osb.Service {
-	if !b.prescribeOverrides {
+	if !b.prescribeOverrides || len(b.globalOverrides) == 0 {
 		return services
 	}
-	// TODO: Alot of duplication of code with ServiceDefinitionToOsb, should cleanup
-	for s, service := range services {
-		for p, plan := range service.Plans {
-			overrideKeys := make([]string, 0)
-			for o := range b.globalOverrides {
-				overrideKeys = append(overrideKeys, o)
+
+	var overridenKeys []string
+	for k := range b.globalOverrides {
+		overridenKeys = append(overridenKeys, k)
+	}
+
+	for _, service := range services {
+		for _, plan := range service.Plans {
+			params := plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})
+			for _, k := range overridenKeys {
+				delete(params["properties"].(map[string]interface{}), k)
+				params["required"] = deleteFromSlice(params["required"].([]string), k)
 			}
-			glog.Infoln(overrideKeys)
-			schemas := map[string]map[string]interface{}{
-				"create": plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{}),
-			}
+
 			if plan.Schemas.ServiceInstance.Update != nil {
-				schemas["update"] = plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})
-			}
-			for schemaName, schema := range schemas {
-				props := make(map[string]interface{})
-				required := make([]string, 0)
-				for k, v := range schema {
-					switch k {
-					case "properties":
-						for pk, pv := range v.(map[string]interface{}) {
-							if !stringInSlice(pk, overrideKeys) {
-								props[pk] = pv
-							}
-						}
-					case "required":
-						glog.Infoln(v)
-						for _, r := range v.([]string) {
-							if !stringInSlice(r, overrideKeys) {
-								required = append(required, r)
-							}
-						}
-					}
+				params := plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})
+				for _, k := range overridenKeys {
+					delete(params["properties"].(map[string]interface{}), k)
+					params["required"] = deleteFromSlice(params["required"].([]string), k)
 				}
-				if schemaName == "create" {
-					params := map[string]interface{}{
-						"type":       "object",
-						"properties": props,
-						"$schema":    "http://json-schema.org/draft-06/schema#",
-					}
-					if len(required) > 0 {
-						params["required"] = required
-					}
-					plan.Schemas = &osb.Schemas{
-						ServiceInstance: &osb.ServiceInstanceSchema{
-							Create: &osb.InputParametersSchema{
-								Parameters: params,
-							},
-						},
-					}
-				} else if schemaName == "update" {
-					params := map[string]interface{}{
-						"type":       "object",
-						"properties": props,
-						"$schema":    "http://json-schema.org/draft-06/schema#",
-					}
-					if len(required) > 0 {
-						params["required"] = required
-					}
-					if len(props) > 0 {
-						plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
-							Parameters: params,
-						}
-					}
+				if len(params["properties"].(map[string]interface{})) == 0 {
+					// If there are no updatable properties left, remove the update schema
+					plan.Schemas.ServiceInstance.Update = nil
 				}
 			}
-			services[s].Plans[p] = plan
 		}
 	}
+
 	return services
 }
 
@@ -129,6 +88,16 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func deleteFromSlice(list []string, s string) []string {
+	var out []string
+	for _, v := range list {
+		if v != s {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // https://gist.github.com/elwinar/14e1e897fdbe4d3432e1
