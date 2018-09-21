@@ -7,6 +7,7 @@
 /packaging/cloudfoundry/resources/cfnsb
 /packaging/helm/aws-servicebroker-*.tgz
 /packaging/helm/index.yaml
+/release/
 
 # General ignores
 .DS_Store
