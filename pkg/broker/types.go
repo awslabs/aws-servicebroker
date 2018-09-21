@@ -7,9 +7,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
@@ -104,11 +105,11 @@ type DataStore interface {
 type GetAwsSession func(keyid string, secretkey string, region string, accountId string, profile string, params map[string]string) *session.Session
 
 type GetCfnClient func(sess *session.Session) CfnClient
-type GetSsmClient func(sess *session.Session) *ssm.SSM
+type GetSsmClient func(sess *session.Session) ssmiface.SSMAPI
 type GetS3Client func(sess *session.Session) S3Client
 type GetDdbClient func(sess *session.Session) *dynamodb.DynamoDB
 type GetStsClient func(sess *session.Session) *sts.STS
-type GetIamClient func(sess *session.Session) *iam.IAM
+type GetIamClient func(sess *session.Session) iamiface.IAMAPI
 
 type AwsClients struct {
 	NewCfn GetCfnClient

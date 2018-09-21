@@ -8,8 +8,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/golang/glog"
@@ -31,7 +33,7 @@ func AwsCfnClientGetter(sess *session.Session) CfnClient {
 	return CfnClient{cloudformation.New(sess)}
 }
 
-func AwsSsmClientGetter(sess *session.Session) *ssm.SSM {
+func AwsSsmClientGetter(sess *session.Session) ssmiface.SSMAPI {
 	return ssm.New(sess)
 }
 
@@ -47,7 +49,7 @@ func AwsStsClientGetter(sess *session.Session) *sts.STS {
 	return sts.New(sess)
 }
 
-func AwsIamClientGetter(sess *session.Session) *iam.IAM {
+func AwsIamClientGetter(sess *session.Session) iamiface.IAMAPI {
 	return iam.New(sess)
 }
 

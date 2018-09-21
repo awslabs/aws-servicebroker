@@ -13,9 +13,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
@@ -73,17 +76,50 @@ func mockAwsDdbClientGetter(sess *session.Session) *dynamodb.DynamoDB {
 	return &dynamodb.DynamoDB{Client: mock.NewMockClient(conf)}
 }
 
-func mockAwsSsmClientGetter(sess *session.Session) *ssm.SSM {
-	conf := aws.NewConfig()
-	conf.Region = sess.Config.Region
-	return &ssm.SSM{Client: mock.NewMockClient(conf)}
+type mockIAM struct {
+	iamiface.IAMAPI
+}
+
+func (c *mockIAM) AttachRolePolicy(input *iam.AttachRolePolicyInput) (*iam.AttachRolePolicyOutput, error) {
+	if aws.StringValue(input.RoleName) != "exists" || aws.StringValue(input.PolicyArn) != "exists" {
+		return nil, errors.New("test failure")
+	}
+	return &iam.AttachRolePolicyOutput{}, nil
+}
+
+func mockAwsIamClientGetter(sess *session.Session) iamiface.IAMAPI {
+	return &mockIAM{}
+}
+
+type mockSSM struct {
+	ssmiface.SSMAPI
+	params map[string]string
+}
+
+func (c *mockSSM) GetParameters(input *ssm.GetParametersInput) (*ssm.GetParametersOutput, error) {
+	output := ssm.GetParametersOutput{}
+	for _, n := range input.Names {
+		if aws.StringValue(n) == "err" {
+			return nil, errors.New("test failure")
+		} else if v, ok := c.params[aws.StringValue(n)]; ok {
+			output.Parameters = append(output.Parameters, &ssm.Parameter{Name: n, Value: &v})
+		} else {
+			output.InvalidParameters = append(output.InvalidParameters, n)
+		}
+	}
+	return &output, nil
+}
+
+func mockAwsSsmClientGetter(sess *session.Session) ssmiface.SSMAPI {
+	return &mockSSM{}
 }
 
 var mockClients = AwsClients{
 	NewCfn: mockAwsCfnClientGetter,
-	NewSsm: mockAwsSsmClientGetter,
-	NewS3:  mockAwsS3ClientGetter,
 	NewDdb: mockAwsDdbClientGetter,
+	NewIam: mockAwsIamClientGetter,
+	NewS3:  mockAwsS3ClientGetter,
+	NewSsm: mockAwsSsmClientGetter,
 	NewSts: mockAwsStsClientGetter,
 }
 
@@ -264,6 +300,9 @@ type mockCfn struct {
 }
 
 func (m mockCfn) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+	if aws.StringValue(in.StackName) == "err" {
+		return nil, errors.New("test failure")
+	}
 	return &m.DescribeStacksResponse, nil
 }
 

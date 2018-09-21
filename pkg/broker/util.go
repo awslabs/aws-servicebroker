@@ -397,7 +397,7 @@ func getCredentials(service *osb.Service, outputs []*cloudformation.Output, ssmS
 		if err != nil {
 			return nil, err
 		} else if len(resp.InvalidParameters) > 0 {
-			return nil, fmt.Errorf("invalid parameters: %v", resp.InvalidParameters)
+			return nil, fmt.Errorf("invalid parameters: %v", aws.StringValueSlice(resp.InvalidParameters))
 		}
 
 		for _, p := range resp.Parameters {
