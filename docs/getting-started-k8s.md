@@ -29,5 +29,5 @@ helm repo add aws-sb https://awsservicebroker.s3.amazonaws.com/charts
 helm inspect aws-sb/aws-servicebroker
 
 # Minimal broker install, assuming defaults above. Add flags to set credentials, region, etc
-helm install aws-sb/aws-servicebroker -n aws-servicebroker -ns aws-sb
+helm install aws-sb/aws-servicebroker -n aws-servicebroker -ns aws-sb --devel
 ```
