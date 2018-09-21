@@ -91,6 +91,7 @@ func TestPrescribeOverrides(t *testing.T) {
 				ServiceInstance: &osb.ServiceInstanceSchema{
 					Create: &osb.InputParametersSchema{
 						Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+							"param":          map[string]interface{}{"type": "integer"},
 							"req_param":      map[string]interface{}{"type": "string"},
 							"override_param": map[string]interface{}{"type": "string"},
 						},
@@ -100,6 +101,7 @@ func TestPrescribeOverrides(t *testing.T) {
 					},
 					Update: &osb.InputParametersSchema{
 						Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+							"param":          map[string]interface{}{"type": "integer"},
 							"req_param":      map[string]interface{}{"type": "string"},
 							"override_param": map[string]interface{}{"type": "string"},
 						},
@@ -120,6 +122,7 @@ func TestPrescribeOverrides(t *testing.T) {
 				ServiceInstance: &osb.ServiceInstanceSchema{
 					Create: &osb.InputParametersSchema{
 						Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+							"param":     map[string]interface{}{"type": "integer"},
 							"req_param": map[string]interface{}{"type": "string"},
 						},
 							"$schema":  "http://json-schema.org/draft-06/schema#",
@@ -128,6 +131,7 @@ func TestPrescribeOverrides(t *testing.T) {
 					},
 					Update: &osb.InputParametersSchema{
 						Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+							"param":     map[string]interface{}{"type": "integer"},
 							"req_param": map[string]interface{}{"type": "string"},
 						},
 							"$schema":  "http://json-schema.org/draft-06/schema#",
@@ -139,6 +143,38 @@ func TestPrescribeOverrides(t *testing.T) {
 		}},
 	}
 	assertor.Equal(expected, psvcs, msg)
+
+	msg = "required should be removed if all required params are overridden"
+	b := AwsBroker{
+		brokerid:           "awsservicebroker",
+		prescribeOverrides: true,
+		globalOverrides:    map[string]string{"override_param": "overridden", "req_param": "overridden"},
+	}
+	psvcs = prescribeOverrides(b, services)
+	expected = []osb.Service{
+		{ID: "test", Name: "test", Description: "test", Plans: []osb.Plan{
+			{ID: "testplan", Name: "testplan", Description: "testplan", Schemas: &osb.Schemas{
+				ServiceInstance: &osb.ServiceInstanceSchema{
+					Create: &osb.InputParametersSchema{
+						Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+							"param": map[string]interface{}{"type": "integer"},
+						},
+							"$schema": "http://json-schema.org/draft-06/schema#",
+						},
+					},
+					Update: &osb.InputParametersSchema{
+						Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+							"param": map[string]interface{}{"type": "integer"},
+						},
+							"$schema": "http://json-schema.org/draft-06/schema#",
+						},
+					},
+				},
+			}},
+		}},
+	}
+	assertor.Equal(expected, psvcs, msg)
+
 	clearOverrides()
 }
 
