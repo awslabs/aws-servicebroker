@@ -47,6 +47,10 @@ func prescribeOverrides(b AwsBroker, services []osb.Service) []osb.Service {
 				delete(params["properties"].(map[string]interface{}), k)
 				params["required"] = deleteFromSlice(params["required"].([]string), k)
 			}
+			if len(params["required"].([]string)) == 0 {
+				// Cloud Foundry does not allow "required" to be an empty slice
+				delete(params, "required")
+			}
 
 			if plan.Schemas.ServiceInstance.Update != nil {
 				params := plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})
@@ -57,6 +61,9 @@ func prescribeOverrides(b AwsBroker, services []osb.Service) []osb.Service {
 				if len(params["properties"].(map[string]interface{})) == 0 {
 					// If there are no updatable properties left, remove the update schema
 					plan.Schemas.ServiceInstance.Update = nil
+				} else if len(params["required"].([]string)) == 0 {
+					// Cloud Foundry does not allow "required" to be an empty slice
+					delete(params, "required")
 				}
 			}
 		}
