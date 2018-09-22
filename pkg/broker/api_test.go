@@ -108,10 +108,45 @@ func (db mockDataStoreProvision) GetServiceBinding(id string) (*serviceinstance.
 	switch id {
 	case "err":
 		return nil, errors.New("test failure")
+	case "err-instance":
+		return &serviceinstance.ServiceBinding{
+			ID:         "err-instance",
+			InstanceID: "err",
+			PolicyArn:  "exists",
+			RoleName:   "exists",
+		}, nil
+	case "err-role-name":
+		return &serviceinstance.ServiceBinding{
+			ID:         "err-role-name",
+			InstanceID: "exists",
+			PolicyArn:  "exists",
+			RoleName:   "err",
+		}, nil
 	case "exists":
 		return &serviceinstance.ServiceBinding{
 			ID:         "exists",
 			InstanceID: "exists",
+		}, nil
+	case "exists-role-name":
+		return &serviceinstance.ServiceBinding{
+			ID:         "exists-role-name",
+			InstanceID: "exists",
+			PolicyArn:  "exists",
+			RoleName:   "exists",
+		}, nil
+	case "foo-instance":
+		return &serviceinstance.ServiceBinding{
+			ID:         "foo-instance",
+			InstanceID: "foo",
+			PolicyArn:  "exists",
+			RoleName:   "exists",
+		}, nil
+	case "foo-role-name":
+		return &serviceinstance.ServiceBinding{
+			ID:         "foo-role-name",
+			InstanceID: "exists",
+			PolicyArn:  "exists",
+			RoleName:   "foo",
 		}, nil
 	default:
 		return nil, nil
@@ -581,26 +616,77 @@ func TestBind(t *testing.T) {
 }
 
 func TestUnbind(t *testing.T) {
-	assertor := assert.New(t)
-
-	opts := Options{
-		TableName:          "testtable",
-		S3Bucket:           "abucket",
-		S3Region:           "us-east-1",
-		S3Key:              "tempates/test",
-		Region:             "us-east-1",
-		BrokerID:           "awsservicebroker",
-		PrescribeOverrides: true,
+	tests := []struct {
+		name        string
+		request     *osb.UnbindRequest
+		expectedErr error
+	}{
+		{
+			name: "error_getting_binding",
+			request: &osb.UnbindRequest{
+				BindingID: "err",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service binding err: test failure"),
+		},
+		{
+			name: "binding_not_found",
+			request: &osb.UnbindRequest{
+				BindingID: "foo",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusGone, "", "The service binding foo was not found."),
+		},
+		{
+			name: "success",
+			request: &osb.UnbindRequest{
+				BindingID: "exists",
+			},
+		},
+		{
+			name: "error_getting_instance",
+			request: &osb.UnbindRequest{
+				BindingID: "err-instance",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service instance err: test failure"),
+		},
+		{
+			name: "instance_not_found",
+			request: &osb.UnbindRequest{
+				BindingID: "foo-instance",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service instance foo was not found."),
+		},
+		{
+			name: "error_detaching_role_policy",
+			request: &osb.UnbindRequest{
+				BindingID: "err-role-name",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to detach the policy exists from role err: test failure"),
+		},
+		{
+			name: "detach_role_policy",
+			request: &osb.UnbindRequest{
+				BindingID: "exists-role-name",
+			},
+		},
+		{
+			name: "role_not_found",
+			request: &osb.UnbindRequest{
+				BindingID: "foo-role-name",
+			},
+		},
 	}
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
-	bl.db.DataStorePort = mockDataStoreProvision{}
 
-	unbindReq := &osb.UnbindRequest{BindingID: "exists"}
-	reqContext := &broker.RequestContext{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+			b.db.DataStorePort = mockDataStoreProvision{}
 
-	expected := &broker.UnbindResponse{UnbindResponse: osb.UnbindResponse{}}
-	actual, err := bl.Unbind(unbindReq, reqContext)
-	assertor.Equal(nil, err, "err should be nil")
-	assertor.Equal(expected, actual, "should succeed")
-
+			_, err := b.Unbind(tt.request, &broker.RequestContext{})
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
