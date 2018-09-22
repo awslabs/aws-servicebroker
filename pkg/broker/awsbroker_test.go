@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/awstesting/mock"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -85,6 +86,15 @@ func (c *mockIAM) AttachRolePolicy(input *iam.AttachRolePolicyInput) (*iam.Attac
 		return nil, errors.New("test failure")
 	}
 	return &iam.AttachRolePolicyOutput{}, nil
+}
+
+func (c *mockIAM) DetachRolePolicy(input *iam.DetachRolePolicyInput) (*iam.DetachRolePolicyOutput, error) {
+	if aws.StringValue(input.RoleName) == "err" || aws.StringValue(input.PolicyArn) == "err" {
+		return nil, errors.New("test failure")
+	} else if aws.StringValue(input.RoleName) == "exists" && aws.StringValue(input.PolicyArn) == "exists" {
+		return &iam.DetachRolePolicyOutput{}, nil
+	}
+	return nil, awserr.New(iam.ErrCodeNoSuchEntityException, "", nil)
 }
 
 func mockAwsIamClientGetter(sess *session.Session) iamiface.IAMAPI {
