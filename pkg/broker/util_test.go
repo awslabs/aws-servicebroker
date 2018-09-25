@@ -175,6 +175,38 @@ func TestPrescribeOverrides(t *testing.T) {
 	}
 	assertor.Equal(expected, psvcs, msg)
 
+	msg = "should succeed when there are no required params"
+	b = AwsBroker{
+		brokerid:           "awsservicebroker",
+		prescribeOverrides: true,
+		globalOverrides:    map[string]string{"override_param": "overridden"},
+	}
+	psvcs = prescribeOverrides(b, []osb.Service{
+		{ID: "test", Name: "test", Description: "test", Plans: []osb.Plan{
+			{ID: "testplan", Name: "testplan", Description: "testplan", Schemas: &osb.Schemas{
+				ServiceInstance: &osb.ServiceInstanceSchema{Create: &osb.InputParametersSchema{
+					Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+						"override_param": map[string]interface{}{"type": "string"},
+					},
+						"$schema": "http://json-schema.org/draft-06/schema#",
+					},
+				}},
+			}},
+		}},
+	})
+	expected = []osb.Service{
+		{ID: "test", Name: "test", Description: "test", Plans: []osb.Plan{
+			{ID: "testplan", Name: "testplan", Description: "testplan", Schemas: &osb.Schemas{
+				ServiceInstance: &osb.ServiceInstanceSchema{Create: &osb.InputParametersSchema{
+					Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{},
+						"$schema": "http://json-schema.org/draft-06/schema#",
+					},
+				}},
+			}},
+		}},
+	}
+	assertor.Equal(expected, psvcs, msg)
+
 	clearOverrides()
 }
 
