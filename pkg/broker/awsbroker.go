@@ -333,10 +333,13 @@ func (db Db) ServiceDefinitionToOsb(sd map[string]interface{}) osb.Service {
 								"type":       "object",
 								"properties": propsForCreate,
 								"$schema":    "http://json-schema.org/draft-06/schema#",
-								"required":   requiredForCreate,
 							},
 						},
 					},
+				}
+				if len(requiredForCreate) > 0 {
+					// Cloud Foundry does not allow "required" to be an empty slice
+					plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"] = requiredForCreate
 				}
 				if len(propsForUpdate) > 0 {
 					plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
@@ -344,8 +347,11 @@ func (db Db) ServiceDefinitionToOsb(sd map[string]interface{}) osb.Service {
 							"type":       "object",
 							"properties": propsForUpdate,
 							"$schema":    "http://json-schema.org/draft-06/schema#",
-							"required":   requiredForUpdate,
 						},
+					}
+					if len(requiredForUpdate) > 0 {
+						// Cloud Foundry does not allow "required" to be an empty slice
+						plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["required"] = requiredForUpdate
 					}
 				}
 			}
