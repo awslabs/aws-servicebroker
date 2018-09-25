@@ -45,6 +45,8 @@ spec:
         - "/var/run/awssb/awssb.crt"
         - --tls-private-key-file
         - "/var/run/awssb/awssb.key"
+        - --region
+        - "{{ .Values.aws.region }}"
         - --s3Bucket
         - "{{ .Values.aws.bucket }}"
         - --s3Key
@@ -82,8 +84,6 @@ spec:
             secretKeyRef:
               name: {{ template "fullname" . }}-credentials
               key: secretkey
-        - name: AWS_DEFAULT_REGION
-          value: {{ .Values.aws.region }}
         - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_aws_access_key
           valueFrom:
             secretKeyRef:
