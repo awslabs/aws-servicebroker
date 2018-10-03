@@ -55,9 +55,8 @@ configured with a broker secret, see getting started guides for [OpenShift](/doc
 
 Name           | Description     | Default         | Accepted Values
 -------------- | --------------- | --------------- | ---------------
-aws_access_key|AWS Access Key to authenticate to AWS with.||
-aws_secret_key|AWS Secret Key to authenticate to AWS with.||
-aws_cloudformation_role_arn|IAM role ARN for use as Cloudformation Stack Role.||
+target_account_id|AWS Account ID to provision into (optional)||
+target_role_name|IAM Role name to provision with (optional), must be used in combination with target_account_id||
 region|AWS Region to create RDS instance in.|us-west-2|ap-northeast-1, ap-northeast-2, ap-south-1, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, sa-east-1, us-east-1, us-east-2, us-west-1, us-west-2
 SBArtifactS3Bucket|Name of the S3 bucket containing the AWS Service Broker Assets|awsservicebroker|
 SBArtifactS3KeyPrefix|Name of the S3 key prefix containing the AWS Service Broker Assets, leave empty if assets are in the root of the bucket||
@@ -97,9 +96,8 @@ configured with a broker secret, see getting started guides for [OpenShift](/doc
 
 Name           | Description     | Default         | Accepted Values
 -------------- | --------------- | --------------- | ---------------
-aws_access_key|AWS Access Key to authenticate to AWS with.||
-aws_secret_key|AWS Secret Key to authenticate to AWS with.||
-aws_cloudformation_role_arn|IAM role ARN for use as Cloudformation Stack Role.||
+target_account_id|AWS Account ID to provision into (optional)||
+target_role_name|IAM Role name to provision with (optional), must be used in combination with target_account_id||
 region|AWS Region to create RDS instance in.|us-west-2|ap-northeast-1, ap-northeast-2, ap-south-1, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, sa-east-1, us-east-1, us-east-2, us-west-1, us-west-2
 SBArtifactS3Bucket|Name of the S3 bucket containing the AWS Service Broker Assets|awsservicebroker|
 SBArtifactS3KeyPrefix|Name of the S3 key prefix containing the AWS Service Broker Assets, leave empty if assets are in the root of the bucket||
@@ -150,9 +148,8 @@ configured with a broker secret, see getting started guides for [OpenShift](/doc
 
 Name           | Description     | Default         | Accepted Values
 -------------- | --------------- | --------------- | ---------------
-aws_access_key|AWS Access Key to authenticate to AWS with.||
-aws_secret_key|AWS Secret Key to authenticate to AWS with.||
-aws_cloudformation_role_arn|IAM role ARN for use as Cloudformation Stack Role.||
+target_account_id|AWS Account ID to provision into (optional)||
+target_role_name|IAM Role name to provision with (optional), must be used in combination with target_account_id||
 region|AWS Region to create RDS instance in.|us-west-2|ap-northeast-1, ap-northeast-2, ap-south-1, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, sa-east-1, us-east-1, us-east-2, us-west-1, us-west-2
 SBArtifactS3Bucket|Name of the S3 bucket containing the AWS Service Broker Assets|awsservicebroker|
 SBArtifactS3KeyPrefix|Name of the S3 key prefix containing the AWS Service Broker Assets, leave empty if assets are in the root of the bucket||
@@ -192,7 +189,7 @@ kind: ServiceInstance
 metadata:
   name: sns-topicwithsub-minimal-example
 spec:
-  clusterServiceClassExternalName: dh-sns
+  clusterServiceClassExternalName: sns
   clusterServicePlanExternalName: topicwithsub
   parameters:
     SubscriptionEndPoint: [VALUE] # REQUIRED
@@ -205,7 +202,7 @@ kind: ServiceInstance
 metadata:
   name: sns-topicwithsub-complete-example
 spec:
-  clusterServiceClassExternalName: dh-sns
+  clusterServiceClassExternalName: sns
   clusterServicePlanExternalName: topicwithsub
   parameters:
     SubscriptionEndPoint: [VALUE] # REQUIRED
@@ -225,7 +222,7 @@ kind: ServiceInstance
 metadata:
   name: sns-topic-minimal-example
 spec:
-  clusterServiceClassExternalName: dh-sns
+  clusterServiceClassExternalName: sns
   clusterServicePlanExternalName: topic
   parameters:
 ```
@@ -237,7 +234,7 @@ kind: ServiceInstance
 metadata:
   name: sns-topic-complete-example
 spec:
-  clusterServiceClassExternalName: dh-sns
+  clusterServiceClassExternalName: sns
   clusterServicePlanExternalName: topic
   parameters:
     SubscriptionNumRetries: 3 # OPTIONAL
@@ -255,7 +252,7 @@ kind: ServiceInstance
 metadata:
   name: sns-subscription-minimal-example
 spec:
-  clusterServiceClassExternalName: dh-sns
+  clusterServiceClassExternalName: sns
   clusterServicePlanExternalName: subscription
   parameters:
     SubscriptionEndPoint: [VALUE] # REQUIRED
@@ -269,7 +266,7 @@ kind: ServiceInstance
 metadata:
   name: sns-subscription-complete-example
 spec:
-  clusterServiceClassExternalName: dh-sns
+  clusterServiceClassExternalName: sns
   clusterServicePlanExternalName: subscription
   parameters:
     SubscriptionEndPoint: [VALUE] # REQUIRED
@@ -280,4 +277,3 @@ spec:
     SubscriptionMaxDelayTarget: 20 # OPTIONAL
 ```
 
-***NOTE: This documentation is auto-generated using available metadata in the ServiceClass and CloudFormation Template. Please do not PR changes to this file, if a change is needed, update the source metadata and ci will re-generate documentation on merge.***
