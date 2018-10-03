@@ -11,7 +11,7 @@ Though not tested, older PCF versions may work.
 
 ### Installation
 
-* Download the [AWS Service Broker Tile](https://awsservicebrokeralpha.s3.amazonaws.com/pcf/aws-service-broker-latest.pivotal)
+* Download the latest tile from the [releases page](https://github.com/awslabs/aws-servicebroker/releases)
 * Login to Ops Manager and import the tile
 * Complete configuration in the `AWS Service Broker Configuration` section. Take note of the following fields:
   * `AWS Access Key ID` and `AWS Secret Access` - if you are using an ec2 instance role attached to the broker hosts, 
