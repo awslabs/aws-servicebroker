@@ -84,20 +84,14 @@ spec:
             secretKeyRef:
               name: {{ template "fullname" . }}-credentials
               key: secretkey
-        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_aws_access_key
-          valueFrom:
-            secretKeyRef:
-              name: {{ template "fullname" . }}-credentials
-              key: accesskeyid
-        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_aws_secret_key
-          valueFrom:
-            secretKeyRef:
-              name: {{ template "fullname" . }}-credentials
-              key: secretkey
         - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_region
           value: {{ .Values.aws.region }}
         - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_VpcId
           value: {{ .Values.aws.vpcid }}
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_target_account_id
+          value: "{{ .Values.aws.targetaccountid }}"
+        - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_target_role_name
+          value: {{ .Values.aws.targetrolename }}
       volumes:
       - name: awssb-ssl
         secret:

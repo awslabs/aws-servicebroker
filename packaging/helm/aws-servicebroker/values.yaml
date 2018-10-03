@@ -13,6 +13,8 @@ aws:
   tablename: awssb
   accesskeyid: ""
   secretkey: ""
+  targetaccountid: ""
+  targetrolename: ""
   vpcid: ""
 brokerconfig:
   verbosity: 10
