@@ -1,0 +1,281 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: aws-servicebroker
+objects:
+
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: aws-servicebroker-client
+
+- kind: Secret
+  apiVersion: v1
+  metadata:
+    name: aws-servicebroker
+    annotations:
+      kubernetes.io/service-account.name: aws-servicebroker-client
+  type: kubernetes.io/service-account-token
+
+- apiVersion: servicecatalog.k8s.io/v1beta1
+  kind: ClusterServiceBroker
+  metadata:
+    name: aws-servicebroker
+  spec:
+    url: https://aws-servicebroker.aws-servicebroker.svc.cluster.local
+    caBundle: ${BROKER_CA_CERT}
+    authInfo:
+      bearer:
+        secretRef:
+          namespace: ${NAMESPACE}
+          name: aws-servicebroker
+
+- kind: ServiceAccount
+  apiVersion: v1
+  metadata:
+    name: aws-servicebroker
+
+- kind: ClusterRole
+  apiVersion: rbac.authorization.k8s.io/v1beta1
+  metadata:
+    name: aws-servicebroker
+  rules:
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+
+- kind: ClusterRole
+  apiVersion: rbac.authorization.k8s.io/v1beta1
+  metadata:
+    name: access-aws-servicebroker
+  rules:
+  - nonResourceURLs: ["/v2", "/v2/*"]
+    verbs: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+
+- kind: ClusterRoleBinding
+  apiVersion: rbac.authorization.k8s.io/v1beta1
+  metadata:
+    name: aws-servicebroker
+  subjects:
+  - kind: ServiceAccount
+    name: aws-servicebroker
+    namespace: ${NAMESPACE}
+  roleRef:
+    kind: ClusterRole
+    name: aws-servicebroker
+
+- kind: ClusterRoleBinding
+  apiVersion: rbac.authorization.k8s.io/v1beta1
+  metadata:
+    name: aws-servicebroker-client
+  subjects:
+  - kind: ServiceAccount
+    name: aws-servicebroker-client
+    namespace: ${NAMESPACE}
+  roleRef:
+    kind: ClusterRole
+    name: access-aws-servicebroker
+
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: aws-servicebroker
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: 'aws-servicebroker-ssl'
+    labels:
+      app: aws-servicebroker
+  spec:
+    selector:
+      app: aws-servicebroker
+    ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 3199
+
+- kind: Secret
+  apiVersion: v1
+  metadata:
+    name: aws-servicebroker-credentials
+  type: Opaque
+  data:
+    accesskeyid: ${ACCESSKEYID}
+    secretkey: ${SECRETKEY}
+
+- kind: Deployment
+  apiVersion: extensions/v1beta1
+  metadata:
+    name: aws-servicebroker
+    labels:
+      app: aws-servicebroker
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: aws-servicebroker
+    template:
+      metadata:
+        labels:
+          app: aws-servicebroker
+      spec:
+        serviceAccount: aws-servicebroker
+        containers:
+        - name: service-aws-servicebroker
+          image: ${IMAGE}
+          imagePullPolicy: ${IMAGEPULLPOLICY}
+          command:
+          - /usr/local/bin/aws-servicebroker
+          args:
+          - --port
+          - "3199"
+          - -v
+          - "${VERBOSITY}"
+          - -logtostderr
+          - --region
+          - "${REGION}"
+          - --s3Bucket
+          - "${S3BUCKET}"
+          - --s3Key
+          - "${S3KEY}"
+          - --s3Region
+          - "${S3REGION}"
+          - --tableName
+          - "${TABLENAME}"
+          - --brokerId
+          - "${BROKERID}"
+          - "--prescribeOverrides=${PRESCRIBE_OVERRIDES}"
+          - --tls-cert-file
+          - "/var/run/aws-servicebroker/awssb.crt"
+          - --tls-private-key-file
+          - "/var/run/aws-servicebroker/awssb.key"
+          env:
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: aws-servicebroker-credentials
+                key: accesskeyid
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: aws-servicebroker-credentials
+                key: secretkey
+          - name: PARAM_OVERRIDE_${BROKERID}_all_all_all_region
+            value: ${REGION}
+          - name: PARAM_OVERRIDE_${BROKERID}_all_all_all_VpcId
+            value: ${VPCID}
+          - name: PARAM_OVERRIDE_${BROKERID}_all_all_all_target_account_id
+            value: ${TARGETACCOUNTID}
+          - name: PARAM_OVERRIDE_${BROKERID}_all_all_all_target_role_name
+            value: ${TARGETROLENAME}
+          ports:
+          - containerPort: 3199
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              scheme: HTTPS
+              port: 3199
+            failureThreshold: 1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 2
+          volumeMounts:
+          - mountPath: /var/run/aws-servicebroker
+            name: aws-servicebroker-ssl
+            readOnly: true
+        volumes:
+        - name: aws-servicebroker-ssl
+          secret:
+            defaultMode: 420
+            secretName: aws-servicebroker-ssl
+            items:
+            - key: tls.crt
+              path: awssb.crt
+            - key: tls.key
+              path: awssb.key
+
+parameters:
+- description: Name of the image to use
+  displayName: Image name
+  name: IMAGE
+  required: true
+  value: aws-servicebroker/servicebroker:beta2
+
+- description: Image pull policy
+  displayName: Image name
+  name: IMAGEPULLPOLICY
+  required: true
+  value: Always
+
+- description: base64 encoded SSL CA Certificate
+  displayName: base64 encoded SSL CA Certificate
+  name: BROKER_CA_CERT
+  required: true
+  value:
+
+- description: Namespace that the broker is deployed to
+  displayName: Namespace
+  name: NAMESPACE
+  value: aws-sb
+
+- description: Default VPC ID to deploy services into
+  displayName: VPC ID
+  name: VPCID
+
+- name: BROKERID
+  value: "awsservicebroker"
+  displayName: Broker ID
+  description: An ID to use for partitioning broker data in DynamoDb. if multiple brokers are used in the same AWS account, this value must be unique per broker
+
+- name: ACCESSKEYID
+  displayName: AWS Access Key ID
+  description: AWS IAM User Key ID to use, if left blank will attempt to use a role, if defined secret-key must also be defined
+
+- name: SECRETKEY
+  displayName: AWS Secret Access Key
+  description: AWS IAM User Secret Key to use, if left blank will attempt to use a role, if defined key-id must also be defined
+
+- name: TARGETACCOUNTID
+  displayName: Target AWS Account ID
+  description: AWS AccountID for provisioning role, by default, resources will be provisioned into this account
+
+- name: TARGETROLENAME
+  displayName: Target IAM Role Name
+  description: Target IAM role name to use when provisioning, requires TARGET_ACCOUNT_ID to be populated
+
+- name: REGION
+  displayName: AWS Region
+  default: us-east-1
+  description: AWS Region to deploy services into
+
+- name: S3BUCKET
+  displayName: Amazon S3 Bucket
+  default: awsservicebroker
+  description: S3 bucket containing service definititions
+
+- name: S3KEY
+  displayName: Amazon S3 Key Prefix
+  default: templates/latest
+  description: S3 key prefix to use when scanning for service definitions
+
+- name: PRESCRIBE_OVERRIDES
+  displayName: Prescribe Global Overrides
+  default: true
+  description: parameters that are overridden globally will not be available in service plans
+
+- name: S3REGION
+  displayName: Amazon S3 Region
+  default: us-east-1
+  description: Region that S3 bucket resides in, if different from region to deploy resources into
+
+- name: TABLENAME
+  displayName: Amazon DynamoDB table name
+  default: awssb
+  description: DynamoDB table name where broker state is stored. Multiple brokers can use the same table, but must use distinct Broker ID's to prevent them from sharing state
+
+- name: VERBOSITY
+  displayName: Log Verbosity
+  default: 5
+  description: log level for V logs
