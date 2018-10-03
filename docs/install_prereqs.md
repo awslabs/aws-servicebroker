@@ -20,7 +20,6 @@ By default the broker will use the same credentials for provisioning ServiceInst
 fetching the catalog and reading/writing metadata to DynamoDB.
 
 The user or role that the broker runs as requires the following policy:
-(will scope this down further before public release)
  
 ```json
 {
@@ -57,7 +56,7 @@ The user or role that the broker runs as requires the following policy:
 }
 ```
 
-The role/user used for provisioning requires additional permissions for provisioning, binding and deprovisioning ServiceInstances. By default this is the same user/role as the broker role, so can be added to that.
+The role/user used for provisioning requires additional permissions for provisioning, binding and deprovisioning ServiceInstances. By default this is the same user/role as the broker role, so can be added to that, or can be applied to a separate role, see [Managing Resources Via Assumed Role](/docs/README.md#managing-resources-via-assumed-role).
 
 ```json
 {
