@@ -97,6 +97,7 @@ type DataStore interface {
 	GetServiceDefinition(serviceuuid string) (*osb.Service, error)
 	GetServiceInstance(sid string) (*serviceinstance.ServiceInstance, error)
 	PutServiceInstance(si serviceinstance.ServiceInstance) error
+	DeleteServiceInstance(sid string) error
 	GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error)
 	PutServiceBinding(sb serviceinstance.ServiceBinding) error
 	DeleteServiceBinding(id string) error

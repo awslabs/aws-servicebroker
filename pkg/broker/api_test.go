@@ -27,7 +27,7 @@ func TestGetCatalog(t *testing.T) {
 		BrokerID:           "awsservicebroker",
 		PrescribeOverrides: false,
 	}
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 	bl.listingcache.Set("__LISTINGS__", []ServiceNeedsUpdate{{Name: "test", Update: false}})
 
 	expected := &broker.CatalogResponse{CatalogResponse: osb.CatalogResponse{}}
@@ -104,6 +104,7 @@ func (db mockDataStoreProvision) GetServiceInstance(sid string) (*serviceinstanc
 		return nil, nil
 	}
 }
+func (db mockDataStoreProvision) DeleteServiceInstance(id string) error { return nil }
 func (db mockDataStoreProvision) GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error) {
 	switch id {
 	case "err":
@@ -169,7 +170,7 @@ func TestProvision(t *testing.T) {
 		BrokerID:           "awsservicebroker",
 		PrescribeOverrides: true,
 	}
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 	bl.db.DataStorePort = mockDataStoreProvision{}
 	bl.globalOverrides = map[string]string{"override_param": "some_value"}
 	provReq := &osb.ProvisionRequest{
@@ -243,40 +244,71 @@ func TestProvision(t *testing.T) {
 }
 
 func TestDeprovision(t *testing.T) {
-	assertor := assert.New(t)
-
-	opts := Options{
-		TableName:          "testtable",
-		S3Bucket:           "abucket",
-		S3Region:           "us-east-1",
-		S3Key:              "tempates/test",
-		Region:             "us-east-1",
-		BrokerID:           "awsservicebroker",
-		PrescribeOverrides: true,
+	tests := []struct {
+		name        string
+		request     *osb.DeprovisionRequest
+		expectedErr error
+	}{
+		{
+			name: "async_required",
+			request: &osb.DeprovisionRequest{
+				AcceptsIncomplete: false,
+				InstanceID:        "exists",
+				ServiceID:         "test-service-id",
+			},
+			expectedErr: newAsyncError(),
+		},
+		{
+			name: "error_getting_instance",
+			request: &osb.DeprovisionRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "err",
+				ServiceID:         "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service instance err: test failure"),
+		},
+		{
+			name: "instance_not_found",
+			request: &osb.DeprovisionRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "foo",
+				ServiceID:         "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusGone, "", "The service instance foo was not found."),
+		},
+		{
+			name: "error_deleting_stack",
+			request: &osb.DeprovisionRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "err-stack",
+				ServiceID:         "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to delete the CloudFormation stack err: test failure"),
+		},
+		{
+			name: "success",
+			request: &osb.DeprovisionRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "exists",
+				ServiceID:         "test-service-id",
+			},
+		},
 	}
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
-	bl.db.DataStorePort = mockDataStoreProvision{}
 
-	deprovReq := &osb.DeprovisionRequest{
-		InstanceID:        "test-instance-id",
-		AcceptsIncomplete: true,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b.db.DataStorePort = mockDataStoreProvision{}
+
+			resp, err := b.Deprovision(tt.request, &broker.RequestContext{})
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.True(t, resp.Async)
+			}
+		})
 	}
-	reqContext := &broker.RequestContext{}
-
-	expected := &broker.DeprovisionResponse{}
-	actual, err := bl.Deprovision(deprovReq, reqContext)
-	assertor.Equal(nil, err, "err should be nil")
-	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
-
-	bl.accountId = "test"
-	bl.secretkey = "testkey"
-
-	deprovReq.InstanceID = "exists"
-	expected.Async = true
-	actual, err = bl.Deprovision(deprovReq, reqContext)
-	assertor.Equal(nil, err, "err should be nil")
-	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
-
 }
 
 func TestLastOperation(t *testing.T) {
@@ -292,7 +324,7 @@ func TestLastOperation(t *testing.T) {
 		PrescribeOverrides: true,
 	}
 
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 	bl.db.DataStorePort = mockDataStoreProvision{}
 
 	loReq := &osb.LastOperationRequest{InstanceID: "test-instance-id"}
@@ -315,7 +347,7 @@ func TestLastOperation(t *testing.T) {
 			},
 		}}
 	}
-	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 	bl.db.DataStorePort = mockDataStoreProvision{}
 	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "in progress", Description: nil}}
 	loReq.InstanceID = "exists"
@@ -335,7 +367,7 @@ func TestLastOperation(t *testing.T) {
 			},
 		}}
 	}
-	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 	bl.db.DataStorePort = mockDataStoreProvision{}
 	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "failed", Description: nil}}
 	loReq.InstanceID = "exists"
@@ -355,7 +387,7 @@ func TestLastOperation(t *testing.T) {
 			},
 		}}
 	}
-	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 	bl.db.DataStorePort = mockDataStoreProvision{}
 	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "succeeded", Description: nil}}
 	loReq.InstanceID = "exists"
@@ -601,7 +633,7 @@ func TestBind(t *testing.T) {
 				NewSts: mockAwsStsClientGetter,
 			}
 
-			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 			b.db.DataStorePort = mockDataStoreProvision{}
 
 			resp, err := b.Bind(tt.request, &broker.RequestContext{})
@@ -678,7 +710,7 @@ func TestUnbind(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 			b.db.DataStorePort = mockDataStoreProvision{}
 
 			_, err := b.Unbind(tt.request, &broker.RequestContext{})

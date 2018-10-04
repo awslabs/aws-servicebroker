@@ -177,35 +177,38 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 	return &response, nil
 }
 
-// Deprovision executed when the osb api receives DELETE /v2/service_instances/:instance_id
-// https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#deprovisioning
+// Deprovision is executed when the OSB API receives `DELETE /v2/service_instances/:instance_id`
+// (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#deprovisioning).
 func (b *AwsBroker) Deprovision(request *osb.DeprovisionRequest, c *broker.RequestContext) (*broker.DeprovisionResponse, error) {
-	response := broker.DeprovisionResponse{}
-	si, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
-	if err != nil {
-		panic(err)
-	}
-	if si == nil || si.StackID == "" {
-		errmsg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way, assuming there is nothing to deprovision"
-		glog.Errorln(errmsg)
-		response.Async = false
-		return &response, nil
-	}
-	glog.V(10).Infoln(si.Params)
-	cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, si.Params))
-	_, err = cfnsvc.Client.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(si.StackID)})
-	if err != nil {
-		panic(err)
+	glog.V(10).Infof("request=%+v", *request)
+
+	if !request.AcceptsIncomplete {
+		return nil, newAsyncError()
 	}
 
-	if request.AcceptsIncomplete {
-		response.Async = true
+	// Get the instance
+	instance, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service instance %s: %v", request.InstanceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if instance == nil {
+		desc := fmt.Sprintf("The service instance %s was not found.", request.InstanceID)
+		return nil, newHTTPStatusCodeError(http.StatusGone, "", desc)
 	}
+
+	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params))
+	if _, err := cfnSvc.Client.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(instance.StackID)}); err != nil {
+		desc := fmt.Sprintf("Failed to delete the CloudFormation stack %s: %v", instance.StackID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	response := broker.DeprovisionResponse{}
+	response.Async = true
 	return &response, nil
 }
 
-// LastOperation executed when the osb api receives GET /v2/service_instances/:instance_id/last_operation
-// https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#polling-last-operation
+// LastOperation is executed when the OSB API receives `GET /v2/service_instances/:instance_id/last_operation`
+// (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#polling-last-operation).
 func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.RequestContext) (*broker.LastOperationResponse, error) {
 	glog.Infoln(request)
 	glog.Infoln(c)
