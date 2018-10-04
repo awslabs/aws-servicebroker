@@ -20,3 +20,4 @@ brokerconfig:
   verbosity: 10
   brokerid: awsservicebroker
   prescribeoverrides: true
+annotations: {}
