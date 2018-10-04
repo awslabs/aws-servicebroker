@@ -312,88 +312,108 @@ func TestDeprovision(t *testing.T) {
 }
 
 func TestLastOperation(t *testing.T) {
-	assertor := assert.New(t)
-
-	opts := Options{
-		TableName:          "testtable",
-		S3Bucket:           "abucket",
-		S3Region:           "us-east-1",
-		S3Key:              "tempates/test",
-		Region:             "us-east-1",
-		BrokerID:           "awsservicebroker",
-		PrescribeOverrides: true,
-	}
-
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
-	bl.db.DataStorePort = mockDataStoreProvision{}
-
-	loReq := &osb.LastOperationRequest{InstanceID: "test-instance-id"}
-	reqContext := &broker.RequestContext{}
-	msg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way"
-	expected := &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "failed", Description: &msg}}
-	actual, err := bl.LastOperation(loReq, reqContext)
-	assertor.Equal(nil, err, "err should be nil")
-	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
-
-	mockClients.NewCfn = func(sess *session.Session) CfnClient {
-		return CfnClient{mockCfn{
-			DescribeStacksResponse: cloudformation.DescribeStacksOutput{
-				NextToken: nil,
-				Stacks: []*cloudformation.Stack{
-					{
-						StackStatus: aws.String("CREATE_IN_PROGRESS"),
-					},
-				},
+	tests := []struct {
+		name              string
+		request           *osb.LastOperationRequest
+		stackStatus       string
+		stackStatusReason string
+		expectedState     osb.LastOperationState
+		expectedDesc      *string
+		expectedErr       error
+	}{
+		{
+			name: "error_getting_instance",
+			request: &osb.LastOperationRequest{
+				InstanceID: "err",
 			},
-		}}
-	}
-	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
-	bl.db.DataStorePort = mockDataStoreProvision{}
-	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "in progress", Description: nil}}
-	loReq.InstanceID = "exists"
-	actual, err = bl.LastOperation(loReq, reqContext)
-	assertor.Equal(nil, err, "err should be nil")
-	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
-
-	mockClients.NewCfn = func(sess *session.Session) CfnClient {
-		return CfnClient{mockCfn{
-			DescribeStacksResponse: cloudformation.DescribeStacksOutput{
-				NextToken: nil,
-				Stacks: []*cloudformation.Stack{
-					{
-						StackStatus: aws.String("CREATE_FAILED"),
-					},
-				},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service instance err: test failure"),
+		},
+		{
+			name: "instance_not_found",
+			request: &osb.LastOperationRequest{
+				InstanceID: "foo",
 			},
-		}}
-	}
-	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
-	bl.db.DataStorePort = mockDataStoreProvision{}
-	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "failed", Description: nil}}
-	loReq.InstanceID = "exists"
-	actual, err = bl.LastOperation(loReq, reqContext)
-	assertor.Equal(nil, err, "err should be nil")
-	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
-
-	mockClients.NewCfn = func(sess *session.Session) CfnClient {
-		return CfnClient{mockCfn{
-			DescribeStacksResponse: cloudformation.DescribeStacksOutput{
-				NextToken: nil,
-				Stacks: []*cloudformation.Stack{
-					{
-						StackStatus: aws.String("CREATE_COMPLETE"),
-					},
-				},
+			expectedErr: newHTTPStatusCodeError(http.StatusGone, "", "The service instance foo was not found."),
+		},
+		{
+			name: "error_describing_stack",
+			request: &osb.LastOperationRequest{
+				InstanceID: "err-stack",
 			},
-		}}
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to describe the CloudFormation stack err: test failure"),
+		},
+		{
+			name: "create_in_progress",
+			request: &osb.LastOperationRequest{
+				InstanceID: "exists",
+			},
+			stackStatus:   cloudformation.StackStatusCreateInProgress,
+			expectedState: osb.StateInProgress,
+		},
+		{
+			name: "create_complete",
+			request: &osb.LastOperationRequest{
+				InstanceID: "exists",
+			},
+			stackStatus:   cloudformation.StackStatusCreateComplete,
+			expectedState: osb.StateSucceeded,
+		},
+		{
+			name: "delete_complete",
+			request: &osb.LastOperationRequest{
+				InstanceID: "exists",
+			},
+			stackStatus:   cloudformation.StackStatusDeleteComplete,
+			expectedState: osb.StateSucceeded,
+		},
+		{
+			name: "update_rollback_complete",
+			request: &osb.LastOperationRequest{
+				InstanceID: "exists",
+			},
+			stackStatus:       cloudformation.StackStatusUpdateRollbackComplete,
+			stackStatusReason: "foo",
+			expectedState:     osb.StateFailed,
+			expectedDesc:      aws.String("foo"),
+		},
 	}
-	bl, _ = NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
-	bl.db.DataStorePort = mockDataStoreProvision{}
-	expected = &broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "succeeded", Description: nil}}
-	loReq.InstanceID = "exists"
-	actual, err = bl.LastOperation(loReq, reqContext)
-	assertor.Equal(nil, err, "err should be nil")
-	assertor.Equal(expected, actual, "should succeed even if stack is not in serviceInstance (was never created)")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clients := AwsClients{
+				NewCfn: func(sess *session.Session) CfnClient {
+					return CfnClient{
+						Client: mockCfn{
+							DescribeStacksResponse: cloudformation.DescribeStacksOutput{
+								Stacks: []*cloudformation.Stack{
+									{
+										StackStatus:       aws.String(tt.stackStatus),
+										StackStatusReason: aws.String(tt.stackStatusReason),
+									},
+								},
+							},
+						},
+					}
+				},
+				NewDdb: mockAwsDdbClientGetter,
+				NewIam: mockAwsIamClientGetter,
+				NewS3:  mockAwsS3ClientGetter,
+				NewSts: mockAwsStsClientGetter,
+			}
+
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b.db.DataStorePort = mockDataStoreProvision{}
+
+			resp, err := b.LastOperation(tt.request, &broker.RequestContext{})
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedState, resp.State)
+				assert.Equal(t, tt.expectedDesc, resp.Description)
+			}
+		})
+	}
 }
 
 func toDescribeStacksOutput(outputs map[string]string) cloudformation.DescribeStacksOutput {

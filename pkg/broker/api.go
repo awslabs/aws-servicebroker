@@ -196,6 +196,7 @@ func (b *AwsBroker) Deprovision(request *osb.DeprovisionRequest, c *broker.Reque
 		return nil, newHTTPStatusCodeError(http.StatusGone, "", desc)
 	}
 
+	// Delete the CFN stack
 	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params))
 	if _, err := cfnSvc.Client.DeleteStack(&cloudformation.DeleteStackInput{StackName: aws.String(instance.StackID)}); err != nil {
 		desc := fmt.Sprintf("Failed to delete the CloudFormation stack %s: %v", instance.StackID, err)
@@ -210,52 +211,49 @@ func (b *AwsBroker) Deprovision(request *osb.DeprovisionRequest, c *broker.Reque
 // LastOperation is executed when the OSB API receives `GET /v2/service_instances/:instance_id/last_operation`
 // (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#polling-last-operation).
 func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.RequestContext) (*broker.LastOperationResponse, error) {
-	glog.Infoln(request)
-	glog.Infoln(c)
-	si, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
+	glog.V(10).Infof("request=%+v", *request)
+
+	// Get the instance
+	instance, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
 	if err != nil {
-		panic(err)
+		desc := fmt.Sprintf("Failed to get the service instance %s: %v", request.InstanceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if instance == nil {
+		// Returning 410 Gone here is only appropriate for asynchronous delete
+		// operations, so hopefully that's what this operation is :)
+		// (https://github.com/openservicebrokerapi/servicebroker/blob/v2.13/spec.md#response-1)
+		desc := fmt.Sprintf("The service instance %s was not found.", request.InstanceID)
+		return nil, newHTTPStatusCodeError(http.StatusGone, "", desc)
 	}
-	glog.Infoln(si)
-	r := broker.LastOperationResponse{LastOperationResponse: osb.LastOperationResponse{State: "", Description: nil}}
-	if si == nil || si.StackID == "" {
-		errmsg := "CloudFormation stackid missing, chances are stack creation failed in an unexpected way"
-		glog.Errorln(errmsg)
-		r.LastOperationResponse.State = "failed"
-		r.LastOperationResponse.Description = &errmsg
-		return &r, nil
-	}
-	glog.V(10).Infoln(si.Params)
-	cfnsvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, si.Params))
-	response, err := cfnsvc.Client.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: aws.String(si.StackID)})
+
+	// Get the CFN stack status
+	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params))
+	resp, err := cfnSvc.Client.DescribeStacks(&cloudformation.DescribeStacksInput{
+		StackName: aws.String(instance.StackID),
+	})
 	if err != nil {
-		panic(err)
+		desc := fmt.Sprintf("Failed to describe the CloudFormation stack %s: %v", instance.StackID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
-	failedstates := []string{"CREATE_FAILED", "ROLLBACK_IN_PROGRESS", "ROLLBACK_FAILED", "ROLLBACK_COMPLETE", "DELETE_FAILED", "UPDATE_ROLLBACK_IN_PROGRESS", "UPDATE_ROLLBACK_FAILED", "UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS", "UPDATE_ROLLBACK_COMPLETE"}
-	progressingstates := []string{"CREATE_IN_PROGRESS", "DELETE_IN_PROGRESS", "UPDATE_IN_PROGRESS", "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS"}
-	successfulstates := []string{"CREATE_COMPLETE", "DELETE_COMPLETE", "UPDATE_COMPLETE"}
-	status := *response.Stacks[0].StackStatus
-	if stringInSlice(status, failedstates) {
-		glog.Errorf("CloudFormation stack failed %#+v", si.StackID)
-		glog.Errorf(status)
-		r.LastOperationResponse.State = "failed"
-		r.LastOperationResponse.Description = response.Stacks[0].StackStatusReason
-		return &r, nil
-	} else if stringInSlice(status, progressingstates) {
-		glog.Infoln("CloudFormation stack still busy...")
-		glog.Infoln(status)
-		r.LastOperationResponse.State = "in progress"
-		r.LastOperationResponse.Description = response.Stacks[0].StackStatusReason
-		return &r, nil
-	} else if stringInSlice(status, successfulstates) {
-		glog.Infoln("CloudFormation stack operation completed...")
-		glog.Infoln(status)
-		r.LastOperationResponse.State = "succeeded"
-		r.LastOperationResponse.Description = response.Stacks[0].StackStatusReason
-		return &r, nil
+
+	response := broker.LastOperationResponse{}
+	stackStatus := aws.StringValue(resp.Stacks[0].StackStatus)
+	if strings.HasSuffix(stackStatus, "_IN_PROGRESS") {
+		response.State = osb.StateInProgress
+	} else if stackStatus == cloudformation.StackStatusCreateComplete || stackStatus == cloudformation.StackStatusUpdateComplete {
+		response.State = osb.StateSucceeded
+	} else if stackStatus == cloudformation.StackStatusDeleteComplete {
+		response.State = osb.StateSucceeded
+		// If the resources were successfully deleted, try to delete the instance
+		if err := b.db.DataStorePort.DeleteServiceInstance(instance.ID); err != nil {
+			glog.Errorf("Failed to delete the service instance %s: %v", instance.ID, err)
+		}
 	} else {
-		return nil, fmt.Errorf("unexpected cfn status %v", status)
+		glog.Errorf("CloudFormation stack %s failed with status %s: %s", instance.StackID, stackStatus, aws.StringValue(resp.Stacks[0].StackStatusReason))
+		response.State = osb.StateFailed
+		response.Description = resp.Stacks[0].StackStatusReason
 	}
+	return &response, nil
 }
 
 // Bind is executed when the OSB API receives `PUT /v2/service_instances/:instance_id/service_bindings/:binding_id`
