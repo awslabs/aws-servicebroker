@@ -22,7 +22,7 @@ objects:
   metadata:
     name: aws-servicebroker
   spec:
-    url: https://aws-servicebroker.aws-servicebroker.svc.cluster.local
+    url: https://aws-servicebroker.aws-sb.svc.cluster.local
     caBundle: ${BROKER_CA_CERT}
     authInfo:
       bearer:
