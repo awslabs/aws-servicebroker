@@ -46,7 +46,7 @@ func (T *TestCases) GetTests(f string) error {
 	return nil
 }
 
-func mockGetAwsSession(keyid string, secretkey string, region string, accountId string, profile string, params map[string]string) *session.Session {
+func mockGetAwsSession(keyid string, secretkey string, region string, accountID string, profile string, params map[string]string) *session.Session {
 	sess := mock.Session
 	conf := aws.NewConfig()
 	conf.Region = aws.String(region)
@@ -133,12 +133,12 @@ var mockClients = AwsClients{
 	NewSts: mockAwsStsClientGetter,
 }
 
-func mockGetAccountId(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error) {
+func mockGetAccountID(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error) {
 	return &sts.GetCallerIdentityOutput{Account: aws.String("123456789012")}, nil
 }
 
-func mockGetAccountIdFail(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error) {
-	return &sts.GetCallerIdentityOutput{}, errors.New("I should be failing...")
+func mockGetAccountIDFail(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error) {
+	return &sts.GetCallerIdentityOutput{}, errors.New("I should be failing")
 }
 
 func mockUpdateCatalog(listingcache cache.Cache, catalogcache cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, bl AwsBroker, listTemplates ListTemplateser, listingUpdate ListingUpdater, metadataUpdate MetadataUpdater) error {
@@ -190,6 +190,7 @@ func (db mockDataStore) GetServiceInstance(sid string) (*serviceinstance.Service
 	}
 	return &si, nil
 }
+func (db mockDataStore) DeleteServiceInstance(sid string) error { return nil }
 func (db mockDataStore) GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error) {
 	return nil, nil
 }
@@ -203,7 +204,7 @@ func TestNewAwsBroker(t *testing.T) {
 
 	for _, v := range *options {
 		// Shouldn't error
-		bl, err := NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+		bl, err := NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 		assert.Nil(err)
 
 		// check values are as expected
@@ -223,11 +224,11 @@ func TestNewAwsBroker(t *testing.T) {
 		assert.Equal(v.BrokerID, bl.db.Brokerid)
 
 		// Should error
-		_, err = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountIdFail, mockUpdateCatalog, mockPollUpdate)
+		_, err = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountIDFail, mockUpdateCatalog, mockPollUpdate)
 		assert.Error(err)
 
 		// Should error
-		_, err = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalogFail, mockPollUpdate)
+		_, err = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalogFail, mockPollUpdate)
 		assert.Error(err)
 	}
 }
@@ -267,7 +268,7 @@ func TestUpdateCatalog(t *testing.T) {
 	var bl *AwsBroker
 	var bd *BucketDetailsRequest
 	for _, v := range *options {
-		bl, _ = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+		bl, _ = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 		bd = &BucketDetailsRequest{
 			v.S3Bucket,
 			v.S3Key,
@@ -321,6 +322,9 @@ func (m mockCfn) CreateStack(in *cloudformation.CreateStackInput) (*cloudformati
 }
 
 func (m mockCfn) DeleteStack(in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+	if aws.StringValue(in.StackName) == "err" {
+		return nil, errors.New("test failure")
+	}
 	return &m.DeleteStackResponse, nil
 }
 
@@ -331,7 +335,7 @@ func TestMetadataUpdate(t *testing.T) {
 	var bl *AwsBroker
 	var bd *BucketDetailsRequest
 	for _, v := range *options {
-		bl, _ = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountId, mockUpdateCatalog, mockPollUpdate)
+		bl, _ = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 		bd = &BucketDetailsRequest{
 			v.S3Bucket,
 			v.S3Key,
@@ -371,8 +375,8 @@ func TestMetadataUpdate(t *testing.T) {
 
 func TestAssumeArnGeneration(t *testing.T) {
 	params := map[string]string{"target_role_name": "worker"}
-	accountId := "123456654321"
-	assert.Equal(t, generateRoleArn(params, accountId), "arn:aws:iam::123456654321:role/worker", "Validate role arn")
+	accountID := "123456654321"
+	assert.Equal(t, generateRoleArn(params, accountID), "arn:aws:iam::123456654321:role/worker", "Validate role arn")
 	params["target_account_id"] = "000000000000"
-	assert.Equal(t, generateRoleArn(params, accountId), "arn:aws:iam::000000000000:role/worker", "Validate role arn")
+	assert.Equal(t, generateRoleArn(params, accountID), "arn:aws:iam::000000000000:role/worker", "Validate role arn")
 }
