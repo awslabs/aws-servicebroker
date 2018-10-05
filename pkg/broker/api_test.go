@@ -376,6 +376,16 @@ func TestLastOperation(t *testing.T) {
 			expectedState:     osb.StateFailed,
 			expectedDesc:      aws.String("foo"),
 		},
+		{
+			name: "rollback_in_progress",
+			request: &osb.LastOperationRequest{
+				InstanceID: "exists",
+			},
+			stackStatus:       cloudformation.StackStatusRollbackInProgress,
+			stackStatusReason: "foo",
+			expectedState:     osb.StateFailed,
+			expectedDesc:      aws.String("foo"),
+		},
 	}
 
 	for _, tt := range tests {

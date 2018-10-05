@@ -235,23 +235,27 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 		desc := fmt.Sprintf("Failed to describe the CloudFormation stack %s: %v", instance.StackID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
+	status := aws.StringValue(resp.Stacks[0].StackStatus)
+	reason := aws.StringValue(resp.Stacks[0].StackStatusReason)
+	glog.V(10).Infof("stack=%s status=%s reason=%s", instance.StackID, status, reason)
 
 	response := broker.LastOperationResponse{}
-	stackStatus := aws.StringValue(resp.Stacks[0].StackStatus)
-	if strings.HasSuffix(stackStatus, "_IN_PROGRESS") {
-		response.State = osb.StateInProgress
-	} else if stackStatus == cloudformation.StackStatusCreateComplete || stackStatus == cloudformation.StackStatusUpdateComplete {
+	if status == cloudformation.StackStatusCreateComplete ||
+		status == cloudformation.StackStatusDeleteComplete ||
+		status == cloudformation.StackStatusUpdateComplete {
 		response.State = osb.StateSucceeded
-	} else if stackStatus == cloudformation.StackStatusDeleteComplete {
-		response.State = osb.StateSucceeded
-		// If the resources were successfully deleted, try to delete the instance
-		if err := b.db.DataStorePort.DeleteServiceInstance(instance.ID); err != nil {
-			glog.Errorf("Failed to delete the service instance %s: %v", instance.ID, err)
+		if status == cloudformation.StackStatusDeleteComplete {
+			// If the resources were successfully deleted, try to delete the instance
+			if err := b.db.DataStorePort.DeleteServiceInstance(instance.ID); err != nil {
+				glog.Errorf("Failed to delete the service instance %s: %v", instance.ID, err)
+			}
 		}
+	} else if strings.HasSuffix(status, "_IN_PROGRESS") && !strings.Contains(status, "ROLLBACK") {
+		response.State = osb.StateInProgress
 	} else {
-		glog.Errorf("CloudFormation stack %s failed with status %s: %s", instance.StackID, stackStatus, aws.StringValue(resp.Stacks[0].StackStatusReason))
+		glog.Errorf("CloudFormation stack %s failed with status %s: %s", instance.StackID, status, reason)
 		response.State = osb.StateFailed
-		response.Description = resp.Stacks[0].StackStatusReason
+		response.Description = &reason
 	}
 	return &response, nil
 }
