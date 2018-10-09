@@ -1,6 +1,9 @@
 package broker
 
 import (
+	"errors"
+	"io/ioutil"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -69,6 +72,11 @@ func assumeTargetRole(sess *session.Session, params map[string]string, region st
 		return sess, nil
 	}
 
+	if params["target_role_name"] == "" {
+		glog.Infof("Parameter 'target_role_name' not set. Not assuming role.")
+		return sess, nil
+	}
+
 	targetAccountRoleArn := generateRoleArn(params, accountId)
 	glog.Infof("Assuming role arn '%s'.", targetAccountRoleArn)
 	credentialsTargetAccount := stscreds.NewCredentials(sess, targetAccountRoleArn)
@@ -79,4 +87,21 @@ func assumeTargetRole(sess *session.Session, params map[string]string, region st
 	}))
 
 	return sessionTargetAccount, nil
+}
+
+func getObjectBody(s3svc S3Client, bucket string, key string) (body []byte, err error) {
+	obj, err := s3svc.Client.GetObject(&s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, err
+	} else if obj.Body == nil {
+		return nil, errors.New("s3 object body missing")
+	}
+	file, err := ioutil.ReadAll(obj.Body)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
 }

@@ -16,7 +16,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/golang/glog"
+	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
+	"gopkg.in/yaml.v2"
 )
 
 func getGlobalOverrides(brokerID string) map[string]string {
@@ -210,10 +212,12 @@ func generateRoleArn(params map[string]string, currentAccountID string) string {
 	targetRoleName := params["target_role_name"]
 
 	if _, ok := params["target_account_id"]; ok {
-		targetAccountID := params["target_account_id"]
+		if params["target_account_id"] != "" {
+			targetAccountID := params["target_account_id"]
 
-		glog.Infof("Params 'target_account_id' present in params, assuming role in target account '%s'.", targetAccountID)
-		return fmtArn(targetAccountID, targetRoleName)
+			glog.Infof("Params 'target_account_id' present in params, assuming role in target account '%s'.", targetAccountID)
+			return fmtArn(targetAccountID, targetRoleName)
+		}
 	}
 
 	glog.Infof("Params 'target_account_id' not present in params, assuming role in current account '%s'.", currentAccountID)
@@ -400,4 +404,90 @@ func getPolicyArn(outputs []*cloudformation.Output, scope string) (string, error
 		}
 	}
 	return "", fmt.Errorf("output not found: %s", outputKey)
+}
+
+func templateToServiceDefinition(file []byte, db Db, c cache.Cache, item ServiceNeedsUpdate) error {
+	var i CfnTemplate
+	err := yaml.Unmarshal(file, &i)
+	if err != nil {
+		return err
+	}
+	osbdef := db.ServiceDefinitionToOsb(i)
+	if osbdef.Name != "" {
+		err := db.DataStorePort.PutServiceDefinition(osbdef)
+		if err == nil {
+			c.Set(item.Name, osbdef)
+		} else {
+			glog.V(10).Infoln(item)
+			glog.V(10).Infoln(osbdef)
+			glog.Errorln(err)
+		}
+	} else {
+		//glog.Errorf("invalid service definition for %q returned", i["name"].(string))
+		glog.Errorln(i)
+		glog.Errorln(osbdef)
+	}
+	return nil
+}
+
+func cfnParamsToOsb(template CfnTemplate) map[string]interface{} {
+	osbParams := make(map[string]interface{})
+	for k, v := range template.Parameters {
+
+		p := map[string]interface{}{"description": v.Description}
+		switch v.Type {
+		case "Number":
+			p["type"] = "integer"
+		default:
+			p["type"] = "string"
+		}
+		if v.Default != nil {
+			p["required"] = false
+			p["default"] = *v.Default
+		} else {
+			p["required"] = true
+		}
+		if v.AllowedValues != nil {
+			p["enum"] = v.AllowedValues
+		}
+		if template.Metadata.Interface.ParameterLabels[k].Label != "" {
+			p["title"] = template.Metadata.Interface.ParameterLabels[k].Label
+		}
+		group := cfnGetParamGroup(k, template)
+		if group != "" {
+			p["display_group"] = group
+		}
+		osbParams[k] = p
+	}
+	return osbParams
+}
+
+func cfnGetParamGroup(param string, template CfnTemplate) string {
+	for _, v := range template.Metadata.Interface.ParameterGroups {
+		if stringInSlice(param, v.Parameters) {
+			return v.Label.Name
+		}
+	}
+	return ""
+}
+
+func openshiftFormAppend(form []OpenshiftFormDefinition, name string, value map[string]interface{}) []OpenshiftFormDefinition {
+	if _, ok := value["display_group"]; ok {
+		var existingSlice *int
+		for k, v := range form {
+			if v.Title == value["display_group"] {
+				existingSlice = &k
+			}
+		}
+		if existingSlice != nil {
+			form[*existingSlice].Items = append(form[*existingSlice].Items, name)
+		} else {
+			form = append(form, OpenshiftFormDefinition{
+				Type:  "fieldset",
+				Title: value["display_group"].(string),
+				Items: []string{name},
+			})
+		}
+	}
+	return form
 }

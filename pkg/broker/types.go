@@ -133,4 +133,63 @@ type UpdateCataloger func(listingcache cache.Cache, catalogcache cache.Cache, bd
 type PollUpdater func(interval int, l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, bl AwsBroker, updateCatalog UpdateCataloger, listTemplates ListTemplateser)
 type ListTemplateser func(s3source *BucketDetailsRequest, b *AwsBroker) (*[]ServiceLastUpdate, error)
 type ListingUpdater func(l *[]ServiceLastUpdate, c cache.Cache) error
-type MetadataUpdater func(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, metadataUpdate MetadataUpdater) error
+type MetadataUpdater func(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, metadataUpdate MetadataUpdater, templatefilter string) error
+
+type CfnTemplate struct {
+	Description string `yaml:"Description,omitempty"`
+	Parameters  map[string]struct {
+		Description   string   `yaml:"Description,omitempty"`
+		Type          string   `yaml:"Type,omitempty"`
+		Default       *string  `yaml:"Default,omitempty"`
+		AllowedValues []string `yaml:"AllowedValues,omitempty"`
+	} `yaml:"Parameters,omitempty"`
+	Outputs map[string]struct {
+		Description string `yaml:"Description,omitempty"`
+	} `yaml:"Outputs,omitempty"`
+	Metadata struct {
+		Spec struct {
+			Version             string   `yaml:"Version,omitempty"`
+			Tags                []string `yaml:"Tags,omitempty"`
+			Name                string   `yaml:"Name,omitempty"`
+			DisplayName         string   `yaml:"DisplayName,omitempty"`
+			LongDescription     string   `yaml:"LongDescription,omitempty"`
+			ImageUrl            string   `yaml:"ImageUrl,omitempty"`
+			DocumentationUrl    string   `yaml:"DocumentationUrl,omitempty"`
+			ProviderDisplayName string   `yaml:"ProviderDisplayName,omitempty"`
+			Bindings            struct {
+				IAM struct {
+					AddKeypair bool `yaml:"AddKeypair,omitempty"`
+					Policies   []struct {
+						PolicyDocument map[string]interface{} `yaml:"PolicyDocument,omitempty"`
+					} `yaml:"Policies,omitempty"`
+				} `yaml:"IAM,omitempty"`
+				CFNOutputs []string `yaml:"CFNOutputs,omitempty"`
+			} `yaml:"Bindings,omitempty"`
+			ServicePlans map[string]struct {
+				DisplayName     string            `yaml:"DisplayName,omitempty"`
+				Description     string            `yaml:"Description,omitempty"`
+				LongDescription string            `yaml:"LongDescription,omitempty"`
+				Cost            string            `yaml:"Cost,omitempty"`
+				ParameterValues map[string]string `yaml:"ParameterValues,omitempty"`
+			} `yaml:"ServicePlans,omitempty"`
+			UpdatableParameters []string `yaml:"UpdatableParameters,omitempty"`
+		} `yaml:"AWS::ServiceBroker::Specification,omitempty"`
+		Interface struct {
+			ParameterGroups []struct {
+				Label struct {
+					Name string `yaml:"default,omitempty"`
+				} `yaml:"Label,omitempty"`
+				Parameters []string `yaml:"Parameters,omitempty"`
+			} `yaml:"ParameterGroups,omitempty"`
+			ParameterLabels map[string]struct {
+				Label string `yaml:"default,omitempty"`
+			} `yaml:"ParameterLabels,omitempty"`
+		} `yaml:"AWS::CloudFormation::Interface,omitempty"`
+	} `yaml:"Metadata,omitempty"`
+}
+
+type OpenshiftFormDefinition struct {
+	Type  string
+	Title string
+	Items []string
+}

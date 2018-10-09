@@ -2,7 +2,6 @@ package broker
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -16,8 +15,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	uuid "github.com/satori/go.uuid"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/satori/go.uuid"
 )
 
 // Runs at startup and bootstraps the broker
@@ -106,7 +104,7 @@ func UpdateCatalog(listingcache cache.Cache, catalogcache cache.Cache, bd Bucket
 	if err != nil {
 		return err
 	}
-	err = metadataUpdate(listingcache, catalogcache, bd, s3svc, db, MetadataUpdate)
+	err = metadataUpdate(listingcache, catalogcache, bd, s3svc, db, MetadataUpdate, bl.templatefilter)
 	if err != nil {
 		return err
 	}
@@ -120,54 +118,26 @@ func PollUpdate(interval int, l cache.Cache, c cache.Cache, bd BucketDetailsRequ
 	}
 }
 
-func MetadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, metadataUpdate MetadataUpdater) error {
+func MetadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, metadataUpdate MetadataUpdater, templatefilter string) error {
 	data, err := l.Get("__LISTINGS__")
 	if err != nil {
 		return err
 	}
 	for _, item := range data.([]ServiceNeedsUpdate) {
 		if item.Update {
-			key := bd.prefix + item.Name + "-spec.yaml"
-			obj, err := s3svc.Client.GetObject(&s3.GetObjectInput{
-				Bucket: aws.String(bd.bucket),
-				Key:    aws.String(key),
-			})
+			file, err := getObjectBody(s3svc, bd.bucket, bd.prefix+item.Name+templatefilter)
 			if err != nil {
-				return err
-			} else if obj.Body == nil {
-				return errors.New("s3 object body missing")
+				glog.Errorln(err)
 			} else {
-				file, err := ioutil.ReadAll(obj.Body)
+				err = templateToServiceDefinition(file, db, c, item)
 				if err != nil {
-					return err
-				} else {
-					var i map[string]interface{}
-					yamlerr := yaml.Unmarshal(file, &i)
-					if yamlerr != nil {
-						return yamlerr
-					} else {
-						osbdef := db.ServiceDefinitionToOsb(i)
-						if osbdef.Name != "" {
-							err = db.DataStorePort.PutServiceDefinition(osbdef)
-							if err == nil {
-								c.Set(item.Name, osbdef)
-							} else {
-								glog.V(10).Infoln(item)
-								glog.V(10).Infoln(osbdef)
-								glog.Errorln(err)
-							}
-						} else {
-							glog.Errorf("invalid service definition for %q returned", i["name"].(string))
-							glog.Errorln(i)
-							glog.Errorln(osbdef)
-						}
-					}
+					glog.Errorln(err)
 				}
 			}
 		} else {
-			i, geterr := c.Get(item.Name)
-			if geterr != nil {
-				glog.Errorln(geterr)
+			i, err := c.Get(item.Name)
+			if err != nil {
+				glog.Errorln(err)
 			} else {
 				c.Set(item.Name, i)
 			}
@@ -241,127 +211,130 @@ func (b *AwsBroker) ValidateBrokerAPIVersion(version string) error {
 }
 
 // ServiceDefinitionToOsb converts apb service definition into osb.Service struct
-func (db Db) ServiceDefinitionToOsb(sd map[string]interface{}) osb.Service {
+func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 	// TODO: Marshal spec straight from the yaml in an osb.Plan, possibly using gjson
-	glog.Infof("converting service definition %q ", sd["name"].(string))
+	glog.Infof("converting service definition %q ", sd.Metadata.Spec.Name)
 	defer func() {
 		if r := recover(); r != nil {
 			glog.Errorln(errors.Wrap(r, 2).ErrorStack())
-			glog.Errorf("Failed to convert service definition for %q", sd["name"].(string))
+			glog.Errorf("Failed to convert service definition for %q", sd.Metadata.Spec.Name)
 		}
 	}()
 	f := false
-	serviceid := uuid.NewV5(db.Accountuuid, sd["name"].(string)).String()
-	outp := osb.Service{}
-	outp.ID = serviceid
-	outp.Name = sd["name"].(string)
-	outp.Bindable = sd["bindable"].(bool)
-	outp.Description = sd["description"].(string)
-	outp.PlanUpdatable = &f
-	metadata := make(map[string]interface{})
-	for index, key := range sd["metadata"].(map[interface{}]interface{}) {
-		metadata[index.(string)] = key
+	t := true
+	serviceid := uuid.NewV5(db.Accountuuid, sd.Metadata.Spec.Name).String()
+	outp := osb.Service{
+		ID:          serviceid,
+		Name:        sd.Metadata.Spec.Name,
+		Description: sd.Description,
+		Tags:        sd.Metadata.Spec.Tags,
+		Bindable:    true,
+		Metadata: map[string]interface{}{
+			"displayName":         sd.Metadata.Spec.DisplayName,
+			"providerDisplayName": sd.Metadata.Spec.ProviderDisplayName,
+			"documentationUrl":    sd.Metadata.Spec.DocumentationUrl,
+			"imageUrl":            sd.Metadata.Spec.ImageUrl,
+			"longDescription":     sd.Metadata.Spec.LongDescription,
+		},
+		PlanUpdatable: &f,
 	}
-	outp.Metadata = metadata
-	var tags []string
-	for _, key := range sd["tags"].([]interface{}) {
-		tags = append(tags, key.(string))
-	}
-	outp.Tags = tags
+
 	var plans []osb.Plan
-	for _, key := range sd["plans"].([]interface{}) {
-		plan := osb.Plan{}
-		for i, k := range key.(map[interface{}]interface{}) {
-			if i.(string) == "name" {
-				plan.Name = k.(string)
-			} else if i.(string) == "description" {
-				plan.Description = k.(string)
-			} else if i.(string) == "free" {
-				free := k.(bool)
-				plan.Free = &free
-			} else if i.(string) == "metadata" {
-				metadata := make(map[string]interface{})
-				for i2, k2 := range k.(map[interface{}]interface{}) {
-					metadata[i2.(string)] = k2
+	params := cfnParamsToOsb(sd)
+	for k, p := range sd.Metadata.Spec.ServicePlans {
+		planid := uuid.NewV5(db.Accountuuid, "service__"+sd.Metadata.Spec.Name+"__plan__"+k).String()
+		plan := osb.Plan{
+			ID:          planid,
+			Name:        k,
+			Description: p.Description,
+			Free:        &f,
+			Bindable:    &t,
+			Metadata: map[string]interface{}{
+				"cost":            p.Cost,
+				"displayName":     p.DisplayName,
+				"longDescription": p.LongDescription,
+			},
+			Schemas: &osb.Schemas{ServiceInstance: &osb.ServiceInstanceSchema{}},
+		}
+		propsForCreate := make(map[string]interface{})
+		for nk, nv := range nonCfnParamDefs {
+			propsForCreate[nk] = nv
+		}
+		propsForUpdate := make(map[string]interface{})
+		requiredForCreate := make([]string, 0)
+		requiredForUpdate := make([]string, 0)
+		prescribed := make(map[string]string)
+		var openshiftFormCreate []OpenshiftFormDefinition
+		var openshiftFormUpdate []OpenshiftFormDefinition
+		for paramName, paramValue := range params {
+			include := true
+			for planParam, planValue := range p.ParameterValues {
+				if planParam == paramName {
+					include = false
+					prescribed[planParam] = planValue
 				}
-				plan.Metadata = metadata
-			} else if i.(string) == "parameters" {
-				propsForCreate := make(map[string]interface{})
-				requiredForCreate := make([]string, 0)
-				propsForUpdate := make(map[string]interface{})
-				requiredForUpdate := make([]string, 0)
-				for _, param := range k.([]interface{}) {
-					var name string
-					var required, updatable bool
-					pvals := make(map[string]interface{})
-					for pk, pv := range param.(map[interface{}]interface{}) {
-						switch pk {
-						case "name":
-							name = pv.(string)
-						case "required":
-							required = pv.(bool)
-						case "type":
-							switch pv {
-							case "enum":
-								pvals[pk.(string)] = "string"
-							case "int":
-								pvals[pk.(string)] = "integer"
-							default:
-								pvals[pk.(string)] = pv
-							}
-						case "updatable":
-							updatable = pv.(bool)
-						default:
-							pvals[pk.(string)] = pv
-						}
-					}
-					propsForCreate[name] = pvals
+			}
+			required := false
+			if paramValue.(map[string]interface{})["required"] != nil {
+				required = paramValue.(map[string]interface{})["required"].(bool)
+			}
+			if include {
+				openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, paramName, paramValue.(map[string]interface{}))
+				createParam := paramValue.(map[string]interface{})
+				delete(createParam, "required")
+				delete(createParam, "display_group")
+				propsForCreate[paramName] = createParam
+				if required {
+					requiredForCreate = append(requiredForCreate, paramName)
+				}
+				if stringInSlice(paramName, sd.Metadata.Spec.UpdatableParameters) {
+					openshiftFormUpdate = openshiftFormAppend(openshiftFormUpdate, paramName, paramValue.(map[string]interface{}))
+					updateParam := paramValue.(map[string]interface{})
+					delete(updateParam, "required")
+					delete(updateParam, "display_group")
+					propsForUpdate[paramName] = updateParam
 					if required {
-						requiredForCreate = append(requiredForCreate, name)
-					}
-					if updatable {
-						propsForUpdate[name] = pvals
-						if required {
-							requiredForUpdate = append(requiredForUpdate, name)
-						}
-					}
-				}
-				plan.Schemas = &osb.Schemas{
-					ServiceInstance: &osb.ServiceInstanceSchema{
-						Create: &osb.InputParametersSchema{
-							Parameters: map[string]interface{}{
-								"type":       "object",
-								"properties": propsForCreate,
-								"$schema":    "http://json-schema.org/draft-06/schema#",
-							},
-						},
-					},
-				}
-				if len(requiredForCreate) > 0 {
-					// Cloud Foundry does not allow "required" to be an empty slice
-					plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"] = requiredForCreate
-				}
-				if len(propsForUpdate) > 0 {
-					plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
-						Parameters: map[string]interface{}{
-							"type":       "object",
-							"properties": propsForUpdate,
-							"$schema":    "http://json-schema.org/draft-06/schema#",
-						},
-					}
-					if len(requiredForUpdate) > 0 {
-						// Cloud Foundry does not allow "required" to be an empty slice
-						plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["required"] = requiredForUpdate
+						requiredForUpdate = append(requiredForUpdate, paramName)
 					}
 				}
 			}
 		}
-		planid := uuid.NewV5(db.Accountuuid, "service__"+sd["name"].(string)+"__plan__"+plan.Name).String()
-		plan.ID = planid
+		plan.Schemas.ServiceInstance.Create = &osb.InputParametersSchema{
+			Parameters: map[string]interface{}{
+				"type":       "object",
+				"properties": propsForCreate,
+				"$schema":    "http://json-schema.org/draft-06/schema#",
+				"prescribed": prescribed,
+			},
+		}
+		if len(openshiftFormCreate) > 0 {
+			plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["openshift_form_definition"] = openshiftFormCreate
+		}
+		if len(requiredForCreate) > 0 {
+			// Cloud Foundry does not allow "required" to be an empty slice
+			plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"] = requiredForCreate
+		}
+		if len(propsForUpdate) > 0 {
+			plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
+				Parameters: map[string]interface{}{
+					"type":       "object",
+					"properties": propsForUpdate,
+					"$schema":    "http://json-schema.org/draft-06/schema#",
+					"prescribed": prescribed,
+				},
+			}
+			if len(openshiftFormUpdate) > 0 {
+				plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["openshift_form_definition"] = openshiftFormCreate
+			}
+			if len(requiredForUpdate) > 0 {
+				// Cloud Foundry does not allow "required" to be an empty slice
+				plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["required"] = requiredForUpdate
+			}
+		}
 		plans = append(plans, plan)
 	}
 	outp.Plans = plans
-	glog.Infof("done converting service definition %q ", sd["name"].(string))
+	glog.Infof("done converting service definition %q ", sd.Metadata.Spec.Name)
 	return outp
 }
 

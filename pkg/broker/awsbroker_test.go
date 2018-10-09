@@ -252,11 +252,11 @@ func mockListingUpdateFail(l *[]ServiceLastUpdate, c cache.Cache) error {
 	return errors.New("ListingUpdate failed")
 }
 
-func mockMetadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, metadataUpdate MetadataUpdater) error {
+func mockMetadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, metadataUpdate MetadataUpdater, templatefilter string) error {
 	return nil
 }
 
-func mockMetadataUpdateFail(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, metadataUpdate MetadataUpdater) error {
+func mockMetadataUpdateFail(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, metadataUpdate MetadataUpdater, templatefilter string) error {
 	return errors.New("MetadataUpdate failed")
 }
 
@@ -345,7 +345,7 @@ func TestMetadataUpdate(t *testing.T) {
 	}
 
 	// test "__LISTINGS__" not in cache
-	err := MetadataUpdate(bl.listingcache, bl.catalogcache, *bd, s3svc, bl.db, MetadataUpdate)
+	err := MetadataUpdate(bl.listingcache, bl.catalogcache, *bd, s3svc, bl.db, MetadataUpdate, "-main.yaml")
 	assert.EqualError(err, "not found")
 
 	// test empty s3 body
@@ -355,16 +355,16 @@ func TestMetadataUpdate(t *testing.T) {
 		Update: true,
 	})
 	bl.listingcache.Set("__LISTINGS__", serviceUpdates)
-	err = MetadataUpdate(bl.listingcache, bl.catalogcache, *bd, s3svc, bl.db, MetadataUpdate)
-	assert.EqualError(err, "s3 object body missing")
+	err = MetadataUpdate(bl.listingcache, bl.catalogcache, *bd, s3svc, bl.db, MetadataUpdate, "-main.yaml")
+	assert.Equal(err, nil, "should handle empty s3 objects without erroring")
 
 	// test object not yaml
 	s3obj := s3.GetObjectOutput{Body: ioutil.NopCloser(strings.NewReader("test"))}
 	s3svc = S3Client{
 		Client: mockS3{GetObjectResp: s3obj},
 	}
-	err = MetadataUpdate(bl.listingcache, bl.catalogcache, *bd, s3svc, bl.db, MetadataUpdate)
-	assert.EqualError(err, "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `test` into map[string]interface {}")
+	err = MetadataUpdate(bl.listingcache, bl.catalogcache, *bd, s3svc, bl.db, MetadataUpdate, "-main.yaml")
+	assert.Equal(err, nil, "should handle bad templates without erroring")
 
 	// TODO: test success and more failure scenarios
 }
