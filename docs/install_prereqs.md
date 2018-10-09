@@ -56,6 +56,8 @@ The user or role that the broker runs as requires the following policy:
 }
 ```
 
+| **NOTE:** replace the `<REGION>`, `<ACCOUNT_ID>` and `<TABLE_NAME>` placeholders in the above json before creating the policy
+ 
 The role/user used for provisioning requires additional permissions for provisioning, binding and deprovisioning ServiceInstances. By default this is the same user/role as the broker role, so can be added to that, or can be applied to a separate role, see [Managing Resources Via Assumed Role](/docs/README.md#managing-resources-via-assumed-role).
 
 ```json
@@ -116,5 +118,7 @@ The role/user used for provisioning requires additional permissions for provisio
    ]
 }
 ```
+
+| **NOTE:** replace the `<REGION>` and `<ACCOUNT_ID>` placeholders in the above json before creating the policy
 
 If a custom catalog is published, this policy may need to be adapted.
