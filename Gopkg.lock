@@ -42,6 +42,7 @@
     "service/cloudformation/cloudformationiface",
     "service/dynamodb",
     "service/dynamodb/dynamodbattribute",
+    "service/dynamodb/expression",
     "service/iam",
     "service/iam/iamiface",
     "service/s3",
@@ -231,6 +232,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "37d2ac1bd3b0cbc92ef8c16fa42dd36347bc8d365e65a94cf87c22485edd666e"
+  inputs-digest = "67b442a5b7a18a2ef82dbcab7f4481046fa9907d70c46abd6403159e701936ee"
   solver-name = "gps-cdcl"
   solver-version = 1

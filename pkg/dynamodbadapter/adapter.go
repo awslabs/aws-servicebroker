@@ -4,8 +4,10 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
 	"github.com/golang/glog"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
@@ -20,7 +22,7 @@ const (
 	itemTypeServiceInstance = "serviceinstance"
 )
 
-// DynamoDB implementation of DataStore Adapter
+// DdbDataStore is a DynamoDB implementation of DataStore.
 type DdbDataStore struct {
 	Accountid   string
 	Accountuuid uuid.UUID
@@ -188,6 +190,11 @@ func (db DdbDataStore) PutServiceInstance(si serviceinstance.ServiceInstance) er
 	return nil
 }
 
+// DeleteServiceInstance deletes the service instance.
+func (db DdbDataStore) DeleteServiceInstance(sid string) error {
+	return db.deleteItem(sid, itemTypeServiceInstance)
+}
+
 // GetServiceBinding returns the specified service binding.
 func (db DdbDataStore) GetServiceBinding(id string) (*serviceinstance.ServiceBinding, error) {
 	resp, err := db.Ddb.GetItem(&dynamodb.GetItemInput{
@@ -229,12 +236,31 @@ func (db DdbDataStore) PutServiceBinding(sb serviceinstance.ServiceBinding) erro
 
 // DeleteServiceBinding deletes the service binding.
 func (db DdbDataStore) DeleteServiceBinding(id string) error {
+	return db.deleteItem(id, itemTypeServiceBinding)
+}
+
+func (db DdbDataStore) deleteItem(id, itemType string) error {
+	// Ensure the item we're deleting has the expected type
+	expr, _ := expression.NewBuilder().
+		WithCondition(expression.Name("type").Equal(expression.Value(itemType))).
+		Build()
+
 	_, err := db.Ddb.DeleteItem(&dynamodb.DeleteItemInput{
+		ConditionExpression:       expr.Condition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
 		Key: map[string]*dynamodb.AttributeValue{
 			"id":     {S: aws.String(id)},
 			"userid": {S: aws.String(db.Accountuuid.String())},
 		},
 		TableName: aws.String(db.Tablename),
 	})
-	return err
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == dynamodb.ErrCodeConditionalCheckFailedException {
+			glog.Errorf("item %s does not have type %s", id, itemType)
+			return nil // Consider this a success since the expected item is gone
+		}
+		return err
+	}
+	return nil
 }
