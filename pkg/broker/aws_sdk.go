@@ -84,16 +84,18 @@ func assumeTargetRole(sess *session.Session, params map[string]string, region st
 	return sessionTargetAccount, nil
 }
 
-func getObjectBody(s3svc S3Client, bucket string, key string) (body []byte, err error) {
+func getObjectBody(s3svc S3Client, bucket, key string) ([]byte, error) {
 	obj, err := s3svc.Client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
 	if err != nil {
 		return nil, err
-	} else if obj.Body == nil {
+	}
+	if obj.Body == nil {
 		return nil, errors.New("s3 object body missing")
 	}
+	defer obj.Body.Close()
 	file, err := ioutil.ReadAll(obj.Body)
 	if err != nil {
 		return nil, err
