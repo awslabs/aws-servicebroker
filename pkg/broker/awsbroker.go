@@ -280,7 +280,16 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			}
 			if include {
 				openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, paramName, paramValue.(map[string]interface{}))
-				createParam := paramValue.(map[string]interface{})
+				createParam := map[string]interface{}{}
+				for nk, nv := range paramValue.(map[string]interface{}) {
+					createParam[nk] = nv
+				}
+				for planDefaultParam, planDefaultValue := range p.ParameterDefaults {
+					if planDefaultParam == paramName {
+						glog.V(10).Infof("Updating default with plan default for plan %q param %q\n", k, paramName)
+						createParam["default"] = planDefaultValue
+					}
+				}
 				for _, v := range []string{"required", "display_group"} {
 					delete(createParam, v)
 				}

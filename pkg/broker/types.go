@@ -167,11 +167,12 @@ type CfnTemplate struct {
 				CFNOutputs []string `yaml:"CFNOutputs,omitempty"`
 			} `yaml:"Bindings,omitempty"`
 			ServicePlans map[string]struct {
-				DisplayName     string            `yaml:"DisplayName,omitempty"`
-				Description     string            `yaml:"Description,omitempty"`
-				LongDescription string            `yaml:"LongDescription,omitempty"`
-				Cost            string            `yaml:"Cost,omitempty"`
-				ParameterValues map[string]string `yaml:"ParameterValues,omitempty"`
+				DisplayName       string            `yaml:"DisplayName,omitempty"`
+				Description       string            `yaml:"Description,omitempty"`
+				LongDescription   string            `yaml:"LongDescription,omitempty"`
+				Cost              string            `yaml:"Cost,omitempty"`
+				ParameterValues   map[string]string `yaml:"ParameterValues,omitempty"`
+				ParameterDefaults map[string]string `yaml:"ParameterDefaults,omitempty"`
 			} `yaml:"ServicePlans,omitempty"`
 			UpdatableParameters []string `yaml:"UpdatableParameters,omitempty"`
 		} `yaml:"AWS::ServiceBroker::Specification,omitempty"`
