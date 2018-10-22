@@ -491,3 +491,14 @@ func openshiftFormAppend(form []OpenshiftFormDefinition, name string, value map[
 	}
 	return form
 }
+
+func getPlanPrescribedParams(params interface{}) map[string]interface{} {
+	prescribed := make(map[string]interface{})
+	if params != nil {
+		if params.(map[string]interface{})["prescribed"] != nil {
+			glog.V(10).Infoln(params.(map[string]interface{})["prescribed"])
+			prescribed = params.(map[string]interface{})["prescribed"].(map[string]interface{})
+		}
+	}
+	return prescribed
+}
