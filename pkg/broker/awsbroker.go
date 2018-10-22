@@ -254,14 +254,17 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			Schemas: &osb.Schemas{ServiceInstance: &osb.ServiceInstanceSchema{}},
 		}
 		propsForCreate := make(map[string]interface{})
+		var openshiftFormCreate []OpenshiftFormDefinition
 		for nk, nv := range nonCfnParamDefs {
-			propsForCreate[nk] = nv
+			nonCfnParam := nv.(map[string]interface{})
+			openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, nk, nonCfnParam)
+			delete(nonCfnParam, "display_group")
+			propsForCreate[nk] = nonCfnParam
 		}
 		propsForUpdate := make(map[string]interface{})
 		requiredForCreate := make([]string, 0)
 		requiredForUpdate := make([]string, 0)
 		prescribed := make(map[string]string)
-		var openshiftFormCreate []OpenshiftFormDefinition
 		var openshiftFormUpdate []OpenshiftFormDefinition
 		for paramName, paramValue := range params {
 			include := true
@@ -278,8 +281,9 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			if include {
 				openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, paramName, paramValue.(map[string]interface{}))
 				createParam := paramValue.(map[string]interface{})
-				delete(createParam, "required")
-				delete(createParam, "display_group")
+				for _, v := range []string{"required", "display_group"} {
+					delete(createParam, v)
+				}
 				propsForCreate[paramName] = createParam
 				if required {
 					requiredForCreate = append(requiredForCreate, paramName)
@@ -287,8 +291,9 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 				if stringInSlice(paramName, sd.Metadata.Spec.UpdatableParameters) {
 					openshiftFormUpdate = openshiftFormAppend(openshiftFormUpdate, paramName, paramValue.(map[string]interface{}))
 					updateParam := paramValue.(map[string]interface{})
-					delete(updateParam, "required")
-					delete(updateParam, "display_group")
+					for _, v := range []string{"required", "display_group", "default"} {
+						delete(updateParam, v)
+					}
 					propsForUpdate[paramName] = updateParam
 					if required {
 						requiredForUpdate = append(requiredForUpdate, paramName)
