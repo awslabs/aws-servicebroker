@@ -33,7 +33,6 @@ var nonCfnParamDefs = map[string]interface{}{
 		"display_group": "AWS Account Information",
 		"title":         "AWS Region",
 		"type":          "string",
-		"default":       "us-west-2",
 		"enum": []string{
 			"ap-northeast-1",
 			"ap-northeast-2",
