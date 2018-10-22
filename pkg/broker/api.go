@@ -89,7 +89,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 	}
 	glog.V(10).Infof("params=%v", params)
 	for k, v := range getPlanPrescribedParams(plan.Schemas.ServiceInstance.Create.Parameters) {
-		params[k] = v.(string)
+		params[k] = paramValue(v)
 	}
 	glog.V(10).Infof("params=%v", params)
 	for k, v := range request.Parameters {
