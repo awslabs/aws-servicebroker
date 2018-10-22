@@ -421,7 +421,6 @@ func templateToServiceDefinition(file []byte, db Db, c cache.Cache, item Service
 			glog.Errorln(err)
 		}
 	} else {
-		//glog.Errorf("invalid service definition for %q returned", i["name"].(string))
 		glog.Errorln(i)
 		glog.Errorln(osbdef)
 	}
