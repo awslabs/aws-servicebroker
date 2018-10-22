@@ -66,6 +66,8 @@ Metadata:
             PreferredMaintenanceWindowDay: Sat
             PreferredMaintenanceWindowStartTime: 06:00
             PreferredMaintenanceWindowEndTime: 07:00
+          ParameterDefaults:
+            DBInstanceClass: db.m1.small
         custom:
           DisplayName: "Custom"
           Description: 'Custom Configuration for Advanced deployments'
