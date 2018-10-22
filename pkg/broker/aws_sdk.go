@@ -67,11 +67,6 @@ func GetCallerId(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error) {
 
 func assumeTargetRole(sess *session.Session, params map[string]string, region string, accountId string) (*session.Session, error) {
 
-	if _, ok := params["target_role_name"]; !ok {
-		glog.Infof("Parameter 'target_role_name' not set. Not assuming role.")
-		return sess, nil
-	}
-
 	if params["target_role_name"] == "" {
 		glog.Infof("Parameter 'target_role_name' not set. Not assuming role.")
 		return sess, nil
