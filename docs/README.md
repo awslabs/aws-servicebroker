@@ -68,7 +68,7 @@ aws cloudformation create-stack \
     --parameters ParameterKey=ServiceBrokerAccountId,ParameterValue=$service_broker_account_id
 ```
 
-To do you this you must ensure that the role the **aws-service-broker** is running allows it to assume the target role.
+To do this you must ensure that the role the **aws-service-broker** is running allows it to assume the target role.
 
 Get the ARN:
 
