@@ -8,7 +8,8 @@ This guide uses helm, for documentation on installing the helm client see [https
 ```bash
 # Install helm and tiller into the cluster
 helm init
-# Wait until tiller is ready before moving onuntil kubectl get pods -n kube-system -l name=tiller | grep 1/1; do sleep 1; done
+# Wait until tiller is ready before moving on
+until kubectl get pods -n kube-system -l name=tiller | grep 1/1; do sleep 1; done
 
 kubectl create clusterrolebinding tiller-cluster-admin \
     --clusterrole=cluster-admin \
