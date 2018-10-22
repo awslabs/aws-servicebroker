@@ -128,11 +128,10 @@ func MetadataUpdate(l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc
 			file, err := getObjectBody(s3svc, bd.bucket, bd.prefix+item.Name+templatefilter)
 			if err != nil {
 				glog.Errorln(err)
-			} else {
-				err = templateToServiceDefinition(file, db, c, item)
-				if err != nil {
-					glog.Errorln(err)
-				}
+				continue
+			}
+			if err := templateToServiceDefinition(file, db, c, item); err != nil {
+				glog.Errorln(err)
 			}
 		} else {
 			i, err := c.Get(item.Name)
@@ -220,8 +219,6 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			glog.Errorf("Failed to convert service definition for %q", sd.Metadata.Spec.Name)
 		}
 	}()
-	f := false
-	t := true
 	serviceid := uuid.NewV5(db.Accountuuid, sd.Metadata.Spec.Name).String()
 	outp := osb.Service{
 		ID:          serviceid,
@@ -236,7 +233,7 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			"imageUrl":            sd.Metadata.Spec.ImageUrl,
 			"longDescription":     sd.Metadata.Spec.LongDescription,
 		},
-		PlanUpdatable: &f,
+		PlanUpdatable: aws.Bool(false),
 	}
 
 	var plans []osb.Plan
@@ -247,8 +244,8 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			ID:          planid,
 			Name:        k,
 			Description: p.Description,
-			Free:        &f,
-			Bindable:    &t,
+			Free:        aws.Bool(false),
+			Bindable:    aws.Bool(true),
 			Metadata: map[string]interface{}{
 				"cost":            p.Cost,
 				"displayName":     p.DisplayName,
