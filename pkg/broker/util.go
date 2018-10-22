@@ -211,13 +211,11 @@ func addTrailingSlash(s string) string {
 func generateRoleArn(params map[string]string, currentAccountID string) string {
 	targetRoleName := params["target_role_name"]
 
-	if _, ok := params["target_account_id"]; ok {
-		if params["target_account_id"] != "" {
-			targetAccountID := params["target_account_id"]
+	if params["target_account_id"] != "" {
+		targetAccountID := params["target_account_id"]
 
-			glog.Infof("Params 'target_account_id' present in params, assuming role in target account '%s'.", targetAccountID)
-			return fmtArn(targetAccountID, targetRoleName)
-		}
+		glog.Infof("Params 'target_account_id' present in params, assuming role in target account '%s'.", targetAccountID)
+		return fmtArn(targetAccountID, targetRoleName)
 	}
 
 	glog.Infof("Params 'target_account_id' not present in params, assuming role in current account '%s'.", currentAccountID)
