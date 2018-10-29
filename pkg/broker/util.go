@@ -83,10 +83,8 @@ func getOverridesFromEnv() map[string]string {
 		envvar := strings.Split(item, "=")
 		if strings.HasPrefix(envvar[0], "PARAM_OVERRIDE_") {
 			key := strings.TrimPrefix(envvar[0], "PARAM_OVERRIDE_")
-			if envvar[1] != "" {
-				Overrides[key] = envvar[1]
-				glog.V(10).Infof("%q=%q\n", key, envvar[1])
-			}
+			Overrides[key] = envvar[1]
+			glog.V(10).Infof("%q=%q\n", key, envvar[1])
 		}
 	}
 	return Overrides
