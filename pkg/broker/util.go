@@ -320,10 +320,12 @@ func getAvailableParams(plan *osb.Plan) (params []string) {
 }
 
 func getUpdatableParams(plan *osb.Plan) (params []string) {
-	properties := plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["properties"]
-	if properties != nil {
-		for k := range properties.(map[string]interface{}) {
-			params = append(params, k)
+	if plan.Schemas.ServiceInstance.Update != nil {
+		properties := plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["properties"]
+		if properties != nil {
+			for k := range properties.(map[string]interface{}) {
+				params = append(params, k)
+			}
 		}
 	}
 	return

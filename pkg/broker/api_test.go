@@ -63,6 +63,11 @@ func (db mockDataStoreProvision) GetParam(paramname string) (value string, err e
 }
 func (db mockDataStoreProvision) PutParam(paramname string, paramvalue string) error { return nil }
 func (db mockDataStoreProvision) PutServiceInstance(si serviceinstance.ServiceInstance) error {
+	for _, v := range si.Params {
+		if v == "err" {
+			return errors.New("test failure")
+		}
+	}
 	return nil
 }
 func (db mockDataStoreProvision) GetServiceDefinition(serviceuuid string) (*osb.Service, error) {
@@ -74,12 +79,22 @@ func (db mockDataStoreProvision) GetServiceDefinition(serviceuuid string) (*osb.
 				{ID: "test-plan-id", Name: "test-plan-name", Schemas: &osb.Schemas{ServiceInstance: &osb.ServiceInstanceSchema{
 					Create: &osb.InputParametersSchema{
 						Parameters: map[string]interface{}{"type": "object", "properties": map[string]interface{}{
-							"req_param":      map[string]interface{}{"type": "string", "required": true},
+							"req_param":      map[string]interface{}{"type": "string"},
 							"override_param": map[string]interface{}{"type": "string"},
 							"region":         map[string]interface{}{"type": "string"},
 						},
 							"$schema":  "http://json-schema.org/draft-06/schema#",
 							"required": []interface{}{"req_param"},
+						},
+					},
+					Update: &osb.InputParametersSchema{
+						Parameters: map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"req_param": map[string]interface{}{"type": "string"},
+							},
+							"$schema":  "http://json-schema.org/draft-06/schema#",
+							"required": []string{"req_param"},
 						},
 					},
 				}}},
@@ -97,9 +112,11 @@ func (db mockDataStoreProvision) GetServiceInstance(sid string) (*serviceinstanc
 	case "err":
 		return nil, errors.New("test failure")
 	case "err-stack":
-		return &serviceinstance.ServiceInstance{StackID: "err"}, nil
+		return &serviceinstance.ServiceInstance{ID: "err-stack", StackID: "err", PlanID: "test-plan-id", Params: map[string]string{"req_param": "a-value"}}, nil
 	case "exists":
-		return &serviceinstance.ServiceInstance{StackID: "an-id"}, nil
+		return &serviceinstance.ServiceInstance{ID: "exists", StackID: "an-id", PlanID: "test-plan-id", Params: map[string]string{"req_param": "a-value"}}, nil
+	case "foo-plan":
+		return &serviceinstance.ServiceInstance{ID: "foo-plan", StackID: "an-id", PlanID: "foo"}, nil
 	default:
 		return nil, nil
 	}
@@ -748,6 +765,144 @@ func TestUnbind(t *testing.T) {
 				assert.EqualError(t, err, tt.expectedErr.Error())
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestUpdate(t *testing.T) {
+	tests := []struct {
+		name          string
+		request       *osb.UpdateInstanceRequest
+		expectedAsync bool
+		expectedErr   error
+	}{
+		{
+			name: "async_required",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: false,
+				InstanceID:        "exists",
+				ServiceID:         "test-service-id",
+			},
+			expectedErr: newAsyncError(),
+		},
+		{
+			name: "error_getting_instance",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "err",
+				ServiceID:         "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service instance \"err\": test failure"),
+		},
+		{
+			name: "instance_not_found",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "foo",
+				ServiceID:         "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service instance \"foo\" was not found."),
+		},
+		{
+			name: "change_plan",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "exists",
+				ServiceID:         "test-service-id",
+				PlanID:            aws.String("new-plan-id"),
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service plan cannot be changed from \"test-plan-id\" to \"new-plan-id\"."),
+		},
+		{
+			name: "error_getting_service",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "exists",
+				ServiceID:         "err",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service \"err\": test failure"),
+		},
+		{
+			name: "service_not_found",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "exists",
+				ServiceID:         "foo",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service \"foo\" was not found."),
+		},
+		{
+			name: "plan_not_found",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "foo-plan",
+				ServiceID:         "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service plan \"foo\" was not found."),
+		},
+		{
+			name: "parameter_not_updatable",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "exists",
+				ServiceID:         "test-service-id",
+				Parameters:        map[string]interface{}{"foo": "bar"},
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The parameter \"foo\" is not updatable."),
+		},
+		{
+			name: "parameter_not_updated",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "exists",
+				ServiceID:         "test-service-id",
+				Parameters:        map[string]interface{}{"req_param": "a-value"},
+			},
+			expectedAsync: false,
+		},
+		{
+			name: "error_updating_stack",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "err-stack",
+				ServiceID:         "test-service-id",
+				Parameters:        map[string]interface{}{"req_param": "new-value"},
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to update the CloudFormation stack \"err\": test failure"),
+		},
+		{
+			name: "success",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "exists",
+				ServiceID:         "test-service-id",
+				Parameters:        map[string]interface{}{"req_param": "new-value"},
+			},
+			expectedAsync: true,
+		},
+		{
+			name: "error_updating_instance",
+			request: &osb.UpdateInstanceRequest{
+				AcceptsIncomplete: true,
+				InstanceID:        "exists",
+				ServiceID:         "test-service-id",
+				Parameters:        map[string]interface{}{"req_param": "err"},
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to update the service instance \"exists\": test failure"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b.db.DataStorePort = mockDataStoreProvision{}
+
+			resp, err := b.Update(tt.request, &broker.RequestContext{})
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else if assert.NoError(t, err) {
+				assert.Equal(t, tt.expectedAsync, resp.Async)
 			}
 		})
 	}

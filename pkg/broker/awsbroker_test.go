@@ -308,6 +308,7 @@ type mockCfn struct {
 	DescribeStacksResponse cloudformation.DescribeStacksOutput
 	CreateStackResponse    cloudformation.CreateStackOutput
 	DeleteStackResponse    cloudformation.DeleteStackOutput
+	UpdateStackResponse    cloudformation.UpdateStackOutput
 }
 
 func (m mockCfn) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
@@ -326,6 +327,17 @@ func (m mockCfn) DeleteStack(in *cloudformation.DeleteStackInput) (*cloudformati
 		return nil, errors.New("test failure")
 	}
 	return &m.DeleteStackResponse, nil
+}
+
+func (m mockCfn) UpdateStack(in *cloudformation.UpdateStackInput) (*cloudformation.UpdateStackOutput, error) {
+	if aws.StringValue(in.StackName) == "err" {
+		return nil, errors.New("test failure")
+	}
+	return &m.UpdateStackResponse, nil
+}
+
+func (m mockCfn) CancelUpdateStack(in *cloudformation.CancelUpdateStackInput) (*cloudformation.CancelUpdateStackOutput, error) {
+	return &cloudformation.CancelUpdateStackOutput{}, nil
 }
 
 func TestMetadataUpdate(t *testing.T) {
