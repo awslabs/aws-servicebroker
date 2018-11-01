@@ -499,3 +499,12 @@ func getPlanPrescribedParams(params interface{}) map[string]interface{} {
 	}
 	return prescribed
 }
+
+func stripTemplateId(description string) string {
+	reg, err := regexp.Compile("\\(qs-[a-z0-9]{9}\\)")
+	if err != nil {
+		glog.Errorln(err)
+	}
+	description = reg.ReplaceAllString(description, "")
+	return strings.TrimSpace(description)
+}

@@ -223,7 +223,7 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 	outp := osb.Service{
 		ID:          serviceid,
 		Name:        sd.Metadata.Spec.Name,
-		Description: sd.Description,
+		Description: stripTemplateId(sd.Description),
 		Tags:        sd.Metadata.Spec.Tags,
 		Bindable:    true,
 		Metadata: map[string]interface{}{
