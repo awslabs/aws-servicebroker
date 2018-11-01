@@ -73,6 +73,7 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 
 	// Get the plan
 	plan := getPlan(service, request.PlanID)
+	glog.V(10).Infof("plan=%v", plan)
 	if plan == nil {
 		desc := fmt.Sprintf("The service plan %s was not found.", request.PlanID)
 		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
@@ -80,10 +81,17 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 
 	// Get the parameters and verify that all required parameters are set
 	params := getPlanDefaults(plan)
+	glog.V(10).Infof("params=%v", params)
 	availableParams := getAvailableParams(plan)
+	glog.V(10).Infof("availableParams=%v", availableParams)
 	for k, v := range getOverrides(b.brokerid, availableParams, namespace, service.Name, cluster) {
 		params[k] = v
 	}
+	glog.V(10).Infof("params=%v", params)
+	for k, v := range getPlanPrescribedParams(plan.Schemas.ServiceInstance.Create.Parameters) {
+		params[k] = paramValue(v)
+	}
+	glog.V(10).Infof("params=%v", params)
 	for k, v := range request.Parameters {
 		if !stringInSlice(k, availableParams) {
 			desc := fmt.Sprintf("The parameter %s is not available.", k)
