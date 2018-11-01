@@ -256,9 +256,13 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 		propsForCreate := make(map[string]interface{})
 		var openshiftFormCreate []OpenshiftFormDefinition
 		for nk, nv := range nonCfnParamDefs {
-			nonCfnParam := nv.(map[string]interface{})
-			openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, nk, nonCfnParam)
-			delete(nonCfnParam, "display_group")
+			openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, nk, nv.(map[string]interface{}))
+			nonCfnParam := make(map[string]interface{})
+			for nnk, nnv := range nv.(map[string]interface{}) {
+				if nnk != "display_group" {
+					nonCfnParam[nnk] = nnv
+				}
+			}
 			propsForCreate[nk] = nonCfnParam
 		}
 		propsForUpdate := make(map[string]interface{})
@@ -299,9 +303,11 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 				}
 				if stringInSlice(paramName, sd.Metadata.Spec.UpdatableParameters) {
 					openshiftFormUpdate = openshiftFormAppend(openshiftFormUpdate, paramName, paramValue.(map[string]interface{}))
-					updateParam := paramValue.(map[string]interface{})
-					for _, v := range []string{"required", "display_group", "default"} {
-						delete(updateParam, v)
+					updateParam := make(map[string]interface{})
+					for nnk, nnv := range paramValue.(map[string]interface{}) {
+						if nnk != "required" && nnk != "display_group" && nnk != "default" {
+							updateParam[nnk] = nnv
+						}
 					}
 					propsForUpdate[paramName] = updateParam
 					if required {
