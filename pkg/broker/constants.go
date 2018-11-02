@@ -63,3 +63,7 @@ const (
 	cfnOutputUserKeyID       = "UserKeyId"
 	cfnOutputUserSecretKey   = "UserSecretKey"
 )
+
+const (
+	templateIDRegex = `\(qs-[a-z0-9]{9}\)`
+)
