@@ -444,37 +444,34 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 	// Get the service instance
 	instance, err := b.db.DataStorePort.GetServiceInstance(request.InstanceID)
 	if err != nil {
-		desc := fmt.Sprintf("Failed to get the service instance %s: %v", request.InstanceID, err)
+		desc := fmt.Sprintf("Failed to get the service instance %q: %v", request.InstanceID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	} else if instance == nil {
-		desc := fmt.Sprintf("The service instance %s was not found.", request.InstanceID)
+		desc := fmt.Sprintf("The service instance %q was not found.", request.InstanceID)
 		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 	}
 
 	// Verify that we're not changing the plan (this should never happen since
 	// we're setting `plan_updateable: false`, but better safe than sorry)
 	if request.PlanID != nil && *request.PlanID != instance.PlanID {
-		desc := fmt.Sprintf("The service plan cannot be changed from %s to %s.", instance.PlanID, *request.PlanID)
+		desc := fmt.Sprintf("The service plan cannot be changed from %q to %q.", instance.PlanID, *request.PlanID)
 		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 	}
 
 	// Get the service
 	service, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
 	if err != nil {
-		desc := fmt.Sprintf("Failed to get the service %s: %v", request.ServiceID, err)
+		desc := fmt.Sprintf("Failed to get the service %q: %v", request.ServiceID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	} else if service == nil {
-		desc := fmt.Sprintf("The service %s was not found.", request.ServiceID)
+		desc := fmt.Sprintf("The service %q was not found.", request.ServiceID)
 		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 	}
 
-	// Get the plan and verify that it has updatable parameters
+	// Get the plan
 	plan := getPlan(service, instance.PlanID)
 	if plan == nil {
-		desc := fmt.Sprintf("The service plan %s was not found.", instance.PlanID)
-		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
-	} else if plan.Schemas.ServiceInstance.Update == nil {
-		desc := fmt.Sprintf("The service plan %s has no updatable parameters.", instance.PlanID)
+		desc := fmt.Sprintf("The service plan %q was not found.", instance.PlanID)
 		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 	}
 
@@ -489,7 +486,7 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 		newValue := paramValue(v)
 		if params[k] != newValue {
 			if !stringInSlice(k, updatableParams) {
-				desc := fmt.Sprintf("The parameter %s is not updatable.", k)
+				desc := fmt.Sprintf("The parameter %q is not updatable.", k)
 				return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 			}
 			params[k] = newValue
@@ -511,7 +508,7 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 		TemplateURL:  b.generateS3HTTPUrl(service.Name),
 	})
 	if err != nil {
-		desc := fmt.Sprintf("Failed to update the CloudFormation stack %s: %v", instance.StackID, err)
+		desc := fmt.Sprintf("Failed to update the CloudFormation stack %q: %v", instance.StackID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
 
@@ -521,11 +518,11 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 	if err != nil {
 		// Try to cancel the update
 		if _, err := cfnSvc.Client.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{StackName: aws.String(instance.StackID)}); err != nil {
-			glog.Errorf("Failed to cancel updating the CloudFormation stack %s: %v", instance.StackID, err)
-			glog.Errorf("Service instance %s and CloudFormation stack %s may be out of sync!", instance.ID, instance.StackID)
+			glog.Errorf("Failed to cancel updating the CloudFormation stack %q: %v", instance.StackID, err)
+			glog.Errorf("Service instance %q and CloudFormation stack %q may be out of sync!", instance.ID, instance.StackID)
 		}
 
-		desc := fmt.Sprintf("Failed to update the service instance %s: %v", instance.ID, err)
+		desc := fmt.Sprintf("Failed to update the service instance %q: %v", instance.ID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
 
