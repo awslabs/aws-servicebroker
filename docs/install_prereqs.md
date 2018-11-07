@@ -50,7 +50,10 @@ The user or role that the broker runs as requires the following policy:
         "ssm:GetParameter",
         "ssm:GetParameters"
       ],
-      "Resource": "arn:aws:ssm:<REGION>:<ACCOUNT_ID>:parameter/asb-*",
+      "Resource": [
+          "arn:aws:ssm:<REGION>:<ACCOUNT_ID>:parameter/asb-*",
+          "arn:aws:ssm:<REGION>:<ACCOUNT_ID>:parameter/Asb*",
+      ],
       "Effect": "Allow"
     }
   ]
