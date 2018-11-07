@@ -39,7 +39,8 @@ The user or role that the broker runs as requires the following policy:
     {
       "Action": [
         "dynamodb:PutItem",
-        "dynamodb:GetItem"
+        "dynamodb:GetItem",
+        "dynamodb:DeleteItem"
       ],
       "Resource": "arn:aws:dynamodb:<REGION>:<ACCOUNT_ID>:table/<TABLE_NAME>",
       "Effect": "Allow"
