@@ -11,8 +11,6 @@ packages:
     path: resources/cfnsb
     buildpack: binary_buildpack
     command: >
-      export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_target_role_namey=${TARGET_ROLE_NAME} ;
-      export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_target_account_id=${TARGET_ACCOUNT_ID} ;
       export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_region=${AWS_DEFAULT_REGION} ;
       ./cfnsb
       -logtostderr
@@ -49,14 +47,6 @@ forms:
     type: secret
     label: AWS Secret Access Key
     description: AWS IAM User Secret Key to use, if left blank will attempt to use a role, if defined key-id must also be defined
-  - name: TARGET_ACCOUNT_ID
-    type: string
-    label: Target AWS Account ID
-    description: AWS AccountID for provisioning role, by default, resources will be provisioned into this account
-  - name: TARGET_ROLE_NAME
-    type: string
-    label: Target IAM Role Name
-    description: Target IAM role name to use when provisioning, requires TARGET_ACCOUNT_ID to be populated
   - name: AWS_DEFAULT_REGION
     type: string
     label: AWS Region
