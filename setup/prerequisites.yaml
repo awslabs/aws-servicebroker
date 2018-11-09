@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Creates the prerequisites for the AWS Service Broker -
+  https://github.com/awslabs/aws-servicebroker/blob/master/docs/install_prereqs.md
+Resources:
+  BrokerTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      - AttributeName: userid
+        AttributeType: S
+      - AttributeName: type
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      - AttributeName: userid
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: "awssb"
+      GlobalSecondaryIndexes:
+      - IndexName: "type-userid-index"
+        KeySchema:
+        - AttributeName: type
+          KeyType: HASH
+        - AttributeName: userid
+          KeyType: RANGE
+        Projection:
+          ProjectionType: INCLUDE
+          NonKeyAttributes: [ id, userid, type, locked ]
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+  BrokerUser:
+    Type: "AWS::IAM::User"
+    Properties:
+      Policies:
+      - PolicyName: AwsServiceBrokerPolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Action: [ "s3:GetObject", "s3:ListBucket" ]
+            Resource: [ "arn:aws:s3:::awsservicebroker/templates/*", "arn:aws:s3:::awsservicebroker" ]
+            Effect: "Allow"
+          - Action: [ "dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:DeleteItem" ]
+            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BrokerTable}"
+            Effect: "Allow"
+          - Action: [ "ssm:GetParameter", "ssm:GetParameters" ]
+            Resource:
+            - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/asb-*"
+            - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/Asb*"
+            Effect: "Allow"
+      - PolicyName: AwsServiceBrokerProvisioningPolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Action: [ "ssm:PutParameter", "ssm:GetParameter", "ssm:GetParameters" ]
+            Resource:
+            - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/asb-*"
+            - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/Asb*"
+            Effect: "Allow"
+          - Action: "s3:GetObject"
+            Resource: "arn:aws:s3:::awsservicebroker/templates/*"
+            Effect: "Allow"
+          - Action:
+            - "cloudformation:CreateStack"
+            - "cloudformation:DeleteStack"
+            - "cloudformation:DescribeStacks"
+            - "cloudformation:UpdateStack"
+            - "cloudformation:CancelUpdateStack"
+            Resource: !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/aws-service-broker-*/*"
+            Effect: "Allow"
+          - Action: [ "athena:*", "dynamodb:*", "kms:*", "elasticache:*", "elasticmapreduce:*", "kinesis:*", "rds:*",
+                      "redshift:*", "route53:*", "s3:*", "sns:*", "sns:*", "sqs:*", "ec2:*", "iam:*", "lambda:*" ]
+            Resource: "*"
+            Effect: "Allow"
+Outputs:
+  IAMUser:
+    Value: !Ref BrokerUser
