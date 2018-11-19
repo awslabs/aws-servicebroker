@@ -108,7 +108,6 @@ The role/user used for provisioning requires additional permissions for provisio
            "route53:*",
            "s3:*",
            "sns:*",
-           "sns:*",
            "sqs:*",
            "ec2:*",
            "iam:*",
