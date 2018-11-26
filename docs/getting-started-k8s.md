@@ -12,6 +12,11 @@ helm repo add svc-cat https://svc-catalog-charts.storage.googleapis.com
 helm install svc-cat/catalog --name catalog --namespace catalog
 ```
 
+### Optional - reduce service catalog max polling interval
+The default max interval is 20 minutes, which is too long in most cases, this can be reduced by adding 
+`--operation-polling-maximum-backoff-duration=120s` as an additional argument to the controller-manager deployment under 
+`spec.template.containers[0].args`.
+
 ### Installing the AWS Service Broker
 
 ```bash
