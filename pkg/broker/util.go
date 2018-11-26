@@ -235,7 +235,11 @@ func getStackName(serviceName, instanceID string) string {
 }
 
 func fmtArn(accountID, roleName string) string {
-	return fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
+	if strings.HasPrefix(roleName, "/") {
+		return fmt.Sprintf("arn:aws:iam::%s:role%s", accountID, roleName)
+	} else {
+		return fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
+	}
 }
 
 func toCFNParams(params map[string]string) []*cloudformation.Parameter {
