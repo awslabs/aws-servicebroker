@@ -1,0 +1,196 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS Service Broker - S3 Example Custom Service
+Metadata:
+  # Service Broker metadata section
+  AWS::ServiceBroker::Specification:
+    # Required - only valid value is 1.0 at this time
+    Version: 1.0
+    # Required - service definition name, all lowercase [a-z0-9-].*
+    Name: s3-example
+    # Required - at least one service plan must be defined
+    ServicePlans:
+      # plan name all lowercase [a-z0-9-].*
+      plana:
+        # Optional - enforce values for template parameters
+        ParameterValues:
+          BucketAccessControl: Private
+        # Optional - used to enhance platforms with web ui
+        DisplayName: Plan A
+        # Optional - used to enhance platforms with web ui
+        Description: Short plan description
+        # Optional - used to enhance platforms with web ui
+        LongDescription: Long plan description
+      planb: {}
+    # Optional - used to enhance platforms with web ui
+    Tags:
+    - AWS
+    - Custom Service
+    # Optional - used to enhance platforms with web ui
+    DisplayName: name used in web ui
+    # Optional - used to enhance platforms with web ui
+    LongDescription: description used in web ui
+    # Optional - used to enhance platforms with web ui
+    ImageUrl: https://hostname/path/to/icon.png
+    # Optional - used to enhance platforms with web ui
+    DocumentationUrl: https://hostname/path-to-documentation/'
+    # Optional - used to enhance platforms with web ui
+    ProviderDisplayName: Amazon Web Services
+  # Optional - used to enhance platforms with web ui
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: S3 Bucket Settings
+      Parameters:
+      - BucketAccessControl
+    ParameterLabels:
+      BucketAccessControl:
+        default: Bucket Access Control
+# Parameters can be set as properties when making a provision call to the broker
+# Parameters without default values will be marked as required.
+Parameters:
+  BucketAccessControl:
+    Description: define if the bucket can be accessed from public or private locations
+    Type: String
+    # Using allowed values will create a drop down in platform ui
+    AllowedValues:
+    - Private
+    - BucketOwnerFullControl
+    # providing a default makes the parameter optional
+    Default: Private
+Resources:
+  # Resource being provisioned, in this example an S3 bucket
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: !Ref BucketAccessControl
+  # Policies can be created for use in bind operations
+  S3Full:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "S3Full-${S3Bucket}"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: [ s3:DeleteObject, s3:GetObject, s3:PutObject ]
+          Effect: Allow
+          Resource: !Sub ${S3bucket.Arn}/*
+  # multiple scopes can be defined
+  S3Read:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "S3Read-${S3Bucket}"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: s3:GetObject
+          Effect: Allow
+          Resource: !Sub ${S3bucket.Arn}/*
+  # The resources below are needed if static iam access keys are to be returned on bind
+  AccessKeyCustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: iam_user_creation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - iam:CreateAccessKey
+            - iam:PutUserPolicy
+            - iam:ListAttachedUserPolicies
+            - iam:DeleteUserPolicy
+            - iam:AttachUserPolicy
+            - iam:DeleteUser
+            - iam:ListUserPolicies
+            - iam:DetachUserPolicy
+            - iam:CreateUser
+            - iam:DeleteAccessKey
+            - iam:ListAccessKeys
+            - ssm:DeleteParameters
+            - ssm:PutParameter
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AccessKeyCustomResourceLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role:
+        Fn::GetAtt: [ AccessKeyCustomResourceRole, Arn ]
+      Code:
+        ZipFile: |-
+          import cfnresponse
+          import random
+          import string
+          import boto3
+          import traceback
+
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          iam_client = boto3.client('iam')
+          ssm_client = boto3.client('ssm')
+
+
+          def handler(event, context):
+              response_code = cfnresponse.SUCCESS
+              response_data = {}
+              if event['RequestType'] == 'Create':
+                  phys_id = ''.join(random.choice(alnum) for _ in range(16))
+              else:
+                  phys_id = event['PhysicalResourceId']
+              response_data['AsbAccessKeyId'] = 'AsbAccessKeyId-%s' % phys_id
+              response_data['AsbSecretAccessKey'] = 'AsbSecretAccessKey-%s' % phys_id
+              try:
+                  username = event['ResourceProperties']['Username']
+                  if event['RequestType'] == 'Create':
+                      response = iam_client.create_access_key(UserName=username)
+                      aws_access_key_id = response['AccessKey']['AccessKeyId']
+                      secret_access_key = response['AccessKey']['SecretAccessKey']
+                      ssm_client.put_parameter(Name=response_data['AsbAccessKeyId'], Value=aws_access_key_id, Type='SecureString')
+                      ssm_client.put_parameter(Name=response_data['AsbSecretAccessKey'], Value=secret_access_key, Type='SecureString')
+                  elif event['RequestType'] == 'Update':
+                      print('Update operation unsupported')
+                      response_code = cfnresponse.FAILED
+                  elif event['RequestType'] == 'Delete':
+                      for access_key in iam_client.list_access_keys(UserName=username)['AccessKeyMetadata']:
+                          iam_client.delete_access_key(UserName=username, AccessKeyId=access_key['AccessKeyId'])
+                      ssm_client.delete_parameters(Names=[response_data['AsbAccessKeyId'], response_data['AsbSecretAccessKey']])
+                  cfnresponse.send(event, context, response_code, response_data, phys_id)
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
+      Runtime: python2.7
+      Timeout: '60'
+  IAMUser:
+    Type: AWS::IAM::User
+  AccessKeyCustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AccessKeyCustomResourceLambda.Arn
+      Username: !Ref IAMUser
+# Outputs are used to define what is returned on bind
+Outputs:
+  BucketName:
+    Value: !Ref S3Bucket
+  BucketArn:
+    Value: !GetAtt S3Bucket.Arn
+  S3Region:
+    Value: !Ref AWS::Region
+  # Secret outputs can be stored in ssm and then outputted with a "ssm:" prefix, the broker will fetch values on bind
+  S3AwsAccessKeyId:
+    Value: !Sub "ssm:${AccessKeyCustomResource.AsbAccessKeyId}"
+  S3AwsSecretAccessKey:
+    Value: !Sub "ssm:${AccessKeyCustomResource.AsbSecretAccessKey}"
+
