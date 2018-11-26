@@ -1,19 +1,11 @@
 # Getting Started Guide - Kubernetes
 
-This guide uses helm, for documentation on installing the helm client see [https://docs.helm.sh/using_helm/#install-helm](https://docs.helm.sh/using_helm/#install-helm)
+This guide uses helm, for documentation on installing the helm and tiller see [https://docs.helm.sh/using_helm/#install-helm](https://docs.helm.sh/using_helm/#install-helm)
 
 
 ### Installing Kubernetes Service Catalog
 
 ```bash
-# Install helm and tiller into the cluster
-helm init
-# Wait until tiller is ready before moving on
-until kubectl get pods -n kube-system -l name=tiller | grep 1/1; do sleep 1; done
-
-kubectl create clusterrolebinding tiller-cluster-admin \
-    --clusterrole=cluster-admin \
-    --serviceaccount=kube-system:default
 # Adds the chart repository for the service catalog
 helm repo add svc-cat https://svc-catalog-charts.storage.googleapis.com
 # Installs the service catalog
