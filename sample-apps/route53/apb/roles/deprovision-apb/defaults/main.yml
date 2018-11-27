@@ -1,2 +1,0 @@
----
-namespace: "{{ lookup('env','NAMESPACE') | default('route53-sample-app', true) }}"

@@ -1,2 +1,0 @@
----
-namespace: "{{ lookup('env','NAMESPACE') | default('redshift-sample-app', true) }}"

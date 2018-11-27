@@ -1,2 +1,0 @@
----
-namespace: "{{ lookup('env','NAMESPACE') | default('sqs-sample-app', true) }}"

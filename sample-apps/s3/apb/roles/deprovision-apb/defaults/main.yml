@@ -1,2 +1,0 @@
----
-namespace: "{{ lookup('env','NAMESPACE') | default('s3-sample-app', true) }}"
