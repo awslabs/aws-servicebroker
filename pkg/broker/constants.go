@@ -11,6 +11,8 @@ var nonCfnParams = []string{
 	"region",
 	"target_role_name",
 	"target_account_id",
+	"user_tags",
+	"admin_tags",
 }
 
 var nonCfnParamDefs = map[string]interface{}{
@@ -49,6 +51,20 @@ var nonCfnParamDefs = map[string]interface{}{
 			"us-west-1",
 			"us-west-2",
 		},
+	},
+	"user_tags": map[string]interface{}{
+		"description":   "AWS Resource tags to apply to resources (json formatted [{\"Key\": \"MyTagKey\", \"Value\": \"MyTagValue\"}, ...]",
+		"display_group": "AWS Account Information",
+		"title":         "AWS Tags",
+		"type":          "string",
+		"default":       "[]",
+	},
+	"admin_tags": map[string]interface{}{
+		"description":   "AWS Resource tags to apply to resources (json formatted [{\"Key\": \"MyTagKey\", \"Value\": \"MyTagValue\"}, ...]",
+		"display_group": "AWS Account Information",
+		"title":         "Additional AWS Tags",
+		"type":          "string",
+		"default":       "[]",
 	},
 }
 

@@ -137,31 +137,20 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 		return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 	}
 
+	tags, err := buildTags(b.brokerid, request.InstanceID, cluster, namespace, params)
+	if err != nil {
+		desc := fmt.Sprintf("failed to parse tags: %v", err)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
 	// Create the CFN stack
 	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, params))
 	resp, err := cfnSvc.Client.CreateStack(&cloudformation.CreateStackInput{
 		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}),
 		Parameters:   toCFNParams(params),
 		StackName:    aws.String(getStackName(service.Name, instance.ID)),
-		Tags: []*cloudformation.Tag{
-			{
-				Key:   aws.String("aws-service-broker:broker-id"),
-				Value: aws.String(b.brokerid),
-			},
-			{
-				Key:   aws.String("aws-service-broker:instance-id"),
-				Value: aws.String(request.InstanceID),
-			},
-			{
-				Key:   aws.String("aws-service-broker:cluster"),
-				Value: aws.String(cluster),
-			},
-			{
-				Key:   aws.String("aws-service-broker:namespace"),
-				Value: aws.String(namespace),
-			},
-		},
-		TemplateURL: b.generateS3HTTPUrl(service.Name),
+		Tags:         tags,
+		TemplateURL:  b.generateS3HTTPUrl(service.Name),
 	})
 	if err != nil {
 		desc := fmt.Sprintf("Failed to create the CloudFormation stack: %v", err)

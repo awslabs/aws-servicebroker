@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -254,6 +255,40 @@ func toCFNParams(params map[string]string) []*cloudformation.Parameter {
 		})
 	}
 	return cfnParams
+}
+
+func buildTags(brokerId string, instanceId string, cluster string, namespace string, params map[string]string) ([]*cloudformation.Tag, error) {
+	tags := []*cloudformation.Tag{
+		{
+			Key:   aws.String("aws-service-broker:broker-id"),
+			Value: aws.String(brokerId),
+		},
+		{
+			Key:   aws.String("aws-service-broker:instance-id"),
+			Value: aws.String(instanceId),
+		},
+		{
+			Key:   aws.String("aws-service-broker:cluster"),
+			Value: aws.String(cluster),
+		},
+		{
+			Key:   aws.String("aws-service-broker:namespace"),
+			Value: aws.String(namespace),
+		},
+	}
+	for k, v := range params {
+		if stringInSlice(k, []string{"user_tags", "admin_tags"}) {
+			tagList := make(AwsTags, 0)
+			err := json.Unmarshal([]byte(v), &tagList)
+			if err != nil {
+				return nil, err
+			}
+			for _, t := range tagList {
+				tags = append(tags, &cloudformation.Tag{Key: aws.String(t.Key), Value: aws.String(t.Value)})
+			}
+		}
+	}
+	return tags, nil
 }
 
 func newAsyncError() osb.HTTPStatusCodeError {

@@ -129,6 +129,11 @@ type CfnClient struct {
 	Client cloudformationiface.CloudFormationAPI
 }
 
+type AwsTags []struct {
+	Key   string `json:"Key"`
+	Value string `json:"Value"`
+}
+
 type GetCallerIder func(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error)
 type UpdateCataloger func(listingcache cache.Cache, catalogcache cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, bl AwsBroker, listTemplates ListTemplateser, listingUpdate ListingUpdater, metadataUpdate MetadataUpdater) error
 type PollUpdater func(interval int, l cache.Cache, c cache.Cache, bd BucketDetailsRequest, s3svc S3Client, db Db, bl AwsBroker, updateCatalog UpdateCataloger, listTemplates ListTemplateser)
