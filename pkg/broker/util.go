@@ -279,6 +279,9 @@ func getCluster(context map[string]interface{}) string {
 	case osb.PlatformCloudFoundry:
 		return strings.Replace(context["organization_guid"].(string), "-", "", -1)
 	case osb.PlatformKubernetes:
+		if context["clusterid"] == nil {
+			return "unknown"
+		}
 		return context["clusterid"].(string)
 	default:
 		return "unknown"
@@ -290,6 +293,9 @@ func getNamespace(context map[string]interface{}) string {
 	case osb.PlatformCloudFoundry:
 		return strings.Replace(context["space_guid"].(string), "-", "", -1)
 	case osb.PlatformKubernetes:
+		if context["namespace"] == nil {
+			return "unknown"
+		}
 		return context["namespace"].(string)
 	default:
 		return "unknown"
