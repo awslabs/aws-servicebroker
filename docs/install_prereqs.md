@@ -1,5 +1,12 @@
 ### DynamoDB Table
 
+#### Automated setup
+
+Prerequisites can be easily setup using a CloudFormation template available [here](/setup/prerequisites.yaml). Stack 
+outputs provide the needed resource names for broker configuration.
+
+#### Manual setup
+
 Table can be created with the following aws cli command:
 
 ```bash
@@ -52,7 +59,7 @@ The user or role that the broker runs as requires the following policy:
       ],
       "Resource": [
           "arn:aws:ssm:<REGION>:<ACCOUNT_ID>:parameter/asb-*",
-          "arn:aws:ssm:<REGION>:<ACCOUNT_ID>:parameter/Asb*",
+          "arn:aws:ssm:<REGION>:<ACCOUNT_ID>:parameter/Asb*"
       ],
       "Effect": "Allow"
     }
