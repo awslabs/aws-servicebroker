@@ -1,157 +1,154 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: "AWS Service Broker - Amazon RDS for MySQL (qs-1nt0fs92s)"
+Description: AWS Service Broker - Amazon RDS for MySQL (qs-1nt0fs92s)
 Metadata:
-  'AWS::ServiceBroker::Specification':
+  AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-      - AWS
-      - RDS
-      - MySQL
-      - database
+    - AWS
+    - RDS
+    - MySQL
+    - database
     Name: rdsmysql
-    DisplayName: "Amazon RDS for MySQL"
-    LongDescription: >-
-      MySQL is the world's most popular open source relational database and Amazon
-      RDS makes it easy to set up, operate, and scale MySQL deployments in the cloud.
-      With Amazon RDS, you can deploy scalable MySQL servers in minutes with
-      cost-efficient and resizable hardware capacity.
-    ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png"
-    DocumentationUrl: 'https://aws.amazon.com/documentation/rds/'
-    ProviderDisplayName: "Amazon Web Services"
-    Bindings:
-      IAM:
-        AddKeypair: False
+    DisplayName: Amazon RDS for MySQL
+    LongDescription: MySQL is the world's most popular open source relational database
+      and Amazon RDS makes it easy to set up, operate, and scale MySQL deployments
+      in the cloud. With Amazon RDS, you can deploy scalable MySQL servers in minutes
+      with cost-efficient and resizable hardware capacity.
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/documentation/rds/
+    ProviderDisplayName: Amazon Web Services
     ServicePlans:
-        production:
-          DisplayName: "Production"
-          Description: 'Configuration designed for production deployments'
-          LongDescription: "Creates an Amazon RDS for MySQL database optimised for production use"
-          Cost: "https://aws.amazon.com/rds/pricing/"
-          ParameterValues:
-            MultiAZ: "true"
-            NumberOfAvailabilityZones: "2"
-            AvailabilityZones: "Auto"
-            CidrSize: "27"
-            CidrBlocks: "Auto"
-            DBName: "Auto"
-            PortNumber: 13306
-            StorageEncrypted: "true"
-            StorageType: io1
-            CopyTagsToSnapshot: "true"
-            BackupRetentionPeriod: 35
-            MonitoringInterval: "1"
-            AllowMajorVersionUpgrade: "false"
-            AutoMinorVersionUpgrade: "true"
-            MasterUsername: "master"
-            MasterUserPassword: "Auto"
-        dev:
-          DisplayName: "Development"
-          Description: 'Configuration designed for development and testing deployments'
-          LongDescription: "Creates an Amazon RDS for MySQL database optimised for dev/test use"
-          Cost: "https://aws.amazon.com/rds/pricing/"
-          ParameterValues:
-            MultiAZ: "false"
-            NumberOfAvailabilityZones: "2"
-            AvailabilityZones: "Auto"
-            CidrSize: "28"
-            CidrBlocks: "Auto"
-            DBName: "Auto"
-            PortNumber: 13306
-            StorageEncrypted: "true"
-            StorageType: io1
-            CopyTagsToSnapshot: "false"
-            BackupRetentionPeriod: 0
-            MonitoringInterval: "60"
-            AllowMajorVersionUpgrade: "false"
-            AutoMinorVersionUpgrade: "true"
-            MasterUsername: "master"
-            MasterUserPassword: "Auto"
-            PreferredBackupWindow: "04:00-06:00"
-            PreferredMaintenanceWindowDay: Sat
-            PreferredMaintenanceWindowStartTime: 06:00
-            PreferredMaintenanceWindowEndTime: 07:00
-          ParameterDefaults:
-            DBInstanceClass: db.m1.small
-        custom:
-          DisplayName: "Custom"
-          Description: 'Custom Configuration for Advanced deployments'
-          LongDescription: "Creates an Amazon RDS for MySQL database with custom configuration"
-          Cost: "https://aws.amazon.com/rds/pricing/"
-  'AWS::CloudFormation::Interface':
+      production:
+        DisplayName: Production
+        Description: Configuration designed for production deployments
+        LongDescription: Creates an Amazon RDS for MySQL database optimised for production
+          use
+        Cost: https://aws.amazon.com/rds/pricing/
+        ParameterValues:
+          MultiAZ: 'true'
+          NumberOfAvailabilityZones: '2'
+          AvailabilityZones: Auto
+          CidrSize: '27'
+          CidrBlocks: Auto
+          DBName: Auto
+          PortNumber: 13306
+          StorageEncrypted: 'true'
+          StorageType: io1
+          CopyTagsToSnapshot: 'true'
+          BackupRetentionPeriod: 35
+          MonitoringInterval: '1'
+          AllowMajorVersionUpgrade: 'false'
+          AutoMinorVersionUpgrade: 'true'
+          MasterUsername: master
+          MasterUserPassword: Auto
+      dev:
+        DisplayName: Development
+        Description: Configuration designed for development and testing deployments
+        LongDescription: Creates an Amazon RDS for MySQL database optimised for dev/test
+          use
+        Cost: https://aws.amazon.com/rds/pricing/
+        ParameterValues:
+          MultiAZ: 'false'
+          NumberOfAvailabilityZones: '2'
+          AvailabilityZones: Auto
+          CidrSize: '28'
+          CidrBlocks: Auto
+          DBName: Auto
+          PortNumber: 13306
+          StorageEncrypted: 'true'
+          StorageType: io1
+          CopyTagsToSnapshot: 'false'
+          BackupRetentionPeriod: 0
+          MonitoringInterval: '60'
+          AllowMajorVersionUpgrade: 'false'
+          AutoMinorVersionUpgrade: 'true'
+          MasterUsername: master
+          MasterUserPassword: Auto
+          PreferredBackupWindow: 04:00-06:00
+          PreferredMaintenanceWindowDay: Sat
+          PreferredMaintenanceWindowStartTime: 06:00
+          PreferredMaintenanceWindowEndTime: 07:00
+      custom:
+        DisplayName: Custom
+        Description: Custom Configuration for Advanced deployments
+        LongDescription: Creates an Amazon RDS for MySQL database with custom configuration
+        Cost: https://aws.amazon.com/rds/pricing/
+        ParameterValues: {}
+  AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: "Database Instance Specifications"
-        Parameters:
-          - DBInstanceClass
-          - AllocatedStorageAndIops
-      - Label:
-          default: "Database Options"
-        Parameters:
-          - EngineVersion
-          - MysqlServerTimezone
-          - MultiAZ
-          - PortNumber
-          - MasterUsername
-          - MasterUserPassword
-      - Label:
-          default: "Network and Security"
-        Parameters:
-          - VpcId
-          - PubliclyAccessible
-          - AccessCidr
-          - CidrBlocks
-          - CidrSize
-          - AvailabilityZones
-          - NumberOfAvailabilityZones
-      - Label:
-          default: "Backup"
-        Parameters:
-          - PreferredBackupWindow
-      - Label:
-          default: "Maintenance"
-        Parameters:
-          - PreferredMaintenanceWindowDay
-          - PreferredMaintenanceWindowStartTime
-          - PreferredMaintenanceWindowEndTime
+    - Label:
+        default: Database Instance Specifications
+      Parameters:
+      - DBInstanceClass
+      - AllocatedStorageAndIops
+    - Label:
+        default: Database Options
+      Parameters:
+      - EngineVersion
+      - MysqlServerTimezone
+      - MultiAZ
+      - PortNumber
+      - MasterUsername
+      - MasterUserPassword
+    - Label:
+        default: Network and Security
+      Parameters:
+      - VpcId
+      - PubliclyAccessible
+      - AccessCidr
+      - CidrBlocks
+      - CidrSize
+      - AvailabilityZones
+      - NumberOfAvailabilityZones
+    - Label:
+        default: Backup
+      Parameters:
+      - PreferredBackupWindow
+    - Label:
+        default: Maintenance
+      Parameters:
+      - PreferredMaintenanceWindowDay
+      - PreferredMaintenanceWindowStartTime
+      - PreferredMaintenanceWindowEndTime
     ParameterLabels:
       MasterUsername:
-        default: "Master Username"
+        default: Master Username
       MasterUserPassword:
-        default: "Master User Password"
+        default: Master User Password
       CidrBlocks:
-        default: "CIDR Blocks"
+        default: CIDR Blocks
       CidrSize:
-        default: "CIDR Size"
+        default: CIDR Size
       AvailabilityZones:
-        default: "Availability Zones"
+        default: Availability Zones
       NumberOfAvailabilityZones:
-        default: "Number Of Availability Zones"
+        default: Number Of Availability Zones
       MultiAZ:
-        default: "Multi AZ"
+        default: Multi AZ
       PortNumber:
-        default: "Port Number"
+        default: Port Number
       DBInstanceClass:
-        default: "DB Instance Class"
+        default: DB Instance Class
       AllocatedStorageAndIops:
-        default: "Allocated Storage And IOPS"
+        default: Allocated Storage And IOPS
       EngineVersion:
-        default: "Engine Version"
+        default: Engine Version
       MysqlServerTimezone:
-        default: "MySQL Server Timezone"
+        default: MySQL Server Timezone
       VpcId:
-        default: "VPC Id"
+        default: VPC Id
       PubliclyAccessible:
-        default: "Publicly Accessible"
+        default: Publicly Accessible
       AccessCidr:
-        default: "Access CIDR"
+        default: Access CIDR
       PreferredBackupWindow:
-        default: "Preferred Backup Window"
+        default: Preferred Backup Window
       PreferredMaintenanceWindowDay:
-        default: "Preferred Maintenance Window Day"
+        default: Preferred Maintenance Window Day
       PreferredMaintenanceWindowStartTime:
-        default: "Preferred MaintenanceWindow Start Time"
+        default: Preferred MaintenanceWindow Start Time
       PreferredMaintenanceWindowEndTime:
-        default: "Preferred Maintenance Window End Time"
+        default: Preferred Maintenance Window End Time
 Parameters:
   AccessCidr:
     Description: CIDR block to allow to connect to database
@@ -161,36 +158,36 @@ Parameters:
     Type: String
     Default: 100GB 1000IOPS
     AllowedValues:
-      - 100GB 1000IOPS
-      - 300GB 3000IOPS
-      - 600GB 6000IOPS
-      - 1000GB 10000IOPS
-      - 1500GB 15000IOPS
-      - 2000GB 20000IOPS
-      - 3000GB 30000IOPS
-      - 4000GB 40000IOPS
-      - 6000GB 60000IOPS
+    - 100GB 1000IOPS
+    - 300GB 3000IOPS
+    - 600GB 6000IOPS
+    - 1000GB 10000IOPS
+    - 1500GB 15000IOPS
+    - 2000GB 20000IOPS
+    - 3000GB 30000IOPS
+    - 4000GB 40000IOPS
+    - 6000GB 60000IOPS
   AllowMajorVersionUpgrade:
     Description: If you update the EngineVersion property to a version that's different
       from the DB instance's current major version, set this property to True.
     Type: String
     Default: 'false'
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
   AutoMinorVersionUpgrade:
     Description: Indicates that minor engine upgrades are applied automatically to
       the DB instance during the maintenance window.
     Type: String
     Default: 'true'
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
   AvailabilityZones:
     Description: list of availability zones to use, must be the same quantity as specified
       in NumberOfAvailabilityZones
     Type: CommaDelimitedList
-    Default: 'Auto'
+    Default: Auto
   BackupRetentionPeriod:
     Description: The number of days during which automatic DB snapshots are retained.
       Setting 0 disables automatic snapshots, maximum value is 35
@@ -202,47 +199,48 @@ Parameters:
     Description: comma seperated list of CIDR blocks to place RDS into, must be the
       same quantity as specified in NumberOfAvailabilityZones
     Type: CommaDelimitedList
-    Default: 'Auto'
+    Default: Auto
   CopyTagsToSnapshot:
     Description: Indicates whether to copy all of the user-defined tags from the DB
       instance to snapshots of the DB instance.
     Type: String
     Default: 'true'
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
   DBInstanceClass:
     Description: The compute and memory capacity of the DB instance.
     Type: String
     Default: db.r3.2xlarge
     AllowedValues:
-      - db.m1.small
-      - db.m1.medium
-      - db.m1.large
-      - db.m1.xlarge
-      - db.m2.xlarge
-      - db.m2.2xlarge
-      - db.m2.4xlarge
-      - db.m3.medium
-      - db.m3.large
-      - db.m3.xlarge
-      - db.m3.2xlarge
-      - db.m4.large
-      - db.m4.xlarge
-      - db.m4.2xlarge
-      - db.m4.4xlarge
-      - db.m4.10xlarge
-      - db.r3.large
-      - db.r3.xlarge
-      - db.r3.2xlarge
-      - db.r3.4xlarge
-      - db.r3.8xlarge
-      - db.t2.micro
-      - db.t2.small
-      - db.t2.medium
-      - db.t2.large
+    - db.m1.small
+    - db.m1.medium
+    - db.m1.large
+    - db.m1.xlarge
+    - db.m2.xlarge
+    - db.m2.2xlarge
+    - db.m2.4xlarge
+    - db.m3.medium
+    - db.m3.large
+    - db.m3.xlarge
+    - db.m3.2xlarge
+    - db.m4.large
+    - db.m4.xlarge
+    - db.m4.2xlarge
+    - db.m4.4xlarge
+    - db.m4.10xlarge
+    - db.r3.large
+    - db.r3.xlarge
+    - db.r3.2xlarge
+    - db.r3.4xlarge
+    - db.r3.8xlarge
+    - db.t2.micro
+    - db.t2.small
+    - db.t2.medium
+    - db.t2.large
   DBName:
-    Description: The name of the database to create when the DB instance is created, will be autogenerated if set to "Auto".
+    Description: The name of the database to create when the DB instance is created,
+      will be autogenerated if set to "Auto".
     Type: String
     MinLength: '1'
     MaxLength: '64'
@@ -255,18 +253,19 @@ Parameters:
     Type: String
     Default: 5.7.17
     AllowedValues:
-      - 5.5.46
-      - 5.5.53
-      - 5.5.54
-      - 5.6.27
-      - 5.6.29
-      - 5.6.34
-      - 5.6.35
-      - 5.7.11
-      - 5.7.16
-      - 5.7.17
+    - 5.5.46
+    - 5.5.53
+    - 5.5.54
+    - 5.6.27
+    - 5.6.29
+    - 5.6.34
+    - 5.6.35
+    - 5.7.11
+    - 5.7.16
+    - 5.7.17
   MasterUserPassword:
-    Description: Master user database Password, if left at default a 32 character password will be generated
+    Description: Master user database Password, if left at default a 32 character
+      password will be generated
     Type: String
     Default: Auto
     NoEcho: 'True'
@@ -279,121 +278,121 @@ Parameters:
     Type: String
     Default: '1'
     AllowedValues:
-      - '0'
-      - '1'
-      - '5'
-      - '10'
-      - '15'
-      - '30'
-      - '60'
+    - '0'
+    - '1'
+    - '5'
+    - '10'
+    - '15'
+    - '30'
+    - '60'
   MultiAZ:
     Description: Specifies if the database instance is a multiple Availability Zone
       deployment.
     Type: String
     Default: 'true'
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
   MysqlServerTimezone:
     Description: The default timezone for the database engine to use.
     Type: String
     Default: UTC
     AllowedValues:
-      - Africa/Cairo
-      - Africa/Casablanca
-      - Africa/Harare
-      - Africa/Monrovia
-      - Africa/Nairobi
-      - Africa/Tripoli
-      - Africa/Windhoek
-      - America/Araguaina
-      - America/Asuncion
-      - America/Bogota
-      - America/Caracas
-      - America/Chihuahua
-      - America/Cuiaba
-      - America/Denver
-      - America/Fortaleza
-      - America/Guatemala
-      - America/Halifax
-      - America/Manaus
-      - America/Matamoros
-      - America/Monterrey
-      - America/Montevideo
-      - America/Phoenix
-      - America/Santiago
-      - America/Tijuana
-      - Asia/Amman
-      - Asia/Ashgabat
-      - Asia/Baghdad
-      - Asia/Baku
-      - Asia/Bangkok
-      - Asia/Beirut
-      - Asia/Calcutta
-      - Asia/Damascus
-      - Asia/Dhaka
-      - Asia/Irkutsk
-      - Asia/Jerusalem
-      - Asia/Kabul
-      - Asia/Karachi
-      - Asia/Kathmandu
-      - Asia/Krasnoyarsk
-      - Asia/Magadan
-      - Asia/Muscat
-      - Asia/Novosibirsk
-      - Asia/Riyadh
-      - Asia/Seoul
-      - Asia/Shanghai
-      - Asia/Singapore
-      - Asia/Taipei
-      - Asia/Tehran
-      - Asia/Tokyo
-      - Asia/Ulaanbaatar
-      - Asia/Vladivostok
-      - Asia/Yakutsk
-      - Asia/Yerevan
-      - Atlantic/Azores
-      - Australia/Adelaide
-      - Australia/Brisbane
-      - Australia/Darwin
-      - Australia/Hobart
-      - Australia/Perth
-      - Australia/Sydney
-      - Canada/Newfoundland
-      - Canada/Saskatchewan
-      - Brazil/East
-      - Europe/Amsterdam
-      - Europe/Athens
-      - Europe/Dublin
-      - Europe/Helsinki
-      - Europe/Istanbul
-      - Europe/Kaliningrad
-      - Europe/Moscow
-      - Europe/Paris
-      - Europe/Prague
-      - Europe/Sarajevo
-      - Pacific/Auckland
-      - Pacific/Fiji
-      - Pacific/Guam
-      - Pacific/Honolulu
-      - Pacific/Samoa
-      - US/Alaska
-      - US/Central
-      - US/Eastern
-      - US/East-Indiana
-      - US/Pacific
-      - UTC
+    - Africa/Cairo
+    - Africa/Casablanca
+    - Africa/Harare
+    - Africa/Monrovia
+    - Africa/Nairobi
+    - Africa/Tripoli
+    - Africa/Windhoek
+    - America/Araguaina
+    - America/Asuncion
+    - America/Bogota
+    - America/Caracas
+    - America/Chihuahua
+    - America/Cuiaba
+    - America/Denver
+    - America/Fortaleza
+    - America/Guatemala
+    - America/Halifax
+    - America/Manaus
+    - America/Matamoros
+    - America/Monterrey
+    - America/Montevideo
+    - America/Phoenix
+    - America/Santiago
+    - America/Tijuana
+    - Asia/Amman
+    - Asia/Ashgabat
+    - Asia/Baghdad
+    - Asia/Baku
+    - Asia/Bangkok
+    - Asia/Beirut
+    - Asia/Calcutta
+    - Asia/Damascus
+    - Asia/Dhaka
+    - Asia/Irkutsk
+    - Asia/Jerusalem
+    - Asia/Kabul
+    - Asia/Karachi
+    - Asia/Kathmandu
+    - Asia/Krasnoyarsk
+    - Asia/Magadan
+    - Asia/Muscat
+    - Asia/Novosibirsk
+    - Asia/Riyadh
+    - Asia/Seoul
+    - Asia/Shanghai
+    - Asia/Singapore
+    - Asia/Taipei
+    - Asia/Tehran
+    - Asia/Tokyo
+    - Asia/Ulaanbaatar
+    - Asia/Vladivostok
+    - Asia/Yakutsk
+    - Asia/Yerevan
+    - Atlantic/Azores
+    - Australia/Adelaide
+    - Australia/Brisbane
+    - Australia/Darwin
+    - Australia/Hobart
+    - Australia/Perth
+    - Australia/Sydney
+    - Canada/Newfoundland
+    - Canada/Saskatchewan
+    - Brazil/East
+    - Europe/Amsterdam
+    - Europe/Athens
+    - Europe/Dublin
+    - Europe/Helsinki
+    - Europe/Istanbul
+    - Europe/Kaliningrad
+    - Europe/Moscow
+    - Europe/Paris
+    - Europe/Prague
+    - Europe/Sarajevo
+    - Pacific/Auckland
+    - Pacific/Fiji
+    - Pacific/Guam
+    - Pacific/Honolulu
+    - Pacific/Samoa
+    - US/Alaska
+    - US/Central
+    - US/Eastern
+    - US/East-Indiana
+    - US/Pacific
+    - UTC
   NumberOfAvailabilityZones:
     Description: Quantity of subnets to use, if selecting more than 2 the region this
       stack is in must have at least that many Availability Zones
     Type: String
     Default: '2'
     AllowedValues:
-      - '1'
-      - '2'
-      - '3'
-      - '4'
-      - '5'
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
   CidrSize:
     Description: Size of Cidr block to allocate if CidrBlocks is set to Auto.
     Type: String
@@ -408,123 +407,123 @@ Parameters:
     Description: The daily time range in UTC during which automated backups are created
       (if automated backups are enabled). Cannot overlap with PreferredMaintenanceWindowTime
     Type: String
-    Default: '00:00-02:00'
+    Default: 00:00-02:00
     AllowedValues:
-      - '00:00-02:00'
-      - '01:00-03:00'
-      - '02:00-04:00'
-      - '03:00-05:00'
-      - '04:00-06:00'
-      - '05:00-07:00'
-      - '06:00-08:00'
-      - '07:00-09:00'
-      - '08:00-10:00'
-      - '09:00-11:00'
-      - '10:00-12:00'
-      - '11:00-13:00'
-      - '12:00-14:00'
-      - '13:00-15:00'
-      - '14:00-16:00'
-      - '15:00-17:00'
-      - '16:00-18:00'
-      - '17:00-19:00'
-      - '18:00-20:00'
-      - '19:00-21:00'
-      - '20:00-22:00'
-      - '21:00-23:00'
-      - '22:00-24:00'
+    - 00:00-02:00
+    - 01:00-03:00
+    - 02:00-04:00
+    - 03:00-05:00
+    - 04:00-06:00
+    - 05:00-07:00
+    - 06:00-08:00
+    - 07:00-09:00
+    - 08:00-10:00
+    - 09:00-11:00
+    - 10:00-12:00
+    - 11:00-13:00
+    - 12:00-14:00
+    - 13:00-15:00
+    - 14:00-16:00
+    - 15:00-17:00
+    - 16:00-18:00
+    - 17:00-19:00
+    - 18:00-20:00
+    - 19:00-21:00
+    - 20:00-22:00
+    - 21:00-23:00
+    - 22:00-24:00
   PreferredMaintenanceWindowDay:
     Description: The day of the week which RDS maintenance will be performed
     Type: String
     Default: Mon
     AllowedValues:
-      - Mon
-      - Tue
-      - Wed
-      - Thu
-      - Fri
-      - Sat
-      - Sun
+    - Mon
+    - Tue
+    - Wed
+    - Thu
+    - Fri
+    - Sat
+    - Sun
   PreferredMaintenanceWindowEndTime:
     Description: The weekly end time in UTC for the RDS maintenance window, must be
       more than PreferredMaintenanceWindowEndTime and cannot overlap with PreferredBackupWindow
     Type: String
-    Default: '06:00'
+    Default: 06:00
     AllowedValues:
-      - '00:00'
-      - '01:00'
-      - '02:00'
-      - '03:00'
-      - '04:00'
-      - '05:00'
-      - '06:00'
-      - '07:00'
-      - '08:00'
-      - '09:00'
-      - '10:00'
-      - '11:00'
-      - '12:00'
-      - '13:00'
-      - '14:00'
-      - '15:00'
-      - '16:00'
-      - '17:00'
-      - '18:00'
-      - '19:00'
-      - '20:00'
-      - '21:00'
-      - '22:00'
+    - 00:00
+    - 01:00
+    - 02:00
+    - 03:00
+    - 04:00
+    - 05:00
+    - 06:00
+    - 07:00
+    - 08:00
+    - 09:00
+    - '10:00'
+    - '11:00'
+    - '12:00'
+    - '13:00'
+    - '14:00'
+    - '15:00'
+    - '16:00'
+    - '17:00'
+    - '18:00'
+    - '19:00'
+    - '20:00'
+    - '21:00'
+    - '22:00'
   PreferredMaintenanceWindowStartTime:
     Description: The weekly start time in UTC for the RDS maintenance window, must
       be less than PreferredMaintenanceWindowEndTime and cannot overlap with PreferredBackupWindow
     Type: String
-    Default: '04:00'
+    Default: 04:00
     AllowedValues:
-      - '00:00'
-      - '01:00'
-      - '02:00'
-      - '03:00'
-      - '04:00'
-      - '05:00'
-      - '06:00'
-      - '07:00'
-      - '08:00'
-      - '09:00'
-      - '10:00'
-      - '11:00'
-      - '12:00'
-      - '13:00'
-      - '14:00'
-      - '15:00'
-      - '16:00'
-      - '17:00'
-      - '18:00'
-      - '19:00'
-      - '20:00'
-      - '21:00'
-      - '22:00'
+    - 00:00
+    - 01:00
+    - 02:00
+    - 03:00
+    - 04:00
+    - 05:00
+    - 06:00
+    - 07:00
+    - 08:00
+    - 09:00
+    - '10:00'
+    - '11:00'
+    - '12:00'
+    - '13:00'
+    - '14:00'
+    - '15:00'
+    - '16:00'
+    - '17:00'
+    - '18:00'
+    - '19:00'
+    - '20:00'
+    - '21:00'
+    - '22:00'
   PubliclyAccessible:
     Description: Indicates whether the DB instance is an Internet-facing instance.
     Type: String
     Default: 'false'
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
   StorageEncrypted:
     Description: Indicates whether the DB instance is encrypted.
     Type: String
     Default: 'true'
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
   StorageType:
     Description: Specifies the storage type to be associated with the DB instance.
     Type: String
     Default: io1
     AllowedValues:
-      - io1
-      - gp2
-      - standard
+    - io1
+    - gp2
+    - standard
   VpcId:
     Description: The ID of the VPC to launch the RDS instance into
     Type: AWS::EC2::VPC::Id
@@ -561,59 +560,92 @@ Mappings:
       Family: mysql5.7
       MajorVersion: '5.7'
 Conditions:
-  3az: !Or
+  3az:
+    !Or
     - !Equals
-      - !Ref 'NumberOfAvailabilityZones'
+      - !Ref NumberOfAvailabilityZones
       - '3'
     - !Equals
-      - !Ref 'NumberOfAvailabilityZones'
+      - !Ref NumberOfAvailabilityZones
       - '4'
     - !Equals
-      - !Ref 'NumberOfAvailabilityZones'
+      - !Ref NumberOfAvailabilityZones
       - '5'
-  4az: !Or
+  4az:
+    !Or
     - !Equals
-      - !Ref 'NumberOfAvailabilityZones'
+      - !Ref NumberOfAvailabilityZones
       - '4'
     - !Equals
-      - !Ref 'NumberOfAvailabilityZones'
+      - !Ref NumberOfAvailabilityZones
       - '5'
-  5az: !Equals
-    - !Ref 'NumberOfAvailabilityZones'
+  5az:
+    !Equals
+    - !Ref NumberOfAvailabilityZones
     - '5'
-  100GB: !Equals
-    - !Ref 'AllocatedStorageAndIops'
+  100GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
     - 100GB 1000IOPS
-  300GB: !Equals
-    - !Ref 'AllocatedStorageAndIops'
+  300GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
     - 300GB 3000IOPS
-  600GB: !Equals
-    - !Ref 'AllocatedStorageAndIops'
+  600GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
     - 600GB 6000IOPS
-  1000GB: !Equals
-    - !Ref 'AllocatedStorageAndIops'
+  1000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
     - 1000GB 10000IOPS
-  1500GB: !Equals
-    - !Ref 'AllocatedStorageAndIops'
+  1500GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
     - 1500GB 15000IOPS
-  2000GB: !Equals
-    - !Ref 'AllocatedStorageAndIops'
+  2000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
     - 2000GB 20000IOPS
-  3000GB: !Equals
-    - !Ref 'AllocatedStorageAndIops'
+  3000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
     - 3000GB 30000IOPS
-  4000GB: !Equals
-    - !Ref 'AllocatedStorageAndIops'
+  4000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
     - 4000GB 40000IOPS
-  EncryptionEnabled: !Equals
-    - !Ref 'StorageEncrypted'
+  EncryptionEnabled:
+    !Equals
+    - !Ref StorageEncrypted
     - 'true'
+  AutoCidrs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref CidrBlocks
+    - Auto
+  AutoAzs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref AvailabilityZones
+    - Auto
+  AutoPassword:
+    !Equals
+    - !Ref MasterUserPassword
+    - Auto
+  AutoDBName:
+    !Equals
+    - !Ref DBName
+    - Auto
 Resources:
   DBInstance:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Snapshot
     Properties:
-      AllocatedStorage: !If
+      AllocatedStorage:
+        !If
         - 100GB
         - '100'
         - !If
@@ -638,17 +670,22 @@ Resources:
                       - 4000GB
                       - '4000'
                       - '6000'
-      AllowMajorVersionUpgrade: !Ref 'AllowMajorVersionUpgrade'
-      AutoMinorVersionUpgrade: !Ref 'AutoMinorVersionUpgrade'
-      BackupRetentionPeriod: !Ref 'BackupRetentionPeriod'
-      CopyTagsToSnapshot: !Ref 'CopyTagsToSnapshot'
-      DBInstanceClass: !Ref 'DBInstanceClass'
-      DBName: !Ref 'DBName'
-      DBParameterGroupName: !Ref 'DBParameterGroup'
-      DBSubnetGroupName: !Ref 'DBSubnetGroup'
+      AllowMajorVersionUpgrade: !Ref AllowMajorVersionUpgrade
+      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
+      CopyTagsToSnapshot: !Ref CopyTagsToSnapshot
+      DBInstanceClass: !Ref DBInstanceClass
+      DBName:
+        !If
+        - AutoDBName
+        - !GetAtt AWSSBInjectedGenerateDBName.DBName
+        - !Ref DBName
+      DBParameterGroupName: !Ref DBParameterGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
       Engine: mysql
-      EngineVersion: !Ref 'EngineVersion'
-      Iops: !If
+      EngineVersion: !Ref EngineVersion
+      Iops:
+        !If
         - 100GB
         - '1000'
         - !If
@@ -673,183 +710,529 @@ Resources:
                       - 4000GB
                       - '40000'
                       - '60000'
-      KmsKeyId: !If
+      KmsKeyId:
+        !If
         - EncryptionEnabled
-        - !GetAtt 'KMSKey.Arn'
-        - !Ref 'AWS::NoValue'
+        - !GetAtt KMSKey.Arn
+        - !Ref AWS::NoValue
       LicenseModel: general-public-license
-      MasterUsername: !Ref 'MasterUsername'
-      MasterUserPassword: !Ref 'MasterUserPassword'
-      MonitoringInterval: !Ref 'MonitoringInterval'
-      MonitoringRoleArn: !GetAtt 'MonitoringRole.Arn'
-      MultiAZ: !Ref 'MultiAZ'
-      OptionGroupName: !Ref 'DBOptionGroup'
-      Port: !Ref 'PortNumber'
-      PreferredBackupWindow: !Ref 'PreferredBackupWindow'
-      PreferredMaintenanceWindow: !Sub '${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}'
-      PubliclyAccessible: !Ref 'PubliclyAccessible'
-      StorageEncrypted: !Ref 'StorageEncrypted'
-      StorageType: !Ref 'StorageType'
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword:
+        !If
+        - AutoPassword
+        - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
+        - !Ref MasterUserPassword
+      MonitoringInterval: !Ref MonitoringInterval
+      MonitoringRoleArn: !GetAtt MonitoringRole.Arn
+      MultiAZ: !Ref MultiAZ
+      OptionGroupName: !Ref DBOptionGroup
+      Port: !Ref PortNumber
+      PreferredBackupWindow: !Ref PreferredBackupWindow
+      PreferredMaintenanceWindow: !Sub ${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}
+      PubliclyAccessible: !Ref PubliclyAccessible
+      StorageEncrypted: !Ref StorageEncrypted
+      StorageType: !Ref StorageType
       VPCSecurityGroups:
-        - !Ref 'RDSSecurityGroup'
+      - !Ref RDSSecurityGroup
   DBOptionGroup:
     Type: AWS::RDS::OptionGroup
     DeletionPolicy: Retain
     Properties:
       EngineName: mysql
-      MajorEngineVersion: !FindInMap
+      MajorEngineVersion:
+        !FindInMap
         - Version2Family
-        - !Ref 'EngineVersion'
+        - !Ref EngineVersion
         - MajorVersion
-      OptionGroupDescription: !Sub 'Database ${DBName}'
+      OptionGroupDescription: !Sub Database ${DBName}
       OptionConfigurations: []
   DBParameterGroup:
     Type: AWS::RDS::DBParameterGroup
     Properties:
-      Description: !Sub 'Database ${DBName}'
-      Family: !FindInMap
+      Description: !Sub Database ${DBName}
+      Family:
+        !FindInMap
         - Version2Family
-        - !Ref 'EngineVersion'
+        - !Ref EngineVersion
         - Family
       Parameters:
-        time_zone: !Ref 'MysqlServerTimezone'
+        time_zone: !Ref MysqlServerTimezone
   DBSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 0
-        - !Ref 'AvailabilityZones'
-      VpcId: !Ref 'VpcId'
-      CidrBlock: !Select
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
         - 0
-        - !Ref 'CidrBlocks'
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   DBSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 1
-        - !Ref 'AvailabilityZones'
-      VpcId: !Ref 'VpcId'
-      CidrBlock: !Select
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
         - 1
-        - !Ref 'CidrBlocks'
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   DBSubnet3:
     Condition: 3az
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 2
-        - !Ref 'AvailabilityZones'
-      VpcId: !Ref 'VpcId'
-      CidrBlock: !Select
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
         - 2
-        - !Ref 'CidrBlocks'
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   DBSubnet4:
     Condition: 4az
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 3
-        - !Ref 'AvailabilityZones'
-      VpcId: !Ref 'VpcId'
-      CidrBlock: !Select
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
         - 3
-        - !Ref 'CidrBlocks'
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   DBSubnet5:
     Condition: 5az
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 4
-        - !Ref 'AvailabilityZones'
-      VpcId: !Ref 'VpcId'
-      CidrBlock: !Select
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
         - 4
-        - !Ref 'CidrBlocks'
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: !Sub 'Database ${DBName}'
+      DBSubnetGroupDescription: !Sub Database ${DBName}
       SubnetIds:
-        - !Ref 'DBSubnet1'
-        - !Ref 'DBSubnet2'
-        - !If
-          - 3az
-          - !Ref 'DBSubnet3'
-          - !Ref 'AWS::NoValue'
-        - !If
-          - 4az
-          - !Ref 'DBSubnet4'
-          - !Ref 'AWS::NoValue'
-        - !If
-          - 5az
-          - !Ref 'DBSubnet5'
-          - !Ref 'AWS::NoValue'
+      - !Ref DBSubnet1
+      - !Ref DBSubnet2
+      - !If
+        - 3az
+        - !Ref DBSubnet3
+        - !Ref AWS::NoValue
+      - !If
+        - 4az
+        - !Ref DBSubnet4
+        - !Ref AWS::NoValue
+      - !If
+        - 5az
+        - !Ref DBSubnet5
+        - !Ref AWS::NoValue
   KMSKey:
     Condition: EncryptionEnabled
     Type: AWS::KMS::Key
     Properties:
-      Description: !Sub 'Database ${DBName}'
+      Description: !Sub Database ${DBName}
       Enabled: 'true'
       EnableKeyRotation: 'true'
       KeyPolicy:
         Version: '2012-10-17'
         Id: key-default-1
         Statement:
-          - Sid: Allow administration of the key
-            Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
-            Action:
-              - 'kms:Create*'
-              - 'kms:Describe*'
-              - 'kms:Enable*'
-              - 'kms:List*'
-              - 'kms:Put*'
-              - 'kms:Update*'
-              - 'kms:Revoke*'
-              - 'kms:Disable*'
-              - 'kms:Get*'
-              - 'kms:Delete*'
-              - 'kms:ScheduleKeyDeletion'
-              - 'kms:CancelKeyDeletion'
-            Resource: '*'
+        - Sid: Allow administration of the key
+          Effect: Allow
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Action:
+          - kms:Create*
+          - kms:Describe*
+          - kms:Enable*
+          - kms:List*
+          - kms:Put*
+          - kms:Update*
+          - kms:Revoke*
+          - kms:Disable*
+          - kms:Get*
+          - kms:Delete*
+          - kms:ScheduleKeyDeletion
+          - kms:CancelKeyDeletion
+          Resource: '*'
   MonitoringRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
-            Principal:
-              Service: monitoring.rds.amazonaws.com
-            Action: sts:AssumeRole
+        - Effect: Allow
+          Principal:
+            Service: monitoring.rds.amazonaws.com
+          Action: sts:AssumeRole
       Path: /
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole'
+      - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
   RDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: !Sub 'Allow Client connections to Database ${DBName}'
-      VpcId: !Ref 'VpcId'
+      GroupDescription: !Sub Allow Client connections to Database ${DBName}
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: !Ref 'PortNumber'
-          ToPort: !Ref 'PortNumber'
-          CidrIp: !Ref 'AccessCidr'
+      - IpProtocol: tcp
+        FromPort: !Ref PortNumber
+        ToPort: !Ref PortNumber
+        CidrIp: !Ref AccessCidr
       SecurityGroupEgress:
-        - IpProtocol: '-1'
-          FromPort: '-1'
-          ToPort: '-1'
-          CidrIp: '0.0.0.0/0'
+      - IpProtocol: '-1'
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: 0.0.0.0/0
+  AWSSBInjectedLambdaZipsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: []
+  AWSSBInjectedCopyZips:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedCopyZipsLambda.Arn
+      DestBucket: !Ref AWSSBInjectedLambdaZipsBucket
+      SourceBucket: awsservicebrokeralpha
+      Prefix: functions/
+      Objects:
+      - get_cidrs/lambda_function.zip
+      - get_azs/lambda_function.zip
+      - generate_password/lambda_function.zip
+      - generate_dbname/lambda_function.zip
+  AWSSBInjectedCopyZipsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+      - PolicyName: lambda-copier
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - arn:aws:s3:::awsservicebrokeralpha/*
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:DeleteObject
+            Resource:
+            - !Sub arn:aws:s3:::${AWSSBInjectedLambdaZipsBucket}/*
+  AWSSBInjectedCopyZipsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python2.7
+      Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+
+
+          def copy_objects(source_bucket, dest_bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              for o in objects:
+                  key = prefix + o
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': key
+                  }
+                  print('copy_source: %s' % copy_source)
+                  print('dest_bucket = %s' % dest_bucket)
+                  print('key = %s' % key)
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket, Key=key)
+
+
+          def delete_objects(bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3.delete_objects(Bucket=bucket, Delete=objects)
+
+
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+
+
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(dest_bucket, prefix, objects)
+                  else:
+                      copy_objects(source_bucket, dest_bucket, prefix, objects)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+  AWSSBInjectedGetCidrsRole:
+    Condition: AutoCidrs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeVpcs
+            - ec2:DescribeSubnets
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetCidrsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoCidrs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetCidrsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_cidrs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetCidrs:
+    Condition: AutoCidrs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetCidrsLambda.Arn
+      Qty: !Ref NumberOfAvailabilityZones
+      VpcId: !Ref VpcId
+      CidrSize: !Ref CidrSize
+  AWSSBInjectedGetAzsRole:
+    Condition: AutoAzs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetAzsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoAzs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetAzsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_azs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetAzs:
+    Condition: AutoAzs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetAzsLambda.Arn
+      Qty: !Ref NumberOfAvailabilityZones
+  AWSSBInjectedGeneratePasswordRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGeneratePasswordLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGeneratePasswordRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_password/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGeneratePassword:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGeneratePasswordLambda.Arn
+      Length: 32
+  AWSSBInjectedGenerateDBNameRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGenerateDBNameLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGenerateDBNameRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_dbname/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGenerateDBName:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGenerateDBNameLambda.Arn
+      Length: 32
 Outputs:
   EndpointAddress:
-    Value: !GetAtt 'DBInstance.Endpoint.Address'
+    Value: !GetAtt DBInstance.Endpoint.Address
   MasterUsername:
-    Value: !Ref 'MasterUsername'
+    Value: !Ref MasterUsername
   MasterPassword:
-    Value: !Ref 'MasterUserPassword'
+    Value:
+      !If
+      - AutoPassword
+      - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
+      - !Ref MasterUserPassword
   Port:
-    Value: !Ref 'PortNumber'
+    Value: !Ref PortNumber
   DBName:
-    Value: !Ref 'DBName'
+    Value:
+      !If
+      - AutoDBName
+      - !GetAtt AWSSBInjectedGenerateDBName.DBName
+      - !Ref DBName

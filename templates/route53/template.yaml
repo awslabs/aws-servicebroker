@@ -1,89 +1,86 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: ' AWS Service Broker - Amazon Route 53 (qs-1nt0fs92n)'
 Metadata:
-  'AWS::ServiceBroker::Specification':
+  AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-      - AWS
-      - Route 53
-      - DNS
+    - AWS
+    - Route 53
+    - DNS
     Name: route53
-    DisplayName: "Amazon Route 53"
-    LongDescription: >-
-      Amazon Route 53 is a highly available and scalable Domain Name System (DNS) web service.
-    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/NetworkingContentDelivery_AmazonRoute53_LARGE.png"
-    DocumentationUrl: 'https://aws.amazon.com/documentation/route53/'
-    ProviderDisplayName: "Amazon Web Services"
-    Bindings:
-      IAM:
-        AddKeypair: False
+    DisplayName: Amazon Route 53
+    LongDescription: Amazon Route 53 is a highly available and scalable Domain Name
+      System (DNS) web service.
+    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/NetworkingContentDelivery_AmazonRoute53_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/documentation/route53/
+    ProviderDisplayName: Amazon Web Services
     ServicePlans:
-        hostedzone:
-          DisplayName: "Hosted Zone"
-          Description: 'Managed Route53 hosted zone'
-          LongDescription: ""
-          Cost: "https://aws.amazon.com/route53/pricing/"
-          ParameterValues:
-            HostedZoneName: ""
-            HostedZoneId: ""
-            TimeToLive: "360"
-            Type: "A"
-            RecordName: ""
-            ResourceRecord: ""
-            AliasTarget: ""
-        recordset:
-          DisplayName: "Record Set"
-          Description: 'Route 53 Record Set'
-          LongDescription: ""
-          Cost: "https://aws.amazon.com/route53/pricing/"
-          ParameterValues:
-            NewHostedZoneName: ""
-  'AWS::CloudFormation::Interface':
+      hostedzone:
+        DisplayName: Hosted Zone
+        Description: Managed Route53 hosted zone
+        LongDescription: ''
+        Cost: https://aws.amazon.com/route53/pricing/
+        ParameterValues:
+          HostedZoneName: ''
+          HostedZoneId: ''
+          TimeToLive: '360'
+          Type: A
+          RecordName: ''
+          ResourceRecord: ''
+          AliasTarget: ''
+      recordset:
+        DisplayName: Record Set
+        Description: Route 53 Record Set
+        LongDescription: ''
+        Cost: https://aws.amazon.com/route53/pricing/
+        ParameterValues:
+          NewHostedZoneName: ''
+  AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: "Record Set Configuration"
-        Parameters:
-          - HostedZoneName
-          - HostedZoneId
-          - TimeToLive
-          - Type
-          - RecordName
-          - ResourceRecord
-          - AliasTarget
-      - Label:
-          default: "Hosted Zone Configuration"
-        Parameters:
-          - NewHostedZoneName
+    - Label:
+        default: Record Set Configuration
+      Parameters:
+      - HostedZoneName
+      - HostedZoneId
+      - TimeToLive
+      - Type
+      - RecordName
+      - ResourceRecord
+      - AliasTarget
+    - Label:
+        default: Hosted Zone Configuration
+      Parameters:
+      - NewHostedZoneName
     ParameterLabels:
       NewHostedZoneName:
-        default: "Hosted Zone DNS Name"
+        default: Hosted Zone DNS Name
       HostedZoneName:
-        default: "Hosted Zone DNS Name"
+        default: Hosted Zone DNS Name
       HostedZoneId:
-        default: "Hosted Zone ID"
+        default: Hosted Zone ID
       TimeToLive:
-        default: "Time To Live"
+        default: Time To Live
       Type:
-        default: "Record Type"
+        default: Record Type
       RecordName:
-        default: "Record Name"
+        default: Record Name
       ResourceRecord:
-        default: "Record Value"
+        default: Record Value
       AliasTarget:
-        default: "Alias Target"
+        default: Alias Target
 Parameters:
   NewHostedZoneName:
     Description: Name of the hosted zone
     Type: String
-    Default: ""
+    Default: ''
   HostedZoneName:
     Description: Name of the hosted zone which the records are to be created in
     Type: String
-    Default: ""
+    Default: ''
   HostedZoneId:
     Description: Id of the hosted zone which the records are to be created in
     Type: String
-    Default: ""
+    Default: ''
   TimeToLive:
     Description: How long the resolved record should be cached by resolvers
     Default: '360'
@@ -92,72 +89,84 @@ Parameters:
     Description: Type of record
     Type: String
     AllowedValues:
-      - A
-      - AAAA
-      - CAA
-      - CNAME
-      - MX
-      - NS
-      - PTR
-      - SOA
-      - SPF
-      - SRV
-      - TXT
+    - A
+    - AAAA
+    - CAA
+    - CNAME
+    - MX
+    - NS
+    - PTR
+    - SOA
+    - SPF
+    - SRV
+    - TXT
     Default: A
   RecordName:
     Description: Name of the record
     Type: String
-    Default: ""
+    Default: ''
   ResourceRecord:
     Description: Value of the record
     Type: String
-    Default: ""
+    Default: ''
   AliasTarget:
-    Description: >-
-      Alias resource record sets only: Information about the domain to which you
-      are redirecting traffic.
+    Description: 'Alias resource record sets only: Information about the domain to
+      which you are redirecting traffic.'
     Type: String
-    Default: ""
+    Default: ''
 Conditions:
-  UseAlias: !Not
+  UseAlias:
+    !Not
     - !Equals
       - !Ref AliasTarget
       - ''
-  CreateZone: !Not
+  CreateZone:
+    !Not
     - !Equals
       - !Ref NewHostedZoneName
-      - ""
-  CreateRecord: !Not
+      - ''
+  CreateRecord:
+    !Not
     - !Equals
       - !Ref RecordName
-      - ""
+      - ''
 Resources:
   HostedZone:
     Condition: CreateZone
-    Type: 'AWS::Route53::HostedZone'
+    Type: AWS::Route53::HostedZone
     Properties:
       Name: !Ref HostedZoneName
   RecordSet:
     Condition: CreateRecord
-    Type: 'AWS::Route53::RecordSet'
+    Type: AWS::Route53::RecordSet
     Properties:
-      AliasTarget: !If
+      AliasTarget:
+        !If
         - UseAlias
         - !Ref AliasTarget
-        - !Ref 'AWS::NoValue'
+        - !Ref AWS::NoValue
       HostedZoneId: !Ref HostedZoneId
-      Name: !Join
+      Name:
+        !Join
         - ''
         - - !Ref RecordName
           - .
           - !Ref HostedZoneName
           - .
       ResourceRecords:
-        - !Ref ResourceRecord
+      - !Ref ResourceRecord
       TTL: !Ref TimeToLive
       Type: !Ref Type
 Outputs:
   RecordName:
-    Value: !If [ CreateRecord, !Ref RecordSet, "" ]
+    Value:
+      !If
+      - CreateRecord
+      - !Ref RecordSet
+      - ''
   HostedZoneId:
-    Value: !If [ CreateZone, !Ref HostedZone, !Ref HostedZoneId ]
+    Value:
+      !If
+      - CreateZone
+      - !Ref HostedZone
+      - !Ref HostedZoneId

@@ -1,123 +1,234 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: "AWS Service Broker - KMS Key (qs-1ob09h69u)"
+Description: AWS Service Broker - KMS Key (qs-1ob09h69u)
 Metadata:
-  'AWS::ServiceBroker::Specification':
+  AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-      - AWS
-      - KMS
-      - encryption
+    - AWS
+    - KMS
+    - encryption
     Name: kms
-    DisplayName: "Amazon KMS"
-    LongDescription: "AWS Key Management Service (KMS) is a managed service that makes it easy for you to create and control the encryption keys used to encrypt your data, and uses FIPS 140-2 validated hardware security modules to protect the security of your keys."
-    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/SecurityIdentityCompliance_AWSKMS_LARGE.png"
-    DocumentationUrl: 'https://aws.amazon.com/documentation/kms/'
-    ProviderDisplayName: "Amazon Web Services"
-    Bindings:
-      IAM:
-        AddKeypair: True
-        Policies:
-          - PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Action:
-                  - 'kms:GenerateDataKey'
-                  - 'kms:ReEncryptFrom'
-                  - 'kms:ReEncryptTo'
-                  Effect: Allow
-                  Resource: "*"
-                - Action:
-                  - 'kms:Decrypt'
-                  - 'kms:Encrypt'
-                  - 'kms:DescribeKey'
-                  Effect: Allow
-                  Resource: !GetAtt KMSKey.Arn
-      CFNOutputs: [ KMSKeyId, KMSKeyArn ]
+    DisplayName: Amazon KMS
+    LongDescription: AWS Key Management Service (KMS) is a managed service that makes
+      it easy for you to create and control the encryption keys used to encrypt your
+      data, and uses FIPS 140-2 validated hardware security modules to protect the
+      security of your keys.
+    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/SecurityIdentityCompliance_AWSKMS_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/documentation/kms/
+    ProviderDisplayName: Amazon Web Services
     ServicePlans:
-        default:
-          DisplayName: "Standard"
-          Description: 'KMS Key'
-          LongDescription: "Generates a KMS key"
-          Cost: "https://aws.amazon.com/kms/pricing/"
-  'AWS::CloudFormation::Interface':
+      default:
+        DisplayName: Standard
+        Description: KMS Key
+        LongDescription: Generates a KMS key
+        Cost: https://aws.amazon.com/kms/pricing/
+        ParameterValues: {}
+  AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: "KMS Configuration"
-        Parameters:
-          - EnableKeyRotation
+    - Label:
+        default: KMS Configuration
+      Parameters:
+      - EnableKeyRotation
     ParameterLabels:
       EnableKeyRotation:
-        default: "Enable Key Rotation"
+        default: Enable Key Rotation
 Parameters:
   EnableKeyRotation:
-    Description: >-
-      AWS KMS generates new cryptographic material for the CMK every year.
+    Description: AWS KMS generates new cryptographic material for the CMK every year.
       AWS KMS also saves the CMK's older cryptographic material so it can be used
       to decrypt data that it encrypted.
     Type: String
-    Default: "true"
+    Default: 'true'
     AllowedValues:
-      - "true"
-      - "false"
+    - 'true'
+    - 'false'
   KeyAdministratorRoleArn:
-    Description: >-
-      To add an additional administrative role, specify the ARN here.
-      By default the root user and the CloudFormation Stack role is granted administrative
-      access to the key. Admins can update, revoke, delete the key, but cannot use it to
-      encrypt or decrypt.
+    Description: To add an additional administrative role, specify the ARN here. By
+      default the root user and the CloudFormation Stack role is granted administrative
+      access to the key. Admins can update, revoke, delete the key, but cannot use
+      it to encrypt or decrypt.
     Type: String
-    Default: ""
+    Default: ''
   CloudformationRoleArn:
-    Description: >-
-      Role used to launch this stack, this is typically configured as an AWS Service Broker Secret.
+    Description: Role used to launch this stack, this is typically configured as an
+      AWS Service Broker Secret.
     Type: String
-    Default: ""
+    Default: ''
 Conditions:
   AddKeyAdminRole:
-    !Not [!Equals [!Ref KeyAdministratorRoleArn, ""]]
+    !Not
+    - !Equals
+      - !Ref KeyAdministratorRoleArn
+      - ''
   AddCfnRole:
-    !Not [!Equals [!Ref CloudformationRoleArn, ""]]
+    !Not
+    - !Equals
+      - !Ref CloudformationRoleArn
+      - ''
 Resources:
   KMSKey:
-    Type: "AWS::KMS::Key"
+    Type: AWS::KMS::Key
     Properties:
       EnableKeyRotation: !Ref EnableKeyRotation
       KeyPolicy:
-        Version: "2012-10-17"
-        Id: "AWS-ServiceBroker-key=permissions"
+        Version: '2012-10-17'
+        Id: AWS-ServiceBroker-key=permissions
         Statement:
-          - Sid: "Allow use of the key"
-            Effect: "Allow"
-            Principal:
-              AWS: !GetAtt AWSSBInjectedIAMUser.Arn
+        - Sid: Allow use of the key
+          Effect: Allow
+          Principal:
+            AWS: !GetAtt AWSSBInjectedIAMUser.Arn
+          Action:
+          - kms:Encrypt
+          - kms:Decrypt
+          - kms:ReEncrypt*
+          - kms:GenerateDataKey*
+          - kms:DescribeKey
+          Resource: '*'
+        - Sid: Allow management of the key
+          Effect: Allow
+          Principal:
+            AWS:
+            - !Sub arn:aws:iam::${AWS::AccountId}:root
+            - !If
+              - AddKeyAdminRole
+              - !Ref KeyAdministratorRoleArn
+              - !Ref AWS::NoValue
+            - !If
+              - AddCfnRole
+              - !Ref CloudformationRoleArn
+              - !Ref AWS::NoValue
+          Action:
+          - kms:Create*
+          - kms:Describe*
+          - kms:Enable*
+          - kms:List*
+          - kms:Put*
+          - kms:Update*
+          - kms:Revoke*
+          - kms:Disable*
+          - kms:Get*
+          - kms:Delete*
+          - kms:ScheduleKeyDeletion
+          - kms:CancelKeyDeletion
+          Resource: '*'
+  AWSSBInjectedIAMUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: iam_user_creation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
             Action:
-              - "kms:Encrypt"
-              - "kms:Decrypt"
-              - "kms:ReEncrypt*"
-              - "kms:GenerateDataKey*"
-              - "kms:DescribeKey"
-            Resource: "*"
-          - Sid: "Allow management of the key"
-            Effect: "Allow"
-            Principal:
-              AWS:
-               - !Sub "arn:aws:iam::${AWS::AccountId}:root"
-               - !If [ AddKeyAdminRole, !Ref KeyAdministratorRoleArn, !Ref "AWS::NoValue" ]
-               - !If [ AddCfnRole, !Ref CloudformationRoleArn, !Ref "AWS::NoValue" ]
-            Action:
-              - "kms:Create*"
-              - "kms:Describe*"
-              - "kms:Enable*"
-              - "kms:List*"
-              - "kms:Put*"
-              - "kms:Update*"
-              - "kms:Revoke*"
-              - "kms:Disable*"
-              - "kms:Get*"
-              - "kms:Delete*"
-              - "kms:ScheduleKeyDeletion"
-              - "kms:CancelKeyDeletion"
-            Resource: "*"
+            - iam:CreateAccessKey
+            - iam:PutUserPolicy
+            - iam:ListAttachedUserPolicies
+            - iam:DeleteUserPolicy
+            - iam:AttachUserPolicy
+            - iam:DeleteUser
+            - iam:ListUserPolicies
+            - iam:DetachUserPolicy
+            - iam:CreateUser
+            - iam:DeleteAccessKey
+            - iam:ListAccessKeys
+            - ssm:DeleteParameters
+            - ssm:PutParameter
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedIAMUserLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedIAMUserRole
+        - Arn
+      Code:
+        ZipFile: |-
+          import cfnresponse
+          import random
+          import string
+          import boto3
+          import traceback
+
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          iam_client = boto3.client('iam')
+          ssm_client = boto3.client('ssm')
+
+
+          def handler(event, context):
+              response_code = cfnresponse.SUCCESS
+              response_data = {}
+              if event['RequestType'] == 'Create':
+                  phys_id = ''.join(random.choice(alnum) for _ in range(16))
+              else:
+                  phys_id = event['PhysicalResourceId']
+              response_data['AsbAccessKeyId'] = 'AsbAccessKeyId-%s' % phys_id
+              response_data['AsbSecretAccessKey'] = 'AsbSecretAccessKey-%s' % phys_id
+              try:
+                  username = event['ResourceProperties']['Username']
+                  if event['RequestType'] == 'Create':
+                      response = iam_client.create_access_key(UserName=username)
+                      aws_access_key_id = response['AccessKey']['AccessKeyId']
+                      secret_access_key = response['AccessKey']['SecretAccessKey']
+                      ssm_client.put_parameter(Name=response_data['AsbAccessKeyId'], Value=aws_access_key_id, Type='SecureString')
+                      ssm_client.put_parameter(Name=response_data['AsbSecretAccessKey'], Value=secret_access_key, Type='SecureString')
+                  elif event['RequestType'] == 'Update':
+                      print('Update operation unsupported')
+                      response_code = cfnresponse.FAILED
+                  elif event['RequestType'] == 'Delete':
+                      for access_key in iam_client.list_access_keys(UserName=username)['AccessKeyMetadata']:
+                          iam_client.delete_access_key(UserName=username, AccessKeyId=access_key['AccessKeyId'])
+                      ssm_client.delete_parameters(Names=[response_data['AsbAccessKeyId'], response_data['AsbSecretAccessKey']])
+                  cfnresponse.send(event, context, response_code, response_data, phys_id)
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedIAMUser:
+    Type: AWS::IAM::User
+  AWSSBInjectedIAMUserCreator:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedIAMUserLambda.Arn
+      Username: !Ref AWSSBInjectedIAMUser
+  AWSSBInjectedIAMUserPolicy1:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AWSSBInjectedIAMUserPolicy1
+      Users:
+      - !Ref AWSSBInjectedIAMUser
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - kms:GenerateDataKey
+          - kms:ReEncryptFrom
+          - kms:ReEncryptTo
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - kms:Decrypt
+          - kms:Encrypt
+          - kms:DescribeKey
+          Effect: Allow
+          Resource: !GetAtt KMSKey.Arn
 Outputs:
   KMSKeyId:
     Description: Id of the KMS key
@@ -125,3 +236,7 @@ Outputs:
   KMSKeyArn:
     Description: Arn of the KMS key
     Value: !GetAtt KMSKey.Arn
+  KmsAwsAccessKeyId:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbAccessKeyId}"
+  KmsAwsSecretAccessKey:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbSecretAccessKey}"

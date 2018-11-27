@@ -1,76 +1,57 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: 'AWS Service Broker - Amazon DynamoDB (qs-1nt0fs927)'
+Description: AWS Service Broker - Amazon DynamoDB (qs-1nt0fs927)
 Metadata:
-  'AWS::ServiceBroker::Specification':
+  AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-      - AWS
-      - RDS
-      - DynamoDB
-      - database
-      - NoSQL
+    - AWS
+    - RDS
+    - DynamoDB
+    - database
+    - NoSQL
     Name: dynamodb
-    DisplayName: "Amazon DynamoDB"
-    LongDescription: >-
-      Amazon DynamoDB is a fully managed NoSQL database service that provides fast and
-      predictable performance with seamless scalability. You can use Amazon DynamoDB to
-      create a database table that can store and retrieve any amount of data, and serve
-      any level of request traffic. Amazon DynamoDB automatically spreads the data and
-      traffic for the table over a sufficient number of servers to handle the request
-      capacity specified by the customer and the amount of data stored, while maintaining
-      consistent and fast performance.
-    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/Database_AmazonDynamoDB_LARGE.png"
-    DocumentationUrl: 'https://aws.amazon.com/documentation/dynamodb/'
-    ProviderDisplayName: "Amazon Web Services"
-    Bindings:
-      IAM:
-        AddKeypair: True
-        Policies:
-          - PolicyDocument:
-              Version: "2012-10-17"
-              Statement:
-                - Effect: "Allow"
-                  Action:
-                  - "dynamodb:BatchGetItem"
-                  - "dynamodb:BatchWriteItem"
-                  - "dynamodb:DeleteItem"
-                  - "dynamodb:GetItem"
-                  - "dynamodb:PutItem"
-                  - "dynamodb:Query"
-                  - "dynamodb:Scan"
-                  - "dynamodb:UpdateItem"
-                  Resource: !GetAtt DynamoDBTable.Arn
-      CFNOutputs: [TableName, TableArn]
+    DisplayName: Amazon DynamoDB
+    LongDescription: Amazon DynamoDB is a fully managed NoSQL database service that
+      provides fast and predictable performance with seamless scalability. You can
+      use Amazon DynamoDB to create a database table that can store and retrieve any
+      amount of data, and serve any level of request traffic. Amazon DynamoDB automatically
+      spreads the data and traffic for the table over a sufficient number of servers
+      to handle the request capacity specified by the customer and the amount of data
+      stored, while maintaining consistent and fast performance.
+    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Database_AmazonDynamoDB_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/documentation/dynamodb/
+    ProviderDisplayName: Amazon Web Services
     ServicePlans:
-        hashrange:
-          DisplayName: "Hash and Range table"
-          Description: 'DynamoDB Table'
-          LongDescription: "DynamoDB Table with hash and range keys"
-          Cost: "https://aws.amazon.com/dynamodb/pricing/"
-  'AWS::CloudFormation::Interface':
+      hashrange:
+        DisplayName: Hash and Range table
+        Description: DynamoDB Table
+        LongDescription: DynamoDB Table with hash and range keys
+        Cost: https://aws.amazon.com/dynamodb/pricing/
+        ParameterValues: {}
+  AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: "DynamoDB Settings"
-        Parameters:
-          - HashAttributeName
-          - HashAttributeType
-          - RangeAttributeName
-          - RangeAttributeType
-          - ReadCapacityUnits
-          - WriteCapacityUnits
+    - Label:
+        default: DynamoDB Settings
+      Parameters:
+      - HashAttributeName
+      - HashAttributeType
+      - RangeAttributeName
+      - RangeAttributeType
+      - ReadCapacityUnits
+      - WriteCapacityUnits
     ParameterLabels:
       HashAttributeName:
-        default: "Hash Attribute Name"
+        default: Hash Attribute Name
       HashAttributeType:
-        default: "Hash Attribute Type"
+        default: Hash Attribute Type
       RangeAttributeName:
-        default: "Range Attribute Name"
+        default: Range Attribute Name
       RangeAttributeType:
-        default: "Range Attribute Type"
+        default: Range Attribute Type
       ReadCapacityUnits:
-        default: "Read Capacity Units"
+        default: Read Capacity Units
       WriteCapacityUnits:
-        default: "Write Capacity Units"
+        default: Write Capacity Units
 Parameters:
   HashAttributeName:
     Type: String
@@ -78,10 +59,10 @@ Parameters:
   HashAttributeType:
     Type: String
     AllowedValues:
-      - S
-      - N
-      - B
-    Default: "S"
+    - S
+    - N
+    - B
+    Default: S
     Description: AttributeType for  Hash key
   RangeAttributeName:
     Type: String
@@ -89,40 +70,152 @@ Parameters:
   RangeAttributeType:
     Type: String
     AllowedValues:
-      - S
-      - N
-      - B
-    Default: "S"
+    - S
+    - N
+    - B
+    Default: S
     Description: AttributeType for the  Range key
   ReadCapacityUnits:
     Type: String
     Description: Read ReadCapacity Units
-    Default: "5"
+    Default: '5'
   WriteCapacityUnits:
     Type: String
     Description: Write Capacity Units
-    Default: "5"
+    Default: '5'
 Resources:
   DynamoDBTable:
-    Type: "AWS::DynamoDB::Table"
+    Type: AWS::DynamoDB::Table
     Properties:
       KeySchema:
-        -
-          AttributeName: !Ref HashAttributeName
-          KeyType: "HASH"
-        -
-          AttributeName: !Ref RangeAttributeName
-          KeyType: "RANGE"
+      - AttributeName: !Ref HashAttributeName
+        KeyType: HASH
+      - AttributeName: !Ref RangeAttributeName
+        KeyType: RANGE
       AttributeDefinitions:
-        -
-          AttributeName: !Ref HashAttributeName
-          AttributeType: !Ref HashAttributeType
-        -
-          AttributeName: !Ref RangeAttributeName
-          AttributeType: !Ref RangeAttributeType
+      - AttributeName: !Ref HashAttributeName
+        AttributeType: S
+      - AttributeName: !Ref RangeAttributeName
+        AttributeType: S
       ProvisionedThroughput:
         ReadCapacityUnits: !Ref ReadCapacityUnits
         WriteCapacityUnits: !Ref WriteCapacityUnits
+  AWSSBInjectedIAMUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: iam_user_creation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - iam:CreateAccessKey
+            - iam:PutUserPolicy
+            - iam:ListAttachedUserPolicies
+            - iam:DeleteUserPolicy
+            - iam:AttachUserPolicy
+            - iam:DeleteUser
+            - iam:ListUserPolicies
+            - iam:DetachUserPolicy
+            - iam:CreateUser
+            - iam:DeleteAccessKey
+            - iam:ListAccessKeys
+            - ssm:DeleteParameters
+            - ssm:PutParameter
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedIAMUserLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedIAMUserRole
+        - Arn
+      Code:
+        ZipFile: |-
+          import cfnresponse
+          import random
+          import string
+          import boto3
+          import traceback
+
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          iam_client = boto3.client('iam')
+          ssm_client = boto3.client('ssm')
+
+
+          def handler(event, context):
+              response_code = cfnresponse.SUCCESS
+              response_data = {}
+              if event['RequestType'] == 'Create':
+                  phys_id = ''.join(random.choice(alnum) for _ in range(16))
+              else:
+                  phys_id = event['PhysicalResourceId']
+              response_data['AsbAccessKeyId'] = 'AsbAccessKeyId-%s' % phys_id
+              response_data['AsbSecretAccessKey'] = 'AsbSecretAccessKey-%s' % phys_id
+              try:
+                  username = event['ResourceProperties']['Username']
+                  if event['RequestType'] == 'Create':
+                      response = iam_client.create_access_key(UserName=username)
+                      aws_access_key_id = response['AccessKey']['AccessKeyId']
+                      secret_access_key = response['AccessKey']['SecretAccessKey']
+                      ssm_client.put_parameter(Name=response_data['AsbAccessKeyId'], Value=aws_access_key_id, Type='SecureString')
+                      ssm_client.put_parameter(Name=response_data['AsbSecretAccessKey'], Value=secret_access_key, Type='SecureString')
+                  elif event['RequestType'] == 'Update':
+                      print('Update operation unsupported')
+                      response_code = cfnresponse.FAILED
+                  elif event['RequestType'] == 'Delete':
+                      for access_key in iam_client.list_access_keys(UserName=username)['AccessKeyMetadata']:
+                          iam_client.delete_access_key(UserName=username, AccessKeyId=access_key['AccessKeyId'])
+                      ssm_client.delete_parameters(Names=[response_data['AsbAccessKeyId'], response_data['AsbSecretAccessKey']])
+                  cfnresponse.send(event, context, response_code, response_data, phys_id)
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedIAMUser:
+    Type: AWS::IAM::User
+  AWSSBInjectedIAMUserCreator:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedIAMUserLambda.Arn
+      Username: !Ref AWSSBInjectedIAMUser
+  AWSSBInjectedIAMUserPolicy1:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AWSSBInjectedIAMUserPolicy1
+      Users:
+      - !Ref AWSSBInjectedIAMUser
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:BatchGetItem
+          - dynamodb:BatchWriteItem
+          - dynamodb:DeleteItem
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          - dynamodb:UpdateItem
+          Resource: !GetAtt DynamoDBTable.Arn
 Outputs:
   TableName:
     Description: Name of the DynamoDB Table
@@ -130,3 +223,7 @@ Outputs:
   TableArn:
     Description: Arn of the DynamoDB Table
     Value: !GetAtt DynamoDBTable.Arn
+  DynamodbAwsAccessKeyId:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbAccessKeyId}"
+  DynamodbAwsSecretAccessKey:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbSecretAccessKey}"

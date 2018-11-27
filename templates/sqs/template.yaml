@@ -1,85 +1,75 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: "AWS Service Broker - Amazon SQS (qs-1nt0fs93h)"
+Description: AWS Servicebroker - Amazon SQS (qs-1nt0fs93h)
 Metadata:
-  'AWS::ServiceBroker::Specification':
+  AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-      - AWS
-      - SQS
-      - message queing
+    - AWS
+    - SQS
+    - message queing
     Name: sqs
-    DisplayName: "Amazon SQS"
-    LongDescription: >-
-      Amazon Simple Queue Service (Amazon SQS) is a fully managed message queuing
-      service that makes it easy to decouple and scale microservices, distributed
+    DisplayName: Amazon SQS
+    LongDescription: Amazon Simple Queue Service (Amazon SQS) is a fully managed message
+      queuing service that makes it easy to decouple and scale microservices, distributed
       systems, and serverless applications. Amazon SQS moves data between distributed
       application components and helps you decouple these components."
-    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/Messaging_AmazonSQS_LARGE.png"
-    DocumentationUrl: 'https://aws.amazon.com/documentation/sqs/'
-    ProviderDisplayName: "Amazon Web Services"
-    Bindings:
-      IAM:
-        AddKeypair: True
-        Policies:
-          - PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Action:
-                  - 'sqs:ChangeMessageVisibility'
-                  - 'sqs:ChangeMessageVisibilityBatch'
-                  - 'sqs:DeleteMessage'
-                  - 'sqs:DeleteMessageBatch'
-                  - 'sqs:ReceiveMessage'
-                  - 'sqs:PurgeQueue'
-                  - 'sqs:SendMessage'
-                  - 'sqs:SendMessageBatch'
-                  Effect: Allow
-                  Resource: !GetAtt SQSQueue.Arn
+    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Messaging_AmazonSQS_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/documentation/sqs/
+    ProviderDisplayName: Amazon Web Services
     ServicePlans:
-        standard:
-          DisplayName: "Standard"
-          Description: 'SQS Queue (Standard)'
-          LongDescription: "Managed Standard SQS Queue"
-          Cost: "https://aws.amazon.com/sqs/pricing/"
-          ParameterValues:
-            FifoQueue: "false"
-            ContentBasedDeduplication: "false"
-        fifo:
-          DisplayName: "FIFO"
-          Description: 'SQS Queue (FIFO)'
-          LongDescription: "Managed FIFO SQS Queue"
-          Cost: "https://aws.amazon.com/sqs/pricing/"
-          ParameterValues:
-            FifoQueue: "true"
-  'AWS::CloudFormation::Interface':
+      standard:
+        DisplayName: Standard
+        Description: SQS Queue (Standard)
+        LongDescription: Managed Standard SQS Queue
+        Cost: https://aws.amazon.com/sqs/pricing/
+        ParameterValues:
+          FifoQueue: 'false'
+          ContentBasedDeduplication: 'false'
+      fifo:
+        DisplayName: FIFO
+        Description: SQS Queue (FIFO)
+        LongDescription: Managed FIFO SQS Queue
+        Cost: https://aws.amazon.com/sqs/pricing/
+        ParameterValues:
+          FifoQueue: 'true'
+  AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: "SQS Configuration"
-        Parameters:
-          - DelaySeconds
-          - MaximumMessageSize
-          - MessageRetentionPeriod
-          - ReceiveMessageWaitTimeSeconds
-          - UsedeadletterQueue
-          - VisibilityTimeout
-          - FifoQueue
-          - ContentBasedDeduplication
+    - Label:
+        default: SQS Configuration
+      Parameters:
+      - DelaySeconds
+      - MaximumMessageSize
+      - MessageRetentionPeriod
+      - ReceiveMessageWaitTimeSeconds
+      - UsedeadletterQueue
+      - VisibilityTimeout
+      - FifoQueue
+      - ContentBasedDeduplication
     ParameterLabels:
-      DelaySeconds: { default: "Delay Seconds" }
-      MaximumMessageSize: { default: "Maximum Message Size" }
-      MessageRetentionPeriod: { default: "Message Retention Period" }
-      ReceiveMessageWaitTimeSeconds: { default: "Receive Message Wait Time Seconds" }
-      UsedeadletterQueue: { default: "Use Dead Letter Queue" }
-      VisibilityTimeout: { default: "Visibility Timeout" }
-      FifoQueue: { default: "Fifo Queue" }
-      ContentBasedDeduplication: { default: "Content Based Deduplication" }
+      DelaySeconds:
+        default: Delay Seconds
+      MaximumMessageSize:
+        default: Maximum Message Size
+      MessageRetentionPeriod:
+        default: Message Retention Period
+      ReceiveMessageWaitTimeSeconds:
+        default: Receive Message Wait Time Seconds
+      UsedeadletterQueue:
+        default: Use Dead Letter Queue
+      VisibilityTimeout:
+        default: Visibility Timeout
+      FifoQueue:
+        default: Fifo Queue
+      ContentBasedDeduplication:
+        default: Content Based Deduplication
 Parameters:
   ContentBasedDeduplication:
-    Description: specifies whether to enable content-based deduplication, only applies to FIFO queues
+    Description: specifies whether to enable content-based deduplication, only applies
+      to FIFO queues
     Type: String
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
     Default: 'true'
   DelaySeconds:
     Description: The Id of the AMI you wish to launch the instance from.
@@ -87,103 +77,238 @@ Parameters:
     Default: '5'
   MaximumMessageSize:
     Type: Number
-    Description: >-
-      The limit of how many bytes that a message can contain before Amazon SQS
-      rejects it, 1024 bytes (1 KiB) to 262144 bytes (256 KiB)
+    Description: The limit of how many bytes that a message can contain before Amazon
+      SQS rejects it, 1024 bytes (1 KiB) to 262144 bytes (256 KiB)
     Default: '262144'
   MessageRetentionPeriod:
-    Description: >-
-      The number of seconds that Amazon SQS retains a message. You can specify
-      an integer value from 60 seconds (1 minute) to 1209600 seconds (14 days).
+    Description: The number of seconds that Amazon SQS retains a message. You can
+      specify an integer value from 60 seconds (1 minute) to 1209600 seconds (14 days).
     Type: Number
     Default: '345600'
   ReceiveMessageWaitTimeSeconds:
-    Description: >-
-      Specifies the duration, in seconds, that the ReceiveMessage action call
-      waits until a message is in the queue in order to include it in the
-      response, as opposed to returning an empty response if a message is not
-      yet available. 1 to 20
+    Description: Specifies the duration, in seconds, that the ReceiveMessage action
+      call waits until a message is in the queue in order to include it in the response,
+      as opposed to returning an empty response if a message is not yet available.
+      1 to 20
     Type: Number
     Default: '0'
   UsedeadletterQueue:
-    Description: >-
-      A dead-letter queue is a queue that other (source) queues can target for
-      messages that can't be processed (consumed) successfully. You can set
-      aside and isolate these messages in the dead-letter queue to determine why
-      their processing doesn't succeed.
+    Description: A dead-letter queue is a queue that other (source) queues can target
+      for messages that can't be processed (consumed) successfully. You can set aside
+      and isolate these messages in the dead-letter queue to determine why their processing
+      doesn't succeed.
     Type: String
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
     Default: 'false'
   VisibilityTimeout:
-    Description: >-
-      This should be longer than the time it would take to process and delete a
-      message, this should not exceed 12 hours.
+    Description: This should be longer than the time it would take to process and
+      delete a message, this should not exceed 12 hours.
     Type: Number
     Default: '5'
   FifoQueue:
     Description: If true queue will be FIFO
     Type: String
     AllowedValues:
-      - 'true'
-      - 'false'
+    - 'true'
+    - 'false'
     Default: 'false'
 Conditions:
-  CreateDeadLetterQueue: !Equals
+  CreateDeadLetterQueue:
+    !Equals
     - !Ref UsedeadletterQueue
     - 'true'
-  IsFifo: !Equals
+  IsFifo:
+    !Equals
     - !Ref FifoQueue
     - 'true'
 Resources:
   SQSQueue:
-    Type: 'AWS::SQS::Queue'
+    Type: AWS::SQS::Queue
     Properties:
-      ContentBasedDeduplication: !If
+      ContentBasedDeduplication:
+        !If
         - IsFifo
         - !Ref ContentBasedDeduplication
         - !Ref AWS::NoValue
-      FifoQueue: !If
+      FifoQueue:
+        !If
         - IsFifo
         - true
         - !Ref AWS::NoValue
       MaximumMessageSize: !Ref MaximumMessageSize
       MessageRetentionPeriod: !Ref MessageRetentionPeriod
       ReceiveMessageWaitTimeSeconds: !Ref ReceiveMessageWaitTimeSeconds
-      RedrivePolicy: !If
+      RedrivePolicy:
+        !If
         - CreateDeadLetterQueue
-        - deadLetterTargetArn: !GetAtt
+        - deadLetterTargetArn:
+            !GetAtt
             - MyDeadLetterQueue
             - Arn
           maxReceiveCount: 5
-        - !Ref 'AWS::NoValue'
+        - !Ref AWS::NoValue
       VisibilityTimeout: !Ref VisibilityTimeout
   MyDeadLetterQueue:
     Condition: CreateDeadLetterQueue
-    Type: 'AWS::SQS::Queue'
+    Type: AWS::SQS::Queue
     Properties:
       FifoQueue: !Ref FifoQueue
+  AWSSBInjectedIAMUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: iam_user_creation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - iam:CreateAccessKey
+            - iam:PutUserPolicy
+            - iam:ListAttachedUserPolicies
+            - iam:DeleteUserPolicy
+            - iam:AttachUserPolicy
+            - iam:DeleteUser
+            - iam:ListUserPolicies
+            - iam:DetachUserPolicy
+            - iam:CreateUser
+            - iam:DeleteAccessKey
+            - iam:ListAccessKeys
+            - ssm:DeleteParameters
+            - ssm:PutParameter
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedIAMUserLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedIAMUserRole
+        - Arn
+      Code:
+        ZipFile: |-
+          import cfnresponse
+          import random
+          import string
+          import boto3
+          import traceback
+
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          iam_client = boto3.client('iam')
+          ssm_client = boto3.client('ssm')
+
+
+          def handler(event, context):
+              response_code = cfnresponse.SUCCESS
+              response_data = {}
+              if event['RequestType'] == 'Create':
+                  phys_id = ''.join(random.choice(alnum) for _ in range(16))
+              else:
+                  phys_id = event['PhysicalResourceId']
+              response_data['AsbAccessKeyId'] = 'AsbAccessKeyId-%s' % phys_id
+              response_data['AsbSecretAccessKey'] = 'AsbSecretAccessKey-%s' % phys_id
+              try:
+                  username = event['ResourceProperties']['Username']
+                  if event['RequestType'] == 'Create':
+                      response = iam_client.create_access_key(UserName=username)
+                      aws_access_key_id = response['AccessKey']['AccessKeyId']
+                      secret_access_key = response['AccessKey']['SecretAccessKey']
+                      ssm_client.put_parameter(Name=response_data['AsbAccessKeyId'], Value=aws_access_key_id, Type='SecureString')
+                      ssm_client.put_parameter(Name=response_data['AsbSecretAccessKey'], Value=secret_access_key, Type='SecureString')
+                  elif event['RequestType'] == 'Update':
+                      print('Update operation unsupported')
+                      response_code = cfnresponse.FAILED
+                  elif event['RequestType'] == 'Delete':
+                      for access_key in iam_client.list_access_keys(UserName=username)['AccessKeyMetadata']:
+                          iam_client.delete_access_key(UserName=username, AccessKeyId=access_key['AccessKeyId'])
+                      ssm_client.delete_parameters(Names=[response_data['AsbAccessKeyId'], response_data['AsbSecretAccessKey']])
+                  cfnresponse.send(event, context, response_code, response_data, phys_id)
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedIAMUser:
+    Type: AWS::IAM::User
+  AWSSBInjectedIAMUserCreator:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedIAMUserLambda.Arn
+      Username: !Ref AWSSBInjectedIAMUser
+  AWSSBInjectedIAMUserPolicy1:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AWSSBInjectedIAMUserPolicy1
+      Users:
+      - !Ref AWSSBInjectedIAMUser
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - sqs:ChangeMessageVisibility
+          - sqs:ChangeMessageVisibilityBatch
+          - sqs:DeleteMessage
+          - sqs:DeleteMessageBatch
+          - sqs:ReceiveMessage
+          - sqs:PurgeQueue
+          - sqs:SendMessage
+          - sqs:SendMessageBatch
+          Effect: Allow
+          Resource: !GetAtt SQSQueue.Arn
 Outputs:
   QueueURL:
     Description: URL of newly created SQS Queue
     Value: !Ref SQSQueue
   QueueARN:
     Description: ARN of newly created SQS Queue
-    Value: !GetAtt
+    Value:
+      !GetAtt
       - SQSQueue
       - Arn
   QueueName:
     Description: Name newly created SQS Queue
-    Value: !GetAtt
+    Value:
+      !GetAtt
       - SQSQueue
       - QueueName
   DeadLetterQueueURL:
     Description: URL of newly created SQS Queue
-    Value: !If [ CreateDeadLetterQueue, !Ref MyDeadLetterQueue, "" ]
+    Value:
+      !If
+      - CreateDeadLetterQueue
+      - !Ref MyDeadLetterQueue
+      - ''
   DeadLetterQueueARN:
     Description: ARN of newly created SQS Queue
-    Value: !If [ CreateDeadLetterQueue, !GetAtt MyDeadLetterQueue.Arn, "" ]
+    Value:
+      !If
+      - CreateDeadLetterQueue
+      - !GetAtt MyDeadLetterQueue.Arn
+      - ''
   DeadLetterQueueName:
     Description: Name newly created SQS Queue
-    Value: !If [ CreateDeadLetterQueue, !GetAtt MyDeadLetterQueue.QueueName, "" ]
+    Value:
+      !If
+      - CreateDeadLetterQueue
+      - !GetAtt MyDeadLetterQueue.QueueName
+      - ''
+  SqsAwsAccessKeyId:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbAccessKeyId}"
+  SqsAwsSecretAccessKey:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbSecretAccessKey}"

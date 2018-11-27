@@ -1,51 +1,44 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: AWS Service Broker - Amazon Kinesis Data Stream (qs-1ob09h69o)
 Metadata:
-  'AWS::ServiceBroker::Specification':
+  AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-      - AWS
-      - Kinesis
-      - stream
+    - AWS
+    - Kinesis
+    - stream
     Name: kinesis
-    DisplayName: "Amazon Kinesis"
-    LongDescription: "Amazon Kinesis Data Streams enables you to build custom applications that process or analyze streaming data for specialized needs. Kinesis Data Streams can continuously capture and store terabytes of data per hour from hundreds of thousands of sources such as website clickstreams, financial transactions, social media feeds, IT logs, and location-tracking events."
-    ImageUrl: "https://s3.amazonaws.com/awsservicebroker/icons/AmazonKinesis_LARGE.png"
-    DocumentationUrl: 'https://aws.amazon.com/documentation/kinesis/'
-    ProviderDisplayName: "Amazon Web Services"
-    Bindings:
-      IAM:
-        AddKeypair: True
-        Policies:
-          - PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: Allow
-                  Action:
-                  - "translate:TranslateText"
-                  Resource: "*"
-      CFNOutputs: [ StreamName, StreamArn ]
+    DisplayName: Amazon Kinesis
+    LongDescription: Amazon Kinesis Data Streams enables you to build custom applications
+      that process or analyze streaming data for specialized needs. Kinesis Data Streams
+      can continuously capture and store terabytes of data per hour from hundreds
+      of thousands of sources such as website clickstreams, financial transactions,
+      social media feeds, IT logs, and location-tracking events.
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonKinesis_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/documentation/kinesis/
+    ProviderDisplayName: Amazon Web Services
     ServicePlans:
-        default:
-          DisplayName: "Standard"
-          Description: 'Amazon Kinesis'
-          LongDescription: "Creates a Kinesis stream"
-          Cost: "https://aws.amazon.com/kinesis/pricing/"
-  'AWS::CloudFormation::Interface':
+      default:
+        DisplayName: Standard
+        Description: Amazon Kinesis
+        LongDescription: Creates a Kinesis stream
+        Cost: https://aws.amazon.com/kinesis/pricing/
+        ParameterValues: {}
+  AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: "Kinesis Stream Configuration"
-        Parameters:
-          - RetentionPeriodHours
-          - ShardCount
-          - StreamEncrypted
+    - Label:
+        default: Kinesis Stream Configuration
+      Parameters:
+      - RetentionPeriodHours
+      - ShardCount
+      - StreamEncrypted
     ParameterLabels:
       RetentionPeriodHours:
-        default: "Retention Period Hours"
+        default: Retention Period Hours
       ShardCount:
-        default: "Shard Count"
+        default: Shard Count
       StreamEncrypted:
-        default: "Stream Encrypted"
+        default: Stream Encrypted
 Parameters:
   RetentionPeriodHours:
     Type: String
@@ -64,23 +57,25 @@ Parameters:
     Type: String
     Default: 'True'
     AllowedValues:
-      - 'True'
-      - 'False'
+    - 'True'
+    - 'False'
 Conditions:
-  EncryptionEnabled: !Equals
-    - !Ref 'StreamEncrypted'
+  EncryptionEnabled:
+    !Equals
+    - !Ref StreamEncrypted
     - 'True'
 Resources:
   KinesisStream:
     Type: AWS::Kinesis::Stream
     Properties:
-      RetentionPeriodHours: !Ref 'RetentionPeriodHours'
-      ShardCount: !Ref 'ShardCount'
-      StreamEncryption: !If
+      RetentionPeriodHours: !Ref RetentionPeriodHours
+      ShardCount: !Ref ShardCount
+      StreamEncryption:
+        !If
         - EncryptionEnabled
-        - KeyId: !GetAtt 'KMSKey.Arn'
+        - KeyId: !GetAtt KMSKey.Arn
           EncryptionType: KMS
-        - !Ref 'AWS::NoValue'
+        - !Ref AWS::NoValue
   KMSKey:
     Condition: EncryptionEnabled
     Type: AWS::KMS::Key
@@ -91,28 +86,141 @@ Resources:
         Version: '2012-10-17'
         Id: key-default-1
         Statement:
-          - Sid: Allow administration of the key
-            Effect: Allow
-            Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+        - Sid: Allow administration of the key
+          Effect: Allow
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Action:
+          - kms:Create*
+          - kms:Describe*
+          - kms:Enable*
+          - kms:List*
+          - kms:Put*
+          - kms:Update*
+          - kms:Revoke*
+          - kms:Disable*
+          - kms:Get*
+          - kms:Delete*
+          - kms:ScheduleKeyDeletion
+          - kms:CancelKeyDeletion
+          Resource: '*'
+  AWSSBInjectedIAMUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: iam_user_creation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
             Action:
-              - "kms:Create*"
-              - "kms:Describe*"
-              - "kms:Enable*"
-              - "kms:List*"
-              - "kms:Put*"
-              - "kms:Update*"
-              - "kms:Revoke*"
-              - "kms:Disable*"
-              - "kms:Get*"
-              - "kms:Delete*"
-              - "kms:ScheduleKeyDeletion"
-              - "kms:CancelKeyDeletion"
+            - iam:CreateAccessKey
+            - iam:PutUserPolicy
+            - iam:ListAttachedUserPolicies
+            - iam:DeleteUserPolicy
+            - iam:AttachUserPolicy
+            - iam:DeleteUser
+            - iam:ListUserPolicies
+            - iam:DetachUserPolicy
+            - iam:CreateUser
+            - iam:DeleteAccessKey
+            - iam:ListAccessKeys
+            - ssm:DeleteParameters
+            - ssm:PutParameter
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
             Resource: '*'
+  AWSSBInjectedIAMUserLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedIAMUserRole
+        - Arn
+      Code:
+        ZipFile: |-
+          import cfnresponse
+          import random
+          import string
+          import boto3
+          import traceback
+
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          iam_client = boto3.client('iam')
+          ssm_client = boto3.client('ssm')
+
+
+          def handler(event, context):
+              response_code = cfnresponse.SUCCESS
+              response_data = {}
+              if event['RequestType'] == 'Create':
+                  phys_id = ''.join(random.choice(alnum) for _ in range(16))
+              else:
+                  phys_id = event['PhysicalResourceId']
+              response_data['AsbAccessKeyId'] = 'AsbAccessKeyId-%s' % phys_id
+              response_data['AsbSecretAccessKey'] = 'AsbSecretAccessKey-%s' % phys_id
+              try:
+                  username = event['ResourceProperties']['Username']
+                  if event['RequestType'] == 'Create':
+                      response = iam_client.create_access_key(UserName=username)
+                      aws_access_key_id = response['AccessKey']['AccessKeyId']
+                      secret_access_key = response['AccessKey']['SecretAccessKey']
+                      ssm_client.put_parameter(Name=response_data['AsbAccessKeyId'], Value=aws_access_key_id, Type='SecureString')
+                      ssm_client.put_parameter(Name=response_data['AsbSecretAccessKey'], Value=secret_access_key, Type='SecureString')
+                  elif event['RequestType'] == 'Update':
+                      print('Update operation unsupported')
+                      response_code = cfnresponse.FAILED
+                  elif event['RequestType'] == 'Delete':
+                      for access_key in iam_client.list_access_keys(UserName=username)['AccessKeyMetadata']:
+                          iam_client.delete_access_key(UserName=username, AccessKeyId=access_key['AccessKeyId'])
+                      ssm_client.delete_parameters(Names=[response_data['AsbAccessKeyId'], response_data['AsbSecretAccessKey']])
+                  cfnresponse.send(event, context, response_code, response_data, phys_id)
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedIAMUser:
+    Type: AWS::IAM::User
+  AWSSBInjectedIAMUserCreator:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedIAMUserLambda.Arn
+      Username: !Ref AWSSBInjectedIAMUser
+  AWSSBInjectedIAMUserPolicy1:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AWSSBInjectedIAMUserPolicy1
+      Users:
+      - !Ref AWSSBInjectedIAMUser
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - translate:TranslateText
+          Resource: '*'
 Outputs:
   StreamName:
     Description: The stream name or physical ID
-    Value: !Ref 'KinesisStream'
+    Value: !Ref KinesisStream
   StreamArn:
     Description: The ARN of the stream
-    Value: !GetAtt 'KinesisStream.Arn'
+    Value: !GetAtt KinesisStream.Arn
+  KinesisAwsAccessKeyId:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbAccessKeyId}"
+  KinesisAwsSecretAccessKey:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbSecretAccessKey}"

@@ -1,120 +1,86 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: 'AWS Service Broker - Amazon S3 (qs-1nt0fs937)'
+Description: AWS Service Broker - Amazon S3 (qs-1nt0fs937)
 Metadata:
-  'AWS::ServiceBroker::Specification':
+  AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-      - AWS
-      - S3
-      - Object Storage
+    - AWS
+    - S3
+    - Object Storage
     Name: s3
-    DisplayName: "Amazon S3"
-    LongDescription: "Amazon Simple Storage Service (Amazon S3) is storage for the Internet. You can use Amazon S3 to store and retrieve any amount of data at any time, from anywhere on the web. You can accomplish these tasks using the simple and intuitive web interface of the AWS Management Console."
-    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/Storage_AmazonS3_LARGE.png"
+    DisplayName: Amazon S3
+    LongDescription: Amazon Simple Storage Service (Amazon S3) is storage for the
+      Internet. You can use Amazon S3 to store and retrieve any amount of data at
+      any time, from anywhere on the web. You can accomplish these tasks using the
+      simple and intuitive web interface of the AWS Management Console.
+    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Storage_AmazonS3_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/s3/'
-    ProviderDisplayName: "Amazon Web Services"
-    Bindings:
-      IAM:
-        AddKeypair: True
-        Policies:
-          - PolicyDocument: {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Action": [
-                        "s3:AbortMultipartUpload",
-                        "s3:DeleteObject",
-                        "s3:GetObject",
-                        "s3:GetObjectAcl",
-                        "s3:GetObjectTagging",
-                        "s3:GetObjectTorrent",
-                        "s3:GetObjectVersion",
-                        "s3:GetObjectVersionAcl",
-                        "s3:GetObjectVersionTagging",
-                        "s3:GetObjectVersionTorrent",
-                        "s3:ListBucketMultipartUploads",
-                        "s3:ListMultipartUploadParts",
-                        "s3:PutObject",
-                        "s3:PutObjectAcl",
-                        "s3:PutObjectTagging"
-                    ],
-                    "Effect": "Allow",
-                    "Resource": !If [ RetainBucket, !Sub "${S3BucketRetain.Arn}/*", !Sub "${S3BucketDelete.Arn}/*" ]
-                },
-                {
-                    "Action": [
-                        "s3:ListBucket"
-                    ],
-                    "Resource": !If [ RetainBucket, !GetAtt S3BucketRetain.Arn, !GetAtt S3BucketDelete.Arn ],
-                    "Effect": "Allow"
-                }
-            ]
-          }
+    ProviderDisplayName: Amazon Web Services
     ServicePlans:
-        production:
-          DisplayName: "Production"
-          Description: 'S3 Bucket pre-configured with production best practices'
-          LongDescription: "Amazon Simple Storage Service (Amazon S3) is storage for the Internet. You can use Amazon S3 to store and retrieve any amount of data at any time, from anywhere on the web. You can accomplish these tasks using the simple and intuitive web interface of the AWS Management Console."
-          Cost: "https://aws.amazon.com/s3/pricing/"
-          ParameterValues:
-            BucketName: "Auto"
-            LoggingPrefix: S3AccessLogs
-            # TODO: add glacier lifecycle for previous versions
-            EnableGlacierLifeCycle: "False"
-            GlacierLifeCycleTransitionInDays: "30"
-            LifeCyclePrefix: Archive
-            EnableVersioning: "True"
-            BucketAccessControl: Private
-            EnableLogging: "True"
-            PreventDeletion: "True"
-        custom:
-          DisplayName: "Custom"
-          Description: 'S3 Bucket pre-configured with custom configuration'
-          LongDescription: "Amazon Simple Storage Service (Amazon S3) is storage for the Internet. You can use Amazon S3 to store and retrieve any amount of data at any time, from anywhere on the web. You can accomplish these tasks using the simple and intuitive web interface of the AWS Management Console."
-          Cost: "https://aws.amazon.com/s3/pricing/"
-  'AWS::CloudFormation::Interface':
+      production:
+        DisplayName: Production
+        Description: S3 Bucket pre-configured with production best practices
+        LongDescription: Amazon Simple Storage Service (Amazon S3) is storage for
+          the Internet. You can use Amazon S3 to store and retrieve any amount of
+          data at any time, from anywhere on the web. You can accomplish these tasks
+          using the simple and intuitive web interface of the AWS Management Console.
+        Cost: https://aws.amazon.com/s3/pricing/
+        ParameterValues:
+          BucketName: Auto
+          LoggingPrefix: S3AccessLogs
+          EnableGlacierLifeCycle: 'False'
+          GlacierLifeCycleTransitionInDays: '30'
+          LifeCyclePrefix: Archive
+          EnableVersioning: 'True'
+          BucketAccessControl: Private
+          EnableLogging: 'True'
+      custom:
+        DisplayName: Custom
+        Description: S3 Bucket pre-configured with custom configuration
+        LongDescription: Amazon Simple Storage Service (Amazon S3) is storage for
+          the Internet. You can use Amazon S3 to store and retrieve any amount of
+          data at any time, from anywhere on the web. You can accomplish these tasks
+          using the simple and intuitive web interface of the AWS Management Console.
+        Cost: https://aws.amazon.com/s3/pricing/
+        ParameterValues: {}
+  AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: "S3 Bucket Settings"
-        Parameters:
-          - BucketName
-          - LoggingPrefix
-          - EnableLogging
-          - EnableGlacierLifeCycle
-          - GlacierLifeCycleTransitionInDays
-          - EnableVersioning
-          - LifeCyclePrefix
-          - BucketAccessControl
-          - PreventDeletion
+    - Label:
+        default: S3 Bucket Settings
+      Parameters:
+      - BucketName
+      - LoggingPrefix
+      - EnableLogging
+      - EnableGlacierLifeCycle
+      - GlacierLifeCycleTransitionInDays
+      - EnableVersioning
+      - LifeCyclePrefix
+      - BucketAccessControl
     ParameterLabels:
       BucketName:
-        default: "BucketName"
+        default: BucketName
       BucketAccessControl:
-        default: "Bucket Access Control"
+        default: Bucket Access Control
       LifeCyclePrefix:
-        default: "LifeCycle Prefix"
+        default: LifeCycle Prefix
       EnableVersioning:
-        default: "Enable Versioning"
+        default: Enable Versioning
       GlacierLifeCycleTransitionInDays:
-        default: "Glacier LifeCycle Transition In Days"
+        default: Glacier LifeCycle Transition In Days
       EnableGlacierLifeCycle:
-        default: "Enable Glacier LifeCycle"
+        default: Enable Glacier LifeCycle
       EnableLogging:
-        default: "Enable Logging"
+        default: Enable Logging
       LoggingPrefix:
-        default: "Logging Prefix"
-      PreventDeletion:
-        default: "Prevent Deletion"
+        default: Logging Prefix
 Parameters:
   BucketName:
-    Description: >-
-      Must contain only lowercase letters, numbers, periods (.), and hyphens. If set to Auto, a bucket name will be generated
-      (-),Cannot end in numbers
+    Description: Must contain only lowercase letters, numbers, periods (.), and hyphens.
+      If set to Auto, a bucket name will be generated (-),Cannot end in numbers
     Type: String
-    Default: "Auto"
+    Default: Auto
   LoggingPrefix:
-    Description: >-
-      Must contain only lowercase letters, numbers, periods (.), and hyphens
+    Description: Must contain only lowercase letters, numbers, periods (.), and hyphens
       (-),Cannot end in numbers
     Type: String
     Default: Archive
@@ -122,15 +88,15 @@ Parameters:
     Description: enable or discable S3 logging
     Type: String
     AllowedValues:
-      - 'True'
-      - 'False'
+    - 'True'
+    - 'False'
     Default: 'True'
   EnableGlacierLifeCycle:
     Description: enable archiving to Glacier Storage
     Type: String
     AllowedValues:
-      - 'True'
-      - 'False'
+    - 'True'
+    - 'False'
     Default: 'False'
   GlacierLifeCycleTransitionInDays:
     Description: Define how many days objects should exist before being moved to Glacier
@@ -140,12 +106,11 @@ Parameters:
     Description: enable versioning
     Type: String
     AllowedValues:
-      - 'True'
-      - 'False'
+    - 'True'
+    - 'False'
     Default: 'False'
   LifeCyclePrefix:
-    Description: >-
-      Must contain only lowercase letters, numbers, periods (.), and hyphens
+    Description: Must contain only lowercase letters, numbers, periods (.), and hyphens
       (-),Cannot end in numbers
     Type: String
     Default: Archive
@@ -153,106 +118,227 @@ Parameters:
     Description: define if the bucket can be accessed from public or private locations
     Type: String
     AllowedValues:
-      - Private
-      - PublicRead
-      - PublicReadWrite
-      - AuthenticatedRead
-      - LogDeliveryWrite
-      - BucketOwnerRead
-      - BucketOwnerFullControl
-      - AwsExecRead
-    Default: "Private"
-  PreventDeletion:
-    Description: With the PreventDeletion attribute you can preserve a resource when its stack is deleted
-    Type: String
-    AllowedValues:
-      - 'True'
-      - 'False'
-    Default: "True"
+    - Private
+    - PublicRead
+    - PublicReadWrite
+    - AuthenticatedRead
+    - LogDeliveryWrite
+    - BucketOwnerRead
+    - BucketOwnerFullControl
+    - AwsExecRead
+    Default: Private
 Conditions:
-  UseLogging: !Equals 
+  UseLogging:
+    !Equals
     - !Ref EnableLogging
     - 'True'
-  UseGlacierLifeCycle: !Equals 
+  UseGlacierLifeCycle:
+    !Equals
     - !Ref EnableGlacierLifeCycle
     - 'True'
-  UseVersioning: !Equals 
+  UseVersioning:
+    !Equals
     - !Ref EnableVersioning
     - 'True'
-  AutoBucketName: !Equals
+  AutoBucketName:
+    !Equals
     - !Ref BucketName
-    - "Auto"
-  RetainBucket: !Equals
-    - !Ref PreventDeletion
-    - "True"
-  DeleteBucket: !Equals
-    - !Ref PreventDeletion
-    - "False"
+    - Auto
 Resources:
-  S3BucketRetain:
-    Type: 'AWS::S3::Bucket'
+  S3bucket:
+    Type: AWS::S3::Bucket
     Properties:
-      BucketName: !If [ AutoBucketName, !Ref "AWS::NoValue", !Ref BucketName ]
+      BucketName:
+        !If
+        - AutoBucketName
+        - !Ref AWS::NoValue
+        - !Ref BucketName
       AccessControl: !Ref BucketAccessControl
       LifecycleConfiguration:
         Rules:
-          - Id: GlacierRule
-            Prefix: !Ref LifeCyclePrefix
-            Status: Enabled
-            ExpirationInDays: '365'
-            Transitions:
-              - TransitionInDays: !Ref GlacierLifeCycleTransitionInDays
-                StorageClass: Glacier
-      LoggingConfiguration: !If 
+        - Id: GlacierRule
+          Prefix: !Ref LifeCyclePrefix
+          Status: Enabled
+          ExpirationInDays: '365'
+          Transitions:
+          - TransitionInDays: !Ref GlacierLifeCycleTransitionInDays
+            StorageClass: Glacier
+      LoggingConfiguration:
+        !If
         - UseLogging
         - DestinationBucketName: !Ref LoggingBucket
           LogFilePrefix: !Ref LoggingPrefix
-        - !Ref 'AWS::NoValue'
-      VersioningConfiguration: !If 
+        - !Ref AWS::NoValue
+      VersioningConfiguration:
+        !If
         - UseVersioning
         - Status: Enabled
-        - !Ref 'AWS::NoValue'
+        - !Ref AWS::NoValue
     DeletionPolicy: Retain
-    Condition: RetainBucket
-  S3BucketDelete:
-    Type: 'AWS::S3::Bucket'
-    Properties:
-      BucketName: !If [ AutoBucketName, !Ref "AWS::NoValue", !Ref BucketName ]
-      AccessControl: !Ref BucketAccessControl
-      LifecycleConfiguration:
-        Rules:
-          - Id: GlacierRule
-            Prefix: !Ref LifeCyclePrefix
-            Status: Enabled
-            ExpirationInDays: '365'
-            Transitions:
-              - TransitionInDays: !Ref GlacierLifeCycleTransitionInDays
-                StorageClass: Glacier
-      LoggingConfiguration: !If
-        - UseLogging
-        - DestinationBucketName: !Ref LoggingBucket
-          LogFilePrefix: !Ref LoggingPrefix
-        - !Ref 'AWS::NoValue'
-      VersioningConfiguration: !If
-        - UseVersioning
-        - Status: Enabled
-        - !Ref 'AWS::NoValue'
-    DeletionPolicy: Delete
-    Condition: DeleteBucket
   LoggingBucket:
     Condition: UseLogging
-    Type: 'AWS::S3::Bucket'
+    Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     Properties:
       AccessControl: LogDeliveryWrite
-      BucketName: !If [ AutoBucketName, !Ref "AWS::NoValue", !Join [ "-", [ !Ref BucketName, 'logging' ] ] ]
+      BucketName:
+        !If
+        - AutoBucketName
+        - !Ref AWS::NoValue
+        - !Join
+          - '-'
+          - - !Ref BucketName
+            - logging
+  AWSSBInjectedIAMUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: iam_user_creation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - iam:CreateAccessKey
+            - iam:PutUserPolicy
+            - iam:ListAttachedUserPolicies
+            - iam:DeleteUserPolicy
+            - iam:AttachUserPolicy
+            - iam:DeleteUser
+            - iam:ListUserPolicies
+            - iam:DetachUserPolicy
+            - iam:CreateUser
+            - iam:DeleteAccessKey
+            - iam:ListAccessKeys
+            - ssm:DeleteParameters
+            - ssm:PutParameter
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedIAMUserLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedIAMUserRole
+        - Arn
+      Code:
+        ZipFile: |-
+          import cfnresponse
+          import random
+          import string
+          import boto3
+          import traceback
+
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          iam_client = boto3.client('iam')
+          ssm_client = boto3.client('ssm')
+
+
+          def handler(event, context):
+              response_code = cfnresponse.SUCCESS
+              response_data = {}
+              if event['RequestType'] == 'Create':
+                  phys_id = ''.join(random.choice(alnum) for _ in range(16))
+              else:
+                  phys_id = event['PhysicalResourceId']
+              response_data['AsbAccessKeyId'] = 'AsbAccessKeyId-%s' % phys_id
+              response_data['AsbSecretAccessKey'] = 'AsbSecretAccessKey-%s' % phys_id
+              try:
+                  username = event['ResourceProperties']['Username']
+                  if event['RequestType'] == 'Create':
+                      response = iam_client.create_access_key(UserName=username)
+                      aws_access_key_id = response['AccessKey']['AccessKeyId']
+                      secret_access_key = response['AccessKey']['SecretAccessKey']
+                      ssm_client.put_parameter(Name=response_data['AsbAccessKeyId'], Value=aws_access_key_id, Type='SecureString')
+                      ssm_client.put_parameter(Name=response_data['AsbSecretAccessKey'], Value=secret_access_key, Type='SecureString')
+                  elif event['RequestType'] == 'Update':
+                      print('Update operation unsupported')
+                      response_code = cfnresponse.FAILED
+                  elif event['RequestType'] == 'Delete':
+                      for access_key in iam_client.list_access_keys(UserName=username)['AccessKeyMetadata']:
+                          iam_client.delete_access_key(UserName=username, AccessKeyId=access_key['AccessKeyId'])
+                      ssm_client.delete_parameters(Names=[response_data['AsbAccessKeyId'], response_data['AsbSecretAccessKey']])
+                  cfnresponse.send(event, context, response_code, response_data, phys_id)
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedIAMUser:
+    Type: AWS::IAM::User
+  AWSSBInjectedIAMUserCreator:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedIAMUserLambda.Arn
+      Username: !Ref AWSSBInjectedIAMUser
+  AWSSBInjectedIAMUserPolicy1:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AWSSBInjectedIAMUserPolicy1
+      Users:
+      - !Ref AWSSBInjectedIAMUser
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - s3:AbortMultipartUpload
+          - s3:DeleteObject
+          - s3:GetObject
+          - s3:GetObjectAcl
+          - s3:GetObjectTagging
+          - s3:GetObjectTorrent
+          - s3:GetObjectVersion
+          - s3:GetObjectVersionAcl
+          - s3:GetObjectVersionTagging
+          - s3:GetObjectVersionTorrent
+          - s3:ListBucketMultipartUploads
+          - s3:ListMultipartUploadParts
+          - s3:PutObject
+          - s3:PutObjectAcl
+          - s3:PutObjectTagging
+          Effect: Allow
+          Resource: !Sub ${S3bucket.Arn}/*
+        - Action:
+          - s3:ListBucket
+          Resource: !GetAtt S3bucket.Arn
+          Effect: Allow
 Outputs:
   BucketName:
-    Value: !If [ RetainBucket, !Ref S3BucketRetain, !Ref S3BucketDelete ]
+    Value: !Ref S3bucket
     Description: Name of the sample Amazon S3 bucket.
   BucketArn:
-    Value: !If [ RetainBucket, !GetAtt S3BucketRetain.Arn, !GetAtt S3BucketDelete.Arn]
+    Value: !GetAtt S3bucket.Arn
     Description: Name of the Amazon S3 bucket
   LoggingBucketName:
-    Value: !If [ UseLogging, !If [ AutoBucketName, !Ref LoggingBucket, !Join [ "-", [ !Ref BucketName, 'logging' ] ] ], "" ]
+    Value:
+      !If
+      - UseLogging
+      - !If
+        - AutoBucketName
+        - !Ref LoggingBucket
+        - !Join
+          - '-'
+          - - !Ref BucketName
+            - logging
+      - ''
     Description: Name of the logging bucket.
+  S3AwsAccessKeyId:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbAccessKeyId}"
+  S3AwsSecretAccessKey:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbSecretAccessKey}"
+  S3Region:
+    Value: !Ref AWS::Region

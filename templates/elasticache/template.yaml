@@ -1,213 +1,203 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: 'AWS Service Broker - Amazon ElastiCache for memcached (qs-1nt0fs92c)'
+Description: AWS Service Broker - Amazon ElastiCache for memcached (qs-1nt0fs92c)
 Metadata:
-  'AWS::ServiceBroker::Specification':
+  AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-      - AWS
-      - RDS
-      - elasticache
-      - memcache
+    - AWS
+    - RDS
+    - elasticache
+    - memcache
     Name: elasticache
-    DisplayName: "Amazon ElastiCache"
-    LongDescription: >-
-      Amazon ElastiCache is a web service that makes it easy to set up, manage,
-      and scale distributed in-memory cache environments in the cloud. It provides
-      a high performance, resizeable, and cost-effective in-memory cache, while
-      removing the complexity associated with deploying and managing a distributed
+    DisplayName: Amazon ElastiCache
+    LongDescription: Amazon ElastiCache is a web service that makes it easy to set
+      up, manage, and scale distributed in-memory cache environments in the cloud.
+      It provides a high performance, resizeable, and cost-effective in-memory cache,
+      while removing the complexity associated with deploying and managing a distributed
       cache environment.
-    ImageUrl: "https://s3.amazonaws.com/thp-aws-icons-dev/Database_AmazonElasticCache_LARGE.png"
-    DocumentationUrl: 'https://aws.amazon.com/documentation/elasticache/'
-    ProviderDisplayName: "Amazon Web Services"
-    Bindings:
-      IAM:
-        AddKeypair: False
+    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Database_AmazonElasticCache_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/documentation/elasticache/
+    ProviderDisplayName: Amazon Web Services
     ServicePlans:
       production:
-        DisplayName: "Production"
-        Description: 'Configuration designed for production deployments'
-        LongDescription: "Creates an Amazon ElastiCache for memcached, optimised for production use"
-        Cost: "https://aws.amazon.com/elasticache/pricing/"
+        DisplayName: Production
+        Description: Configuration designed for production deployments
+        LongDescription: Creates an Amazon ElastiCache for memcached, optimised for
+          production use
+        Cost: https://aws.amazon.com/elasticache/pricing/
         ParameterValues:
-          ClusterType: "multi-node"
-          AllowVersionUpgrade: "False"
-          PortNumber: "6379"
-          AZMode: "cross-az"
-          NumberOfAvailabilityZones: "2"
-          AvailabilityZones: "Auto"
-          CidrBlocks: "Auto"
-          CidrSize: "26"
+          ClusterType: multi-node
+          AllowVersionUpgrade: 'False'
+          PortNumber: '6379'
+          AZMode: cross-az
+          NumberOfAvailabilityZones: '2'
+          AvailabilityZones: Auto
+          CidrBlocks: Auto
+          CidrSize: '26'
       custom:
-        DisplayName: "Custom"
-        Description: 'Custom Configuration for Advanced deployments'
-        LongDescription: "Creates an Amazon ElastiCache for memcached with custom configuration"
-        Cost: "https://aws.amazon.com/elasticache/pricing/"
-  'AWS::CloudFormation::Interface':
+        DisplayName: Custom
+        Description: Custom Configuration for Advanced deployments
+        LongDescription: Creates an Amazon ElastiCache for memcached with custom configuration
+        Cost: https://aws.amazon.com/elasticache/pricing/
+        ParameterValues: {}
+  AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: "Elasticache Settings"
-        Parameters:
-          - ClusterType
-          - NumCacheNodes
-          - EngineVersion
-          - CacheNodeType
-          - AllowVersionUpgrade
-      - Label:
-          default: "Network and Security"
-        Parameters:
-          - VpcId
-          - PortNumber
-          - AZMode
-          - NumberOfAvailabilityZones
-          - AvailabilityZones
-          - CidrBlocks
-          - CidrSize
-          - AccessCidr
-      - Label:
-          default: "Maintenance"
-        Parameters:
-          - PreferredMaintenanceWindowStartTime
-          - PreferredMaintenanceWindowEndTime
+    - Label:
+        default: Elasticache Settings
+      Parameters:
+      - ClusterType
+      - NumCacheNodes
+      - EngineVersion
+      - CacheNodeType
+      - AllowVersionUpgrade
+    - Label:
+        default: Network and Security
+      Parameters:
+      - VpcId
+      - PortNumber
+      - AZMode
+      - NumberOfAvailabilityZones
+      - AvailabilityZones
+      - CidrBlocks
+      - CidrSize
+      - AccessCidr
+    - Label:
+        default: Maintenance
+      Parameters:
+      - PreferredMaintenanceWindowStartTime
+      - PreferredMaintenanceWindowEndTime
     ParameterLabels:
       ClusterType:
-        default: "Cluster Type"
+        default: Cluster Type
       NumCacheNodes:
-        default: "Number of Cache Nodes"
+        default: Number of Cache Nodes
       EngineVersion:
-        default: "Engine Version"
+        default: Engine Version
       CacheNodeType:
-        default: "Cache Node Type"
+        default: Cache Node Type
       AllowVersionUpgrade:
-        default: "Allow Version Upgrade"
+        default: Allow Version Upgrade
       VpcId:
-        default: "Vpc ID"
+        default: Vpc ID
       PortNumber:
-        default: "Port Number"
+        default: Port Number
       AZMode:
-        default: "AZ Mode"
+        default: AZ Mode
       NumberOfAvailabilityZones:
-        default: "Number Of Availability Zones"
+        default: Number Of Availability Zones
       AvailabilityZones:
-        default: "Availability Zones"
+        default: Availability Zones
       CidrBlocks:
-        default: "CIDR Blocks"
+        default: CIDR Blocks
       CidrSize:
-        default: "CIDR Size"
+        default: CIDR Size
       AccessCidr:
-        default: "Access CIDR"
+        default: Access CIDR
       PubliclyAccessible:
-        default: "Publicly Accessible"
-      AccessCidr:
-        default: "Access CIDR"
+        default: Publicly Accessible
       PreferredMaintenanceWindowStartTime:
-        default: "Preferred MaintenanceWindow Start Time"
+        default: Preferred MaintenanceWindow Start Time
       PreferredMaintenanceWindowEndTime:
-        default: "Preferred Maintenance Window End Time"
+        default: Preferred Maintenance Window End Time
 Parameters:
   VpcId:
     Description: The ID of the VPC to launch the Memcache cluster into
-    Type: 'AWS::EC2::VPC::Id'
+    Type: AWS::EC2::VPC::Id
   NumberOfAvailabilityZones:
-    Description: >-
-      Quantity of subnets to use, if selecting more than 2 the region this stack
-      is in must have at least that many Availability Zones
+    Description: Quantity of subnets to use, if selecting more than 2 the region this
+      stack is in must have at least that many Availability Zones
     Type: String
     Default: '3'
     AllowedValues:
-      - '2'
-      - '3'
-      - '4'
-      - '5'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
   PreferredMaintenanceWindowDay:
     Description: The day of the week which ElastiCache maintenance will be performed
     Type: String
     Default: Mon
     AllowedValues:
-      - Mon
-      - Tue
-      - Wed
-      - Thu
-      - Fri
-      - Sat
-      - Sun
+    - Mon
+    - Tue
+    - Wed
+    - Thu
+    - Fri
+    - Sat
+    - Sun
   PreferredMaintenanceWindowStartTime:
-    Description: >-
-      The weekly start time in UTC for the ElastiCache maintenance window, must
-      be less than PreferredMaintenanceWindowEndTime and cannot overlap with
+    Description: The weekly start time in UTC for the ElastiCache maintenance window,
+      must be less than PreferredMaintenanceWindowEndTime and cannot overlap with
       PreferredBackupWindow
     Type: String
-    Default: '04:00'
+    Default: 04:00
     AllowedValues:
-      - '00:00'
-      - '01:00'
-      - '02:00'
-      - '03:00'
-      - '04:00'
-      - '05:00'
-      - '06:00'
-      - '07:00'
-      - '08:00'
-      - '09:00'
-      - '10:00'
-      - '11:00'
-      - '12:00'
-      - '13:00'
-      - '14:00'
-      - '15:00'
-      - '16:00'
-      - '17:00'
-      - '18:00'
-      - '19:00'
-      - '20:00'
-      - '21:00'
-      - '22:00'
+    - 00:00
+    - 01:00
+    - 02:00
+    - 03:00
+    - 04:00
+    - 05:00
+    - 06:00
+    - 07:00
+    - 08:00
+    - 09:00
+    - '10:00'
+    - '11:00'
+    - '12:00'
+    - '13:00'
+    - '14:00'
+    - '15:00'
+    - '16:00'
+    - '17:00'
+    - '18:00'
+    - '19:00'
+    - '20:00'
+    - '21:00'
+    - '22:00'
   PreferredMaintenanceWindowEndTime:
-    Description: >-
-      The weekly end time in UTC for the ElastiCache maintenance window, must be
-      more than PreferredMaintenanceWindowEndTime and cannot overlap with
+    Description: The weekly end time in UTC for the ElastiCache maintenance window,
+      must be more than PreferredMaintenanceWindowEndTime and cannot overlap with
       PreferredBackupWindow
     Type: String
-    Default: '06:00'
+    Default: 06:00
     AllowedValues:
-      - '00:00'
-      - '01:00'
-      - '02:00'
-      - '03:00'
-      - '04:00'
-      - '05:00'
-      - '06:00'
-      - '07:00'
-      - '08:00'
-      - '09:00'
-      - '10:00'
-      - '11:00'
-      - '12:00'
-      - '13:00'
-      - '14:00'
-      - '15:00'
-      - '16:00'
-      - '17:00'
-      - '18:00'
-      - '19:00'
-      - '20:00'
-      - '21:00'
-      - '22:00'
+    - 00:00
+    - 01:00
+    - 02:00
+    - 03:00
+    - 04:00
+    - 05:00
+    - 06:00
+    - 07:00
+    - 08:00
+    - 09:00
+    - '10:00'
+    - '11:00'
+    - '12:00'
+    - '13:00'
+    - '14:00'
+    - '15:00'
+    - '16:00'
+    - '17:00'
+    - '18:00'
+    - '19:00'
+    - '20:00'
+    - '21:00'
+    - '22:00'
   AvailabilityZones:
-    Description: >-
-      list of availability zones to use, must be the same quantity as specified
+    Description: list of availability zones to use, must be the same quantity as specified
       in NumberOfAvailabilityZones
     Type: CommaDelimitedList
-    Default: "Auto"
+    Default: Auto
   CidrBlocks:
-    Description: >-
-      comma seperated list of CIDR blocks to place ElastiCache into, must be the
-      same quantity as specified in NumberOfAvailabilityZones.
-      If auto is specified unused cidr space in the vpc will be used
+    Description: comma seperated list of CIDR blocks to place ElastiCache into, must
+      be the same quantity as specified in NumberOfAvailabilityZones. If auto is specified
+      unused cidr space in the vpc will be used
     Type: CommaDelimitedList
-    Default: 'Auto'
+    Default: Auto
   CidrSize:
-    Description: >-
-      Size of Cidr block to allocate if CidrBlocks is set to Auto.
+    Description: Size of Cidr block to allocate if CidrBlocks is set to Auto.
     Type: String
     Default: '26'
   AccessCidr:
@@ -217,55 +207,53 @@ Parameters:
     Description: The compute and memory capacity of nodes in a cache cluster.
     Type: String
     AllowedValues:
-      - cache.t2.small
-      - cache.t2.medium
-      - cache.m3.medium
-      - cache.m3.large
-      - cache.m3.xlarge
-      - cache.m3.2xlarge
-      - cache.m4.medium
-      - cache.m4.large
-      - cache.m4.xlarge
-      - cache.m4.2xlarge
-      - cache.m4.4xlarge
-      - cache.m4.10xlarge
-      - cache.r4.large
-      - cache.r4.xlarge
-      - cache.r4.2xlarge
-      - cache.r4.4xlarge
-      - cache.r4.8xlarge
+    - cache.t2.small
+    - cache.t2.medium
+    - cache.m3.medium
+    - cache.m3.large
+    - cache.m3.xlarge
+    - cache.m3.2xlarge
+    - cache.m4.medium
+    - cache.m4.large
+    - cache.m4.xlarge
+    - cache.m4.2xlarge
+    - cache.m4.4xlarge
+    - cache.m4.10xlarge
+    - cache.r4.large
+    - cache.r4.xlarge
+    - cache.r4.2xlarge
+    - cache.r4.4xlarge
+    - cache.r4.8xlarge
     Default: cache.m4.large
   EngineVersion:
     Description: Family to be used with cluster or parameter group
     Type: String
     AllowedValues:
-      - 1.4.34
-      - 1.4.33
-      - 1.4.24
-      - 1.4.5
+    - 1.4.34
+    - 1.4.33
+    - 1.4.24
+    - 1.4.5
     Default: 1.4.34
   NumCacheNodes:
     Description: The number of cache nodes in the cluster.
     Type: String
     Default: '3'
   ClusterType:
-    Description: >-
-      The type of cluster. Specify single-node or multi-node (default).  Number
+    Description: The type of cluster. Specify single-node or multi-node (default).  Number
       of nodes must be greater than 1 for multi-node
     Type: String
     AllowedValues:
-      - single-node
-      - multi-node
+    - single-node
+    - multi-node
     Default: multi-node
   AllowVersionUpgrade:
-    Description: >-
-      Indicates that minor engine upgrades will be applied automatically to the
-      cache cluster during the maintenance window. The default value is true.
+    Description: Indicates that minor engine upgrades will be applied automatically
+      to the cache cluster during the maintenance window. The default value is true.
     Type: String
     Default: 'True'
     AllowedValues:
-      - 'True'
-      - 'False'
+    - 'True'
+    - 'False'
   PortNumber:
     Description: The port number for the Cluster to listen on
     Type: Number
@@ -273,19 +261,19 @@ Parameters:
     MinValue: '1150'
     MaxValue: '65535'
   AZMode:
-    Description: >-
-      Specifies whether the nodes in this Memcached cluster are created in a
-      single Availability Zone or created across multiple Availability Zones in
-      the cluster's region. This parameter is only supported for Memcached cache
-      clusters. If the AZMode and PreferredAvailabilityZones are not specified,
-      ElastiCache assumes single-az mode.
+    Description: Specifies whether the nodes in this Memcached cluster are created
+      in a single Availability Zone or created across multiple Availability Zones
+      in the cluster's region. This parameter is only supported for Memcached cache
+      clusters. If the AZMode and PreferredAvailabilityZones are not specified, ElastiCache
+      assumes single-az mode.
     Type: String
     Default: cross-az
     AllowedValues:
-      - single-az
-      - cross-az
+    - single-az
+    - cross-az
 Conditions:
-  3az: !Or
+  3az:
+    !Or
     - !Equals
       - !Ref NumberOfAvailabilityZones
       - '3'
@@ -295,22 +283,37 @@ Conditions:
     - !Equals
       - !Ref NumberOfAvailabilityZones
       - '5'
-  4az: !Or
+  4az:
+    !Or
     - !Equals
       - !Ref NumberOfAvailabilityZones
       - '4'
     - !Equals
       - !Ref NumberOfAvailabilityZones
       - '5'
-  5az: !Equals
+  5az:
+    !Equals
     - !Ref NumberOfAvailabilityZones
     - '5'
-  Cross-AZ: !Equals
+  Cross-AZ:
+    !Equals
     - !Ref AZMode
     - cross-az
+  AutoCidrs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref CidrBlocks
+    - Auto
+  AutoAzs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref AvailabilityZones
+    - Auto
 Resources:
   ElastiCacheCluster:
-    Type: 'AWS::ElastiCache::CacheCluster'
+    Type: AWS::ElastiCache::CacheCluster
     Properties:
       AutoMinorVersionUpgrade: !Ref AllowVersionUpgrade
       AZMode: !Ref AZMode
@@ -321,106 +324,353 @@ Resources:
       EngineVersion: !Ref EngineVersion
       NumCacheNodes: !Ref NumCacheNodes
       Port: !Ref PortNumber
-      PreferredAvailabilityZones: !Ref AvailabilityZones
-      PreferredMaintenanceWindow: !Sub >-
-        ${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}
+      PreferredAvailabilityZones:
+        !If
+        - AutoAzs
+        - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+        - !Ref AvailabilityZones
+      PreferredMaintenanceWindow: !Sub ${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}
       VpcSecurityGroupIds:
-        - !Ref ClusterSecurityGroup
+      - !Ref ClusterSecurityGroup
   ElasticacheParameterGroup:
-    Type: 'AWS::ElastiCache::ParameterGroup'
+    Type: AWS::ElastiCache::ParameterGroup
     Properties:
       CacheParameterGroupFamily: memcached1.4
-      Description: 'AWS Service Broker Elasticache cluster'
+      Description: AWS Service Broker Elasticache cluster
       Properties: {}
   ClusterSubnetGroup:
-    Type: 'AWS::ElastiCache::SubnetGroup'
+    Type: AWS::ElastiCache::SubnetGroup
     Properties:
-      Description: 'AWS Service Broker Elasticache cluster'
+      Description: AWS Service Broker Elasticache cluster
       SubnetIds:
-        - !Ref ClusterSubnet1
-        - !Ref ClusterSubnet2
-        - !If
-          - 3az
-          - !Ref ClusterSubnet3
-          - !Ref 'AWS::NoValue'
-        - !If
-          - 4az
-          - !Ref ClusterSubnet4
-          - !Ref 'AWS::NoValue'
-        - !If
-          - 5az
-          - !Ref ClusterSubnet5
-          - !Ref 'AWS::NoValue'
+      - !Ref ClusterSubnet1
+      - !Ref ClusterSubnet2
+      - !If
+        - 3az
+        - !Ref ClusterSubnet3
+        - !Ref AWS::NoValue
+      - !If
+        - 4az
+        - !Ref ClusterSubnet4
+        - !Ref AWS::NoValue
+      - !If
+        - 5az
+        - !Ref ClusterSubnet5
+        - !Ref AWS::NoValue
   ClusterSubnet1:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 0
-        - !Ref AvailabilityZones
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
       VpcId: !Ref VpcId
-      CidrBlock: !Select
+      CidrBlock:
+        !Select
         - 0
-        - !Ref CidrBlocks
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   ClusterSubnet2:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 1
-        - !Ref AvailabilityZones
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
       VpcId: !Ref VpcId
-      CidrBlock: !Select
+      CidrBlock:
+        !Select
         - 1
-        - !Ref CidrBlocks
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   ClusterSubnet3:
     Condition: 3az
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 2
-        - !Ref AvailabilityZones
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
       VpcId: !Ref VpcId
-      CidrBlock: !Select
+      CidrBlock:
+        !Select
         - 2
-        - !Ref CidrBlocks
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   ClusterSubnet4:
     Condition: 4az
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 3
-        - !Ref AvailabilityZones
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
       VpcId: !Ref VpcId
-      CidrBlock: !Select
+      CidrBlock:
+        !Select
         - 3
-        - !Ref CidrBlocks
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   ClusterSubnet5:
     Condition: 5az
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Select
+      AvailabilityZone:
+        !Select
         - 4
-        - !Ref AvailabilityZones
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
       VpcId: !Ref VpcId
-      CidrBlock: !Select
+      CidrBlock:
+        !Select
         - 4
-        - !Ref CidrBlocks
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
   ClusterSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: !Sub 'Allow Client connections'
+      GroupDescription: !Sub Allow Client connections
       VpcId: !Ref VpcId
       SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: !Ref PortNumber
-          ToPort: !Ref PortNumber
-          CidrIp: !Ref AccessCidr
+      - IpProtocol: tcp
+        FromPort: !Ref PortNumber
+        ToPort: !Ref PortNumber
+        CidrIp: !Ref AccessCidr
       SecurityGroupEgress:
-        - IpProtocol: '-1'
-          FromPort: '-1'
-          ToPort: '-1'
-          CidrIp: 0.0.0.0/0
+      - IpProtocol: '-1'
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: 0.0.0.0/0
+  AWSSBInjectedLambdaZipsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: []
+  AWSSBInjectedCopyZips:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedCopyZipsLambda.Arn
+      DestBucket: !Ref AWSSBInjectedLambdaZipsBucket
+      SourceBucket: awsservicebrokeralpha
+      Prefix: functions/
+      Objects:
+      - get_cidrs/lambda_function.zip
+      - get_azs/lambda_function.zip
+  AWSSBInjectedCopyZipsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+      - PolicyName: lambda-copier
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - arn:aws:s3:::awsservicebrokeralpha/*
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:DeleteObject
+            Resource:
+            - !Sub arn:aws:s3:::${AWSSBInjectedLambdaZipsBucket}/*
+  AWSSBInjectedCopyZipsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python2.7
+      Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+
+
+          def copy_objects(source_bucket, dest_bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              for o in objects:
+                  key = prefix + o
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': key
+                  }
+                  print('copy_source: %s' % copy_source)
+                  print('dest_bucket = %s' % dest_bucket)
+                  print('key = %s' % key)
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket, Key=key)
+
+
+          def delete_objects(bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3.delete_objects(Bucket=bucket, Delete=objects)
+
+
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+
+
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(dest_bucket, prefix, objects)
+                  else:
+                      copy_objects(source_bucket, dest_bucket, prefix, objects)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+  AWSSBInjectedGetCidrsRole:
+    Condition: AutoCidrs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeVpcs
+            - ec2:DescribeSubnets
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetCidrsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoCidrs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetCidrsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_cidrs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetCidrs:
+    Condition: AutoCidrs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetCidrsLambda.Arn
+      Qty: !Ref NumberOfAvailabilityZones
+      VpcId: !Ref VpcId
+      CidrSize: !Ref CidrSize
+  AWSSBInjectedGetAzsRole:
+    Condition: AutoAzs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetAzsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoAzs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetAzsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_azs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetAzs:
+    Condition: AutoAzs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetAzsLambda.Arn
+      Qty: !Ref NumberOfAvailabilityZones
 Outputs:
   EndpointAddress:
-    Value: !GetAtt
+    Value:
+      !GetAtt
       - ElastiCacheCluster
       - ConfigurationEndpoint.Address
