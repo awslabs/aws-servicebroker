@@ -171,16 +171,26 @@ objects:
             value: ${TARGETROLENAME}
           ports:
           - containerPort: 3199
-          readinessProbe:
+          livenessProbe:
+            failureThreshold: 3
             httpGet:
-              path: /healthz
-              scheme: HTTPS
-              port: 3199
-            failureThreshold: 1
-            initialDelaySeconds: 10
+            path: /healthz
+            port: 3199
+            scheme: HTTPS
+            initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
-            timeoutSeconds: 2
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+            path: /healthz
+            port: 3199
+            scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
           volumeMounts:
           - mountPath: /var/run/aws-servicebroker
             name: aws-servicebroker-ssl
