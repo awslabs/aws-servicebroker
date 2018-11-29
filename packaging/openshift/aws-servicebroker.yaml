@@ -128,28 +128,18 @@ objects:
           command:
           - /usr/local/bin/aws-servicebroker
           args:
-          - --port
-          - "3199"
-          - -v
-          - "${VERBOSITY}"
-          - -logtostderr
-          - --region
-          - "${REGION}"
-          - --s3Bucket
-          - "${S3BUCKET}"
-          - --s3Key
-          - "${S3KEY}"
-          - --s3Region
-          - "${S3REGION}"
-          - --tableName
-          - "${TABLENAME}"
-          - --brokerId
-          - "${BROKERID}"
-          - "--prescribeOverrides=${PRESCRIBE_OVERRIDES}"
-          - --tls-cert-file
-          - "/var/run/aws-servicebroker/awssb.crt"
-          - --tls-private-key-file
-          - "/var/run/aws-servicebroker/awssb.key"
+          - --logtostderr
+          - --port=3199
+          - --v=${VERBOSITY}
+          - --region=${REGION}
+          - --s3Bucket=${S3BUCKET}
+          - --s3Key=${S3KEY}
+          - --s3Region=${S3REGION}
+          - --tableName=${TABLENAME}
+          - --brokerId=${BROKERID}
+          - --prescribeOverrides=${PRESCRIBE_OVERRIDES}
+          - --tls-cert-file=/var/run/aws-servicebroker/awssb.crt
+          - --tls-private-key-file=/var/run/aws-servicebroker/awssb.key
           env:
           - name: AWS_ACCESS_KEY_ID
             valueFrom:

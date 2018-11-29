@@ -32,37 +32,24 @@ spec:
         command:
         - /usr/local/bin/aws-servicebroker
         args:
-        - --port
-        - "3199"
+        - --logtostderr
+        - --port=3199
         {{- if .Values.tls.cert}}
-        - --tlsCert
-        - "{{ .Values.tls.cert }}"
+        - --tlsCert={{ .Values.tls.cert }}
         {{- end}}
         {{- if .Values.tls.key}}
-        - --tlsKey
-        - "{{ .Values.tls.key }}"
+        - --tlsKey={{ .Values.tls.key }}
         {{- end}}
-        - -v
-        - "{{ .Values.brokerconfig.verbosity }}"
-        - -logtostderr
-        - --tls-cert-file
-        - "/var/run/awssb/awssb.crt"
-        - --tls-private-key-file
-        - "/var/run/awssb/awssb.key"
-        - --region
-        - "{{ .Values.aws.region }}"
-        - --s3Bucket
-        - "{{ .Values.aws.bucket }}"
-        - --s3Key
-        - "{{ .Values.aws.key }}"
-        - --s3Region
-        - "{{ .Values.aws.s3region }}"
-        - --tableName
-        - "{{ .Values.aws.tablename }}"
-        - --brokerId
-        - "{{ .Values.brokerconfig.brokerid }}"
-        - --prescribeOverrides
-        - "{{ .Values.brokerconfig.prescribeoverrides }}"
+        - --v={{ .Values.brokerconfig.verbosity }}
+        - --tls-cert-file=/var/run/awssb/awssb.crt"
+        - --tls-private-key-file=/var/run/awssb/awssb.key
+        - --region={{ .Values.aws.region }}
+        - --s3Bucket={{ .Values.aws.bucket }}
+        - --s3Key={{ .Values.aws.key }}
+        - --s3Region={{ .Values.aws.s3region }}
+        - --tableName={{ .Values.aws.tablename }}
+        - --brokerId={{ .Values.brokerconfig.brokerid }}
+        - --prescribeOverrides={{ .Values.brokerconfig.prescribeoverrides }}
         ports:
         - containerPort: 3199
         livenessProbe:
