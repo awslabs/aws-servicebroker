@@ -68,9 +68,9 @@ spec:
         livenessProbe:
           failureThreshold: 3
           httpGet:
-          path: /healthz
-          port: 3199
-          scheme: HTTPS
+            path: /healthz
+            port: 3199
+            scheme: HTTPS
           initialDelaySeconds: 30
           periodSeconds: 10
           successThreshold: 1
@@ -78,9 +78,9 @@ spec:
         readinessProbe:
           failureThreshold: 1
           httpGet:
-          path: /healthz
-          port: 3199
-          scheme: HTTPS
+            path: /healthz
+            port: 3199
+            scheme: HTTPS
           initialDelaySeconds: 30
           periodSeconds: 5
           successThreshold: 1
