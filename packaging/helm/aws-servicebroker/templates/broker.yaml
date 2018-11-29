@@ -9,7 +9,7 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
-  url: https://{{ template "fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  url: https://{{ template "fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
   insecureSkipTLSVerify: true
 {{- if .Values.authenticate}}
   authInfo:

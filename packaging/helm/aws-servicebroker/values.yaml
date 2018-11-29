@@ -21,3 +21,4 @@ brokerconfig:
   brokerid: awsservicebroker
   prescribeoverrides: true
 annotations: {}
+clusterDomain: cluster.local
