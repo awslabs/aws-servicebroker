@@ -551,3 +551,37 @@ func stripTemplateID(description string) string {
 	re := regexp.MustCompile(templateIDRegex)
 	return strings.TrimSpace(re.ReplaceAllString(description, ""))
 }
+
+func getCfnError(stackName string, cfnSvc CfnClient) *string {
+	var events []*cloudformation.StackEvent
+	var nextToken string
+	var message string
+
+	for {
+		input := &cloudformation.DescribeStackEventsInput{
+			StackName: aws.String(stackName),
+		}
+		if nextToken != "" {
+			input.NextToken = aws.String(nextToken)
+		}
+		out, err := cfnSvc.Client.DescribeStackEvents(input)
+		if err != nil {
+			message = "unable to retrieve failure cause: " + err.Error()
+			return &message
+		}
+		events = append(events, out.StackEvents...)
+
+		if out.NextToken == nil {
+			break
+		}
+		nextToken = aws.StringValue(out.NextToken)
+	}
+
+	for _, event := range events {
+		if stringInSlice(*event.ResourceStatus, []string{"CREATE_FAILED", "UPDATE_FAILED", "DELETE_FAILED"}) &&
+			!strings.HasSuffix(*event.ResourceStatusReason, " cancelled") {
+			message += *event.LogicalResourceId + " " + *event.ResourceStatusReason + " "
+		}
+	}
+	return &message
+}

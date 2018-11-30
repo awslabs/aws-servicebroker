@@ -2,9 +2,6 @@ package broker
 
 import (
 	"errors"
-	"net/http"
-	"testing"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -13,6 +10,8 @@ import (
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 	"github.com/stretchr/testify/assert"
+	"net/http"
+	"testing"
 )
 
 func TestGetCatalog(t *testing.T) {
@@ -419,6 +418,15 @@ func TestLastOperation(t *testing.T) {
 									},
 								},
 							},
+							DescribeStackEventsResponse: cloudformation.DescribeStackEventsOutput{
+								StackEvents: []*cloudformation.StackEvent{
+									{
+										LogicalResourceId:    aws.String("testId"),
+										ResourceStatus:       aws.String(tt.stackStatus),
+										ResourceStatusReason: aws.String(tt.stackStatusReason),
+									},
+								},
+							},
 						},
 					}
 				},
@@ -431,7 +439,7 @@ func TestLastOperation(t *testing.T) {
 			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 			b.db.DataStorePort = mockDataStoreProvision{}
 
-			resp, err := b.LastOperation(tt.request, &broker.RequestContext{})
+			resp, err := b.LastOperation(tt.request, &broker.RequestContext{Request: &http.Request{Header: http.Header{}}})
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
 			} else {

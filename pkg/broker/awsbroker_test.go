@@ -305,10 +305,11 @@ func (m mockS3) GetObject(in *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
 
 type mockCfn struct {
 	cloudformationiface.CloudFormationAPI
-	DescribeStacksResponse cloudformation.DescribeStacksOutput
-	CreateStackResponse    cloudformation.CreateStackOutput
-	DeleteStackResponse    cloudformation.DeleteStackOutput
-	UpdateStackResponse    cloudformation.UpdateStackOutput
+	DescribeStacksResponse      cloudformation.DescribeStacksOutput
+	DescribeStackEventsResponse cloudformation.DescribeStackEventsOutput
+	CreateStackResponse         cloudformation.CreateStackOutput
+	DeleteStackResponse         cloudformation.DeleteStackOutput
+	UpdateStackResponse         cloudformation.UpdateStackOutput
 }
 
 func (m mockCfn) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
@@ -316,6 +317,13 @@ func (m mockCfn) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudf
 		return nil, errors.New("test failure")
 	}
 	return &m.DescribeStacksResponse, nil
+}
+
+func (m mockCfn) DescribeStackEvents(in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+	if aws.StringValue(in.StackName) == "err" {
+		return nil, errors.New("test failure")
+	}
+	return &m.DescribeStackEventsResponse, nil
 }
 
 func (m mockCfn) CreateStack(in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error) {

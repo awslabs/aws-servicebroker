@@ -252,7 +252,10 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 	} else {
 		glog.Errorf("CloudFormation stack %s failed with status %s: %s", instance.StackID, status, reason)
 		response.State = osb.StateFailed
-		response.Description = &reason
+		response.Description = getCfnError(instance.StackID, cfnSvc)
+		if *response.Description == "" {
+			response.Description = &reason
+		}
 		// workaround for https://github.com/kubernetes-incubator/service-catalog/issues/2505
 		originatingIdentity := strings.Split(c.Request.Header.Get("X-Broker-Api-Originating-Identity"), " ")[0]
 		if originatingIdentity == "kubernetes" {
