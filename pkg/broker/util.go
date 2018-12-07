@@ -395,6 +395,28 @@ func paramValue(v interface{}) string {
 	return fmt.Sprintf("%v", v)
 }
 
+func leaveOutputsAsIs(service *osb.Service) bool {
+	if service.Metadata == nil {
+		return false
+	}
+	v, found := service.Metadata["outputsAsIs"]
+	if !found {
+		return false
+	}
+	b, ok := v.(bool)
+	if !ok {
+		return false
+	}
+	return b
+}
+
+func toScreamingSnakeCaseIfAppropriate(service *osb.Service, s string) string {
+	if leaveOutputsAsIs(service) {
+		return s
+	}
+	return toScreamingSnakeCase(s)
+}
+
 func getCredentials(service *osb.Service, outputs []*cloudformation.Output, ssmSvc ssmiface.SSMAPI) (map[string]interface{}, error) {
 	credentials := make(map[string]interface{})
 	var ssmValues []string
@@ -410,7 +432,7 @@ func getCredentials(service *osb.Service, outputs []*cloudformation.Output, ssmS
 			credentials[k] = aws.StringValue(o.OutputValue)
 			ssmValues = append(ssmValues, aws.StringValue(o.OutputValue))
 		} else {
-			credentials[toScreamingSnakeCase(aws.StringValue(o.OutputKey))] = aws.StringValue(o.OutputValue)
+			credentials[toScreamingSnakeCaseIfAppropriate(service, aws.StringValue(o.OutputKey))] = aws.StringValue(o.OutputValue)
 			// If the output value starts with "ssm:", we'll get the actual value from SSM
 			if strings.HasPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix) {
 				ssmValues = append(ssmValues, strings.TrimPrefix(aws.StringValue(o.OutputValue), cfnOutputSSMValuePrefix))
