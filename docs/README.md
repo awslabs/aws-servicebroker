@@ -197,5 +197,5 @@ You can configure the broker to point to your own S3 bucket (which can be privat
 CloudFormation templates and ServiceClass specs. The bucket, prefix and AWS region that the broker scans for ServiceClasses is configured using the 
 `-s3Bucket`, `-s3Key` and `-s3Region` commandline switches.
 
-* [Example -spec.yaml file](/docs/examples/example-spec.yaml)
+* [Example -spec.yaml file](/docs/examples/example-main.yaml)
 
