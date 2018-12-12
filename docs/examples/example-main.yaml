@@ -21,6 +21,9 @@ Metadata:
         # Optional - used to enhance platforms with web ui
         LongDescription: Long plan description
       planb: {}
+    # Optional - Parameter names here can be updated by calling osb update. 
+    # If none are specified the ServiceInstance will not be updateable.
+    UpdatableParameters: []
     # Optional - used to enhance platforms with web ui
     Tags:
     - AWS
