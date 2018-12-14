@@ -162,6 +162,7 @@ type CfnTemplate struct {
 			ImageUrl            string   `yaml:"ImageUrl,omitempty"`
 			DocumentationUrl    string   `yaml:"DocumentationUrl,omitempty"`
 			ProviderDisplayName string   `yaml:"ProviderDisplayName,omitempty"`
+			OutputsAsIs         bool     `yaml:"OutputsAsIs,omitempty"`
 			Bindings            struct {
 				IAM struct {
 					AddKeypair bool `yaml:"AddKeypair,omitempty"`
