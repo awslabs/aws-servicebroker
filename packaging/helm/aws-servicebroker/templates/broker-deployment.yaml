@@ -41,7 +41,7 @@ spec:
         - --tlsKey={{ .Values.tls.key }}
         {{- end}}
         - --v={{ .Values.brokerconfig.verbosity }}
-        - --tls-cert-file=/var/run/awssb/awssb.crt"
+        - --tls-cert-file=/var/run/awssb/awssb.crt
         - --tls-private-key-file=/var/run/awssb/awssb.key
         - --region={{ .Values.aws.region }}
         - --s3Bucket={{ .Values.aws.bucket }}
