@@ -659,6 +659,10 @@ Conditions:
     !Equals
     - !Ref DBName
     - Auto
+  EncryptionEnabled:
+    !Equals
+    - !Ref StorageEncrypted
+    - 'true'
 Resources:
   DBInstance:
     Type: AWS::RDS::DBInstance
@@ -730,7 +734,11 @@ Resources:
                       - 4000GB
                       - '40000'
                       - '60000'
-      KmsKeyId: !GetAtt KMSKey.Arn
+      KmsKeyId:
+        !If
+        - EncryptionEnabled
+        - !GetAtt KMSKey.Arn
+        - !Ref AWS::NoValue
       LicenseModel: postgresql-license
       MasterUsername: !Ref MasterUsername
       MasterUserPassword:
@@ -886,6 +894,7 @@ Resources:
         - !Ref DBSubnet5
         - !Ref AWS::NoValue
   KMSKey:
+    Condition: EncryptionEnabled
     Type: AWS::KMS::Key
     Properties:
       Description: !Sub Database ${DBName}
