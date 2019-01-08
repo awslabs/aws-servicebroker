@@ -70,6 +70,7 @@ Resources:
             - "cloudformation:CreateStack"
             - "cloudformation:DeleteStack"
             - "cloudformation:DescribeStacks"
+            - "cloudformation:DescribeStackEvents"
             - "cloudformation:UpdateStack"
             - "cloudformation:CancelUpdateStack"
             Resource: !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/aws-service-broker-*/*"

@@ -93,6 +93,7 @@ The role/user used for provisioning requires additional permissions for provisio
             "cloudformation:CreateStack",
             "cloudformation:DeleteStack",
             "cloudformation:DescribeStacks",
+            "cloudformation:DescribeStackEvents",
             "cloudformation:UpdateStack",
             "cloudformation:CancelUpdateStack"
          ],
