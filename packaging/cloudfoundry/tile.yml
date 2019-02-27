@@ -11,93 +11,96 @@ packages:
     path: resources/cfnsb
     buildpack: binary_buildpack
     command: >
-      export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_region=${AWS_DEFAULT_REGION} ;
+      export PARAM_OVERRIDE_${broker_id}_all_all_all_region=${aws_default_region} ;
+      export AWS_ACCESS_KEY_ID=${aws_access_key_id} ;
+      export AWS_SECRET_ACCESS_KEY=${aws_secret_access_key} ;
+      export AWS_DEFAULT_REGION=${aws_default_region} ;
       ./cfnsb
       --logtostderr
-      --prescribeOverrides=${PRESCRIBE}
-      --v=${VERBOSITY}
-      --brokerId=${BROKER_ID}
+      --prescribeOverrides=${prescribe}
+      --v=${verbosity}
+      --brokerId=${broker_id}
       --enableBasicAuth=true
-      --insecure=${INSECURE}
-      --port=${PORT}
-      --region=${AWS_DEFAULT_REGION}
-      --s3Bucket=${S3_BUCKET}
-      --s3Key=${S3_KEY}
-      --s3Region=${S3_REGION}
-      --tableName=${TABLE_NAME}
-      --templateFilter=${TEMPLATE_FILTER}
-      --tlsCert=${TLS_CERT}
-      --tlsKey=${TLS_KEY}
+      --insecure=${insecure}
+      --port=${port}
+      --region=${aws_default_region}
+      --s3Bucket=${s3_bucket}
+      --s3Key=${s3_key}
+      --s3Region=${s3_region}
+      --tableName=${table_name}
+      --templateFilter=${template_filter}
+      --tlsCert=${tls_cert}
+      --tlsKey=${tls_key}
     memory: 1024M
 forms:
 - name: aws_sb_properties
   label: AWS Service Broker Configuration
   description: Required configuration to run the AWS service broker
   properties:
-  - name: BROKER_ID
+  - name: broker_id
     type: string
     default: "awsservicebroker"
     label: Broker ID
     description: An ID to use for partitioning broker data in DynamoDb. if multiple brokers are used in the same AWS account, this value must be unique per broker
-  - name: AWS_ACCESS_KEY_ID
+  - name: aws_access_key_id
     type: string
     label: AWS Access Key ID
     description: AWS IAM User Key ID to use, if left blank will attempt to use a role, if defined secret-key must also be defined
-  - name: AWS_SECRET_ACCESS_KEY
+  - name: aws_secret_access_key
     type: secret
     label: AWS Secret Access Key
     description: AWS IAM User Secret Key to use, if left blank will attempt to use a role, if defined key-id must also be defined
-  - name: AWS_DEFAULT_REGION
+  - name: aws_default_region
     type: string
     label: AWS Region
     default: us-east-1
     description: AWS Region to deploy services into
-  - name: S3_BUCKET
+  - name: s3_bucket
     type: string
     label: Amazon S3 Bucket 
     default: awsservicebroker
     description: S3 bucket containing service definititions
-  - name: S3_KEY
+  - name: s3_key
     type: string
     label: Amazon S3 Key Prefix
     default: templates/latest
     description: S3 key prefix to use when scanning for service definitions
-  - name: TEMPLATE_FILTER
+  - name: template_filter
     type: string
     label: Amazon S3 Key Suffix
     default: -main.yaml
     description: only process templates with the defined suffix.
-  - name: PRESCRIBE
+  - name: prescribe
     type: boolean
     label: Prescribe Global Overrides
     default: true
     description: parameters that are overridden globally will not be available in service plans
-  - name: S3_REGION
+  - name: s3_region
     type: string
     label: Amazon S3 Region
     default: us-east-1
     description: Region that S3 bucket resides in, if different from region to deploy resources into
-  - name: TABLE_NAME
+  - name: table_name
     type: string
     label: Amazon DynamoDB table name
     default: awssb
     description: DynamoDB table name where broker state is stored. Multiple brokers can use the same table, but must use distinct Broker ID's to prevent them from sharing state
-  - name: TLS_CERT
+  - name: tls_cert
     type: string
     label: TLS Certificate
     description: base-64 encoded PEM block to use as the certificate for TLS.
     optional: true
-  - name: TLS_KEY
+  - name: tls_key
     type: string
     label: TLS Key
     optional: true
     description: base-64 encoded PEM block to use as the private key matching the TLS certificate
-  - name: INSECURE
+  - name: insecure
     type: boolean
     label: Disable SSL
     default: false
     description: use HTTP vs HTTPS
-  - name: VERBOSITY
+  - name: verbosity
     type: integer
     label: Log Verbosity
     default: 5 
