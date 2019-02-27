@@ -153,6 +153,11 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 		TemplateURL:  b.generateS3HTTPUrl(service.Name),
 	})
 	if err != nil {
+		glog.Errorf("TemplateURL: %v", b.generateS3HTTPUrl(service.Name))
+		glog.Errorf("Tags: %v", tags)
+		glog.Errorf("StackName: %v", aws.String(getStackName(service.Name, instance.ID)))
+		glog.Errorf("Parameters: %v", toCFNParams(params))
+		glog.Errorf("Capabilities: %v", aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}))
 		desc := fmt.Sprintf("Failed to create the CloudFormation stack: %v", err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
