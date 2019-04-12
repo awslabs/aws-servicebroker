@@ -24,7 +24,7 @@ The **aws_access_key**, **aws_secret_key** can be passed in as parameters to the
 
 If provided, they will be used in place of the aws service catalog process role.
 
-These parameters will be stored in the DynamoDB backend.  Currentently STS generated credentials
+These parameters will be stored in the DynamoDB backend.  Currently STS generated credentials
 are not supported as there is no way to update them upon expiration via the 
 open service broker spec.
 
