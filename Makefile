@@ -2,12 +2,14 @@ IMAGE ?= my-docker-org/aws-servicebroker
 TAG  ?= latest
 BUCKET_NAME ?= my-helm-repo-bucket
 BUCKET_PREFIX ?= /charts
+TEMPLATE_PREFIX ?= /templates/latest
 HELM_URL ?= https://$(BUCKET_NAME).s3.amazonaws.com$(BUCKET_PREFIX)
 S3URI ?= $(shell echo $(HELM_URL)/ | sed 's/https:/s3:/' | sed 's/.s3.amazonaws.com//')
 ACL ?= private
 PROFILE_NAME ?= ""
 PROFILE ?= $(shell if [ "${PROFILE_NAME}" != "" ] ; then echo "--profile ${PROFILE_NAME}" ; fi)
 VERSION ?= $(shell cat ./version)
+TEMPLATES ?= $(shell cd templates ; ls -1 ; cd ..)
 
 build: ## Builds the starter pack
 	go build -i github.com/awslabs/aws-servicebroker/cmd/servicebroker
@@ -75,6 +77,13 @@ release: ## Package and deploy requirements for a release
 	make cf && \
 	mv ./packaging/cloudfoundry/product/aws-service-broker-$(VERSION).pivotal ./release/$(VERSION)/
 
+templates: ## Package and upload templates
+	mkdir -p release/$(VERSION)$(TEMPLATE_PREFIX)/ && \
+	cd templates && \
+	for i in $(TEMPLATES) ; do cp $$i/template.yaml ../release/$(VERSION)$(TEMPLATE_PREFIX)/$$i-main.yaml ; done && \
+	cd .. && \
+	aws s3 cp --recursive release/$(VERSION)$(TEMPLATE_PREFIX)/ s3://$(BUCKET_NAME)$(TEMPLATE_PREFIX)/ --acl $(ACL) $(PROFILE)
+
 help: ## Shows the help
 	@echo 'Usage: make <OPTIONS> ... <TARGETS>'
 	@echo ''
@@ -84,4 +93,4 @@ help: ## Shows the help
         awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ''
 
-.PHONY: build test functional-test linux cf image helm deploy-chart release clean help
+.PHONY: build test functional-test linux cf image helm deploy-chart release templates clean help
