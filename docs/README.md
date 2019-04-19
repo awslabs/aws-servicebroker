@@ -59,7 +59,7 @@ To setup the role, assume admin credentials in the account where the role will r
 and create the role for the aws-service-broker to assume.
 
 ```
-service_broker_account_id=123456654321 # role where the service broker will run, will be the same as the target if in single account
+service_broker_account_id=100000000001 # role where the service broker will run, will be the same as the target if in single account
 
 aws cloudformation create-stack \
     --stack-name AwsServiceBrokerWorkerRole \

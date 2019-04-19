@@ -1,12 +1,10 @@
 # Getting Started Guide - Pivotal Cloud Foundry
 
-*Note:* The use of the AWS Service Broker for PCF is at the beta stage. Bugs and possible update related breaking 
-changes may manifest. Use of the AWS Service Broker in Pivotal Cloud Foundry is not recommended for production at this 
-time.
+:imagesdir: /images
 
 ### Compatibility
 
-Testing on V2.1/2.2 was done using the [Pivotal Cloud Foundry on the AWS Cloud Quick Start](https://aws.amazon.com/quickstart/architecture/pivotal-cloud-foundry/). 
+Testing on V2.1/2.2/2.4 was done using the [Pivotal Cloud Foundry on the AWS Cloud Quick Start](https://aws.amazon.com/quickstart/architecture/pivotal-cloud-foundry/). 
 Though not tested, older PCF versions may work.
 
 ### Installation
@@ -14,6 +12,7 @@ Though not tested, older PCF versions may work.
 * Download the latest tile from the [releases page](https://github.com/awslabs/aws-servicebroker/releases)
 * Login to Ops Manager and import the tile
 * Complete configuration in the `AWS Service Broker Configuration` section. Take note of the following fields:
+  * `Broker ID` - An ID to use for partitioning broker data in DynamoDb. if multiple brokers are used in the same AWS account, this value must be unique per broker. This is a customer selected string. 
   * `AWS Access Key ID` and `AWS Secret Access` - if you are using an ec2 instance role attached to the broker hosts, 
   leave these fields blank, otherwise specify the credentials for the user created in the prerequisites section of this guide.
   * `Target AWS Account ID` and `Target IAM Role Name` - if you would like to provision into a different account, or use a 
@@ -27,4 +26,5 @@ Though not tested, older PCF versions may work.
   * `Amazon S3 Key Suffix` - specify `-main.yaml`
   * `Amazon DynamoDB table name` - specify the name of the table created in the prerequisites section of this guide, default is `awssb`
 
+image::SBinstall01.gif[Service Broker Install]
 
