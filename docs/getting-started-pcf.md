@@ -1,6 +1,5 @@
 # Getting Started Guide - Pivotal Cloud Foundry
 
-:imagesdir: /images
 
 ### Compatibility
 
@@ -26,5 +25,6 @@ Though not tested, older PCF versions may work.
   * `Amazon S3 Key Suffix` - specify `-main.yaml`
   * `Amazon DynamoDB table name` - specify the name of the table created in the prerequisites section of this guide, default is `awssb`
 
-image::SBinstall01.gif[Service Broker Install]
+![Service Broker Install](../images/SBinstall01.gif)
+
 
