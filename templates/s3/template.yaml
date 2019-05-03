@@ -368,7 +368,9 @@ Resources:
               - s3:PutObjectAcl
               - s3:PutObjectTagging
             Effect: Allow
-            Resource: !Sub ${S3bucket.Arn}/*
+            Resource: !Sub
+             - ${S3bucketArn}/*
+             - { S3bucketArn: !If [ RetainBucket, !GetAtt S3BucketRetain.Arn, !GetAtt S3BucketDelete.Arn ] }
           - Action:
               - s3:ListBucket
             Resource: !If [ RetainBucket, !GetAtt S3BucketRetain.Arn, !GetAtt S3BucketDelete.Arn ]
