@@ -106,11 +106,22 @@ If provided, it will be used in place of the aws service catalog process region.
 
 ### Parameter Overrides
 
-The broker can override parameter values using override records in the metadata DynamoDB table.
+> **NOTE:** Current releases of the Service Broker have the DynamoDB mechanism has been disabled, please use the Environment Variable approach to prescribing overrides
+
+The broker can override parameter values using override records in the metadata DynamoDB table, or by providing environemnt variables in the broker execution environment.
+
 The broker provides a hierarchy of parameter overrides to prescribe values for common parameters like AWS credentials, region, 
 VPC ID or any other parameter in a service plan.
 
 An override can be broker wide, or only apply to a particular org/cluster, space/namespace, or ServiceClass.
+
+#### Environment Variables
+The following structure is used for override Environment Variables:
+```
+PARAM_OVERRIDE_<BROKER_ID>_<ORG_GUID/CLUSTER_ID>_<SPACE_GUID/NAMESPACE>_all_region
+```
+
+#### DynamoDB
 
 The structure of an override record is:
 
@@ -153,6 +164,8 @@ The order of precedence for parameter values is:
 
 **Set a global override to provision into us-west-2 region:**
 
+**DynamoDB:**
+
 ```bash
 ACCOUNT_ID=123456789012          # Account ID for the AWS account that the broker user/role is in
 BROKER_ID=aws-service-broker     # brokerId provided as an argument when launching the broker, if not specified it defaults to aws-service-broker
@@ -169,8 +182,17 @@ EOF
 aws dynamodb put-item --table-name ${DYNAMODB_TABLE} --region ${DYNAMODB_REGION} --item file://override.json
 ```
 
+**Environment Variable:**
+
+add an environment variable as follows (assumes the broker has been configured with a BROKER_ID of `awsservicebroker`:
+
+```
+PARAM_OVERRIDE_awsservicebroker_all_all_all_region=us-west-2
+```
+
 **Set `myns` namespace to provision into us-west-2 region:**
 
+**DynamoDB:**
 ```bash
 ACCOUNT_ID=123456789012          # Account ID for the AWS account that the broker user/role is in
 BROKER_ID=aws-service-broker     # brokerId provided as an argument when launching the broker, if not specified it defaults to aws-service-broker
@@ -190,6 +212,15 @@ cat <<EOF > "./override.json"
 EOF
 aws dynamodb put-item --table-name ${DYNAMODB_TABLE} --region ${DYNAMODB_REGION} --item file://override.json
 ```
+**Environment Variable:**
+
+add an environment variable replacing the sections between `<>` with appropriate values (assumes the broker has been configured with a BROKER_ID of `awsservicebroker`:
+
+```
+PARAM_OVERRIDE_awsservicebroker_<ORG_GUID/CLUSTER_ID>_<SPACE_GUID/NAMESPACE>_all_region=us-west-2
+```
+
+
 
 ### Custom Catalog
 
