@@ -209,18 +209,18 @@ func addTrailingSlash(s string) string {
 	return s
 }
 
-func generateRoleArn(params map[string]string, currentAccountID string) string {
+func generateRoleArn(params map[string]string, currentAccountID string, partition string) string {
 	targetRoleName := params["target_role_name"]
 
 	if params["target_account_id"] != "" {
 		targetAccountID := params["target_account_id"]
 
 		glog.Infof("Params 'target_account_id' present in params, assuming role in target account '%s'.", targetAccountID)
-		return fmtArn(targetAccountID, targetRoleName)
+		return fmtArn(targetAccountID, targetRoleName, partition)
 	}
 
 	glog.Infof("Params 'target_account_id' not present in params, assuming role in current account '%s'.", currentAccountID)
-	return fmtArn(currentAccountID, targetRoleName)
+	return fmtArn(currentAccountID, targetRoleName, partition)
 }
 
 // getStackName returns the stack name for a service instance. A stack name can
@@ -235,11 +235,11 @@ func getStackName(serviceName, instanceID string) string {
 	return s
 }
 
-func fmtArn(accountID, roleName string) string {
+func fmtArn(accountID, roleName string, partition string) string {
 	if strings.HasPrefix(roleName, "/") {
-		return fmt.Sprintf("arn:aws:iam::%s:role%s", accountID, roleName)
+		return fmt.Sprintf("arn:%s:iam::%s:role%s", partition, accountID, roleName)
 	} else {
-		return fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
+		return fmt.Sprintf("arn:%s:iam::%s:role/%s", partition, accountID, roleName)
 	}
 }
 

@@ -395,8 +395,23 @@ func TestMetadataUpdate(t *testing.T) {
 
 func TestAssumeArnGeneration(t *testing.T) {
 	params := map[string]string{"target_role_name": "worker"}
+
+	// AWS Standard Partition
+	partition := "aws"
 	accountID := "123456654321"
-	assert.Equal(t, generateRoleArn(params, accountID), "arn:aws:iam::123456654321:role/worker", "Validate role arn")
+	assert.Equal(t, generateRoleArn(params, accountID, partition), "arn:aws:iam::123456654321:role/worker", "Validate role arn")
 	params["target_account_id"] = "000000000000"
-	assert.Equal(t, generateRoleArn(params, accountID), "arn:aws:iam::000000000000:role/worker", "Validate role arn")
+	assert.Equal(t, generateRoleArn(params, accountID, partition), "arn:aws:iam::000000000000:role/worker", "Validate role arn")
+
+}
+
+func TestAssumeArnGenerationChinaPartition(t *testing.T) {
+	params := map[string]string{"target_role_name": "worker"}
+
+	// AWS China Partition
+	partition := "aws-cn"
+	accountID := "123456654321"
+	assert.Equal(t, generateRoleArn(params, accountID, partition), "arn:aws-cn:iam::123456654321:role/worker", "Validate role arn")
+	params["target_account_id"] = "000000000000"
+	assert.Equal(t, generateRoleArn(params, accountID, partition), "arn:aws-cn:iam::000000000000:role/worker", "Validate role arn")
 }
