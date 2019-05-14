@@ -76,7 +76,7 @@ func assumeTargetRole(sess *session.Session, params map[string]string, region st
 	partition, err := ec2metadata.New(sess).GetMetadata("/services/partition")
 
 	if err != nil {
-		return nil, err
+		partition = "aws" // no access to metadata service, defaults to AWS Standard Partition
 	}
 
 	targetAccountRoleArn := generateRoleArn(params, accountId, partition)

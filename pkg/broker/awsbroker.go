@@ -65,7 +65,7 @@ func NewAWSBroker(o Options, awssess GetAwsSession, clients AwsClients, getCalle
 	partition, err := ec2metadata.New(sess).GetMetadata("/services/partition")
 
 	if err != nil {
-		return nil, err
+		partition = "aws" // no access to metadata service, defaults to AWS Standard Partition
 	}
 
 	// populate broker variables
@@ -366,21 +366,18 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 }
 
 func (b *AwsBroker) generateS3HTTPUrl(serviceDefName string) *string {
-	if b.partition == "aws" {
-		// AWS Standard Partition
-		prefix := "https://s3.amazonaws.com/"
-		if b.s3region != "us-east-1" {
-			prefix = fmt.Sprintf("https://s3-%s.amazonaws.com/", b.s3region)
-		}
-		return aws.String(prefix + b.s3bucket + "/" + b.s3key + strings.TrimSuffix(serviceDefName, "-apb") + b.templatefilter)
-	} else if b.partition == "aws-cn" {
+	if b.partition == "aws-cn" {
 		// AWS China Partition
 		objKey := b.s3key + strings.TrimSuffix(serviceDefName, "-apb") + b.templatefilter
 		objURL := fmt.Sprintf("https://%s.s3.%s.amazonaws.com.cn/%s", b.s3bucket, b.s3region, objKey)
 		return aws.String(objURL)
 	} else {
-		// AWS GovCloud Partition
-		// TODO add implementation for GovCloud partition
-		return nil
+		// AWS Standard Partition and GovCloud Partition
+		objKey := b.s3key + strings.TrimSuffix(serviceDefName, "-apb") + b.templatefilter
+		objURL := fmt.Sprintf("https://%s.s3.amazonaws.com/%s", b.s3bucket, objKey)
+		if b.s3region != "us-east-1" {
+			objURL = fmt.Sprintf("https://%s.s3-%s.amazonaws.com/%s", b.s3bucket, b.s3region, objKey)
+		}
+		return aws.String(objURL)
 	}
 }
