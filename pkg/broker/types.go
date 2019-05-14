@@ -56,6 +56,7 @@ type AwsBroker struct {
 	s3key              string
 	templatefilter     string
 	region             string
+	partition          string
 	s3svc              S3Client
 	ssmsvc             ssm.SSM
 	catalogcache       cache.Cache
