@@ -17,6 +17,9 @@ Metadata:
     ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/rds/
     ProviderDisplayName: Amazon Web Services
+    Bindings:
+      IAM:
+        AddKeypair: false
     ServicePlans:
       production:
         DisplayName: Production
@@ -566,6 +569,24 @@ Mappings:
       Family: mysql5.7
       MajorVersion: '5.7'
     5.7.17:
+      Family: mysql5.7
+      MajorVersion: '5.7'
+    5.7.18:
+      Family: mysql5.7
+      MajorVersion: '5.7'
+    5.7.19:
+      Family: mysql5.7
+      MajorVersion: '5.7'
+    5.7.20:
+      Family: mysql5.7
+      MajorVersion: '5.7'
+    5.7.21:
+      Family: mysql5.7
+      MajorVersion: '5.7'
+    5.7.22:
+      Family: mysql5.7
+      MajorVersion: '5.7'
+    5.7.23:
       Family: mysql5.7
       MajorVersion: '5.7'
 Conditions:
