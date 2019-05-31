@@ -28,9 +28,9 @@ helm inspect aws-sb/aws-servicebroker --version 1.0.0-beta.4
 ### Note: If setting aws.targetaccountid on the helm cli, do not use --set, use --set-string, see https://github.com/helm/helm/issues/1707 for more info
 
 # Minimal broker install, assuming defaults above. Sets up a ClusterServiceBroker. Add flags to set credentials, region, etc
-helm install aws-sb/aws-servicebroker --name aws-servicebroker --namespace aws-sb --version 1.0.0-beta.4
+helm install aws-sb/aws-servicebroker --name aws-servicebroker --namespace aws-sb
 
 # Install broker for the specified namespace only
-helm install aws-sb/aws-servicebroker --name aws-servicebroker --namespace aws-sb --version 1.0.0-beta.4 \
+helm install aws-sb/aws-servicebroker --name aws-servicebroker --namespace aws-sb \
   --set deployNamespacedServiceBroker=true
 ```
