@@ -230,3 +230,14 @@ CloudFormation templates and ServiceClass specs. The bucket, prefix and AWS regi
 
 * [Example -spec.yaml file](/docs/examples/example-main.yaml)
 
+### Template Metadata Generator
+
+A tool that examines the parameters of the JSON Cloudformation template and automatically creates the Service Broker Metadata (AWS::ServiceBroker::Specification) for the template and outputs in JSON and YAML format. It will include all parameters in the template into the metadata.
+
+https://github.com/ndrest-amzn/ServiceBrokerMetaGen
+
+### Template Documentation Generator
+
+A tool tha automatically creates the Service Broker doc Readme.md from the Cloudformation Template provided. It will include all parameters in the template into the Readme.md.
+
+https://github.com/ndrest-amzn/ServiceBrokerDocGen 
