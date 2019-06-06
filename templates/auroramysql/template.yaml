@@ -549,31 +549,31 @@ Parameters:
 
   ServerlessMinCapacityUnit:
     Description: The minimum capacity for an Aurora DB cluster in serverless DB engine mode. The minimum capacity must be less than or equal to the maximum capacity.
-    Type: Number
-    Default: 2
+    Type: String
+    Default: '2'
     AllowedValues:
-    - 2
-    - 4
-    - 8
-    - 16
-    - 32
-    - 64
-    - 128
-    - 256
+    - '2'
+    - '4'
+    - '8'
+    - '16'
+    - '32'
+    - '64'
+    - '128'
+    - '256'
 
   ServerlessMaxCapacityUnit:
     Description: The maximum capacity for an Aurora DB cluster in serverless DB engine mode. The maximum capacity must be greater than or equal to the minimum capacity.
-    Type: Number
-    Default: 64
+    Type: String
+    Default: '64'
     AllowedValues:
-    - 2
-    - 4
-    - 8
-    - 16
-    - 32
-    - 64
-    - 128
-    - 256  
+    - '2'
+    - '4'
+    - '8'
+    - '16'
+    - '32'
+    - '64'
+    - '128'
+    - '256'  
   
   ServerlessAutoPause:
     Description: Specifies whether to allow or disallow automatic pause for an Aurora DB cluster in serverless DB engine mode. A DB cluster can be paused only when its idle (it has no connections).
