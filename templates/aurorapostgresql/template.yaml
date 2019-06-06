@@ -12,7 +12,7 @@ Metadata:
     - Aurora
     - PostgreSQL
     - database
-    Name: rdspostgresql
+    Name: aurorapostgresql
     DisplayName: Amazon Aurora PostgreSQL
     LongDescription: Amazon Aurora is a relational database service that combines the speed 
       and availability of high-end commercial databases with the simplicity and cost-effectiveness 
