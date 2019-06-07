@@ -10,6 +10,7 @@ AWS Service Broker Documentation
 * [Installation on OpenShift](/docs/getting-started-openshift.md)
 * [Installation on Pivotal Cloud Foundry](/docs/getting-started-pcf.md)
 * [Installation on Kubernetes](/docs/getting-started-k8s.md)
+* [Installation on SAP Cloud Platform](/docs/getting-started-scp.md)
 
 ## Provisioning and binding services
 
