@@ -14,14 +14,14 @@ For a high-level overview of how this works, take a look at the following image:
 
 ## Configuration in your AWS Environment
 
-1. Sign in to your AWS account and in the AWS console, search for Cloudformation.
+1. Sign in to your AWS account and in the AWS console, search for CloudFormation.
 3. Choose Create Stack and under Choose a Template, pick Upload a template to Amazon S3.
 4. Save the contents of the [this file](https://github.com/awslabs/aws-servicebroker/blob/master/setup/prerequisites.yaml) to your local environment as a yaml file. In the AWS console, click Choose and upload this file from your local environment.
 5. Choose Next.
 
-Once the Cloudformation stack creation is complete, the DynamoDB table and the IAM user are displayed as follows:
+Once the CloudFormation stack creation is complete, the DynamoDB table and the IAM user are displayed as follows:
 
-![AWS Cloudformation Stack](/docs/images/aws-cloudformation.png)
+![AWS CloudFormation Stack](/docs/images/aws-cloudformation.png)
 
 ## Deploy the AWS Service Broker to SAP Cloud Platform
 
@@ -40,38 +40,12 @@ https://api.<REGION_TECHNICAL_KEY>.hana.ondemand.com.
 Find out your region and the technical key [here](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/350356d1dc314d3199dca15bd2ab9b0e.html#loiof344a57233d34199b2123b9620d0bb41)
 
 5. Enter username and password for your SAP Cloud Platform account.
-6. Edit the `aws-sb-cf-cloudfoundry-app/manifest.yml` file and replace the values within the angular brackets:
+6. Edit the [aws-sb-cf-cloudfoundry-app/manifest.yml](https://github.com/awslabs/aws-servicebroker/blob/master/packaging/cloudfoundry/manifest.yml) file and replace the values of the following fields accordingly:
 ```yaml
-applications:
-- name: aws-service-broker
-buildpacks:
-- binary_buildpack
-command: |
-export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_region=${AWS_DEFAULT_REGION} ; ./cfnsb --logtostderr --prescribeOverrides=${PRESCRIBE} --v=${VERBOSITY} --brokerId=${BROKER_ID} --enableBasicAuth=true --insecure=${INSECURE} --port=${PORT} --region=${AWS_DEFAULT_REGION} --s3Bucket=${S3_BUCKET} --s3Key=${S3_KEY} --s3Region=${S3_REGION} --tableName=${TABLE_NAME} --templateFilter=${TEMPLATE_FILTER} --tlsCert=${TLS_CERT} --tlsKey=${TLS_KEY}
-disk_quota: 1G
-env:
-# Required
 AWS_ACCESS_KEY_ID: <ENTER YOUR AWS ACCOUNT KEY>
 AWS_SECRET_ACCESS_KEY: <ENTER YOUR AWS ACCOUNT KEY SECRET> 
-SECURITY_USER_PASSWORD: <ENTER ANY SECURITY USER PASSWORD>
-# Optional
-AWS_DEFAULT_REGION: <ENTER YOUR REGION>
-BROKER_ID: awsservicebroker
-INSECURE: "true"
-PRESCRIBE: "true"
-ROOT: $HOME
-S3_BUCKET: awsservicebroker
-S3_KEY: templates/latest
-S3_REGION: us-east-1
-SCHEME: https
-SECURITY_USER_NAME: awssb
-TABLE_NAME: awssb
-TEMPLATE_FILTER: -main.yaml
-TLS_CERT: ""
-TLS_KEY: ""
-VERBOSITY: "5"
-instances: 1
-memory: 1G
+SECURITY_USER_PASSWORD: <ENTER ANY PASSWORD FOR YOUR SECURITY USER>
+AWS_DEFAULT_REGION: <ENTER YOUR AWS REGION>
 ```
 7. Push the AWS Service Broker to Cloud Foundry
 ```
