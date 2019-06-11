@@ -24,7 +24,7 @@ The default max interval is 20 minutes, which is too long in most cases, this ca
 helm repo add aws-sb https://awsservicebroker.s3.amazonaws.com/charts
 
 # Show the available variables for the chart
-helm inspect aws-sb/aws-servicebroker --version 1.0.0-beta.4
+helm inspect aws-sb/aws-servicebroker
 ### Note: If setting aws.targetaccountid on the helm cli, do not use --set, use --set-string, see https://github.com/helm/helm/issues/1707 for more info
 
 # Minimal broker install, assuming defaults above. Sets up a ClusterServiceBroker. Add flags to set credentials, region, etc
