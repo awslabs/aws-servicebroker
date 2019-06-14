@@ -76,7 +76,7 @@ Resources:
         Statement:
         - Action: [ s3:DeleteObject, s3:GetObject, s3:PutObject ]
           Effect: Allow
-          Resource: !Sub ${S3bucket.Arn}/*
+          Resource: !Sub ${S3Bucket.Arn}/*
   # multiple scopes can be defined
   S3Read:
     Type: AWS::IAM::Policy
@@ -87,7 +87,7 @@ Resources:
         Statement:
         - Action: s3:GetObject
           Effect: Allow
-          Resource: !Sub ${S3bucket.Arn}/*
+          Resource: !Sub ${S3Bucket.Arn}/*
   # The resources below are needed if static iam access keys are to be returned on bind
   AccessKeyCustomResourceRole:
     Type: AWS::IAM::Role
