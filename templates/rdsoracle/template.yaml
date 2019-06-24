@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: AWS Service Broker - Amazon RDS for Oracle
+Description: AWS Service Broker - Amazon RDS for Oracle (qs-1pn9kr5ec)
 ###############################################################################
 # MetaData - ServiceBroker 
 ############################################################################### 
