@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Service Broker - Amazon RDS Microsoft SQL Server Standard and Web and Express'
+Description: 'AWS Service Broker - Amazon RDS Microsoft SQL Server Standard and Web and Express (qs-1pn9kr5dm)'
 
 ###############################################################################
 # MetaData - ServiceBroker 

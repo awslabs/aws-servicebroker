@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Service Broker - Amazon Aurora MySQL 5.6, 5.7 provisioned or serverless capacity type'
+Description: 'AWS Service Broker - Amazon Aurora MySQL 5.6, 5.7 (qs-1pn9kr5a8)'
 
 ###############################################################################
 # MetaData - ServiceBroker 

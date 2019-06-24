@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Service Broker - Amazon Aurora Postgresql.'
+Description: 'AWS Service Broker - Amazon Aurora Postgresql (qs-1pn9kr5df)'
 
 ###############################################################################
 # MetaData - ServiceBroker 
