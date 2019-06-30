@@ -201,8 +201,7 @@ Parameters:
   
   AccessCidr:
     Description: CIDR block to allow to connect to database
-    Type: String
-    Default: '172.31.0.0/16'
+    Type: String    
 
   AvailabilityZones:
     Description: list of availability zones to use, must be the same quantity as specified. Leave as Auto for stack to determine AZ names available.      
