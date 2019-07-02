@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Service Broker - Amazon Aurora MySQL 5.6, 5.7 (qs-1pn9kr5a8)'
+Description: 'AWS Service Broker - Amazon DocumentDB (with MongoDB compatibility)'
 
 ###############################################################################
 # MetaData - ServiceBroker 
@@ -8,74 +8,60 @@ Metadata:
   AWS::ServiceBroker::Specification:
     Version: 1.0
     Tags:
-    - AWS    
-    - Aurora
-    - MySQL
-    - database
-    Name: auroramysql
-    DisplayName: Amazon Aurora MySQL
-    LongDescription: Amazon Aurora is a relational database service that combines the speed and 
-      availability of high-end commercial databases with the simplicity and cost-effectiveness of 
-      open source databases. The MySQL-compatible edition of Aurora delivers up to 5X the throughput 
-      of standard MySQL running on the same hardware, and enables existing MySQL applications and 
-      tools to run without requiring modification.
+    - AWS
+    - DocumentDB
+    Name: documentdb
+    DisplayName: Amazon DocumentDB (with MongoDB compatibility)
+    LongDescription: Amazon DocumentDB (with MongoDB compatibility) is a fast, scalable, highly available, and fully managed document database service that supports MongoDB workloads.
     ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
-    DocumentationUrl: https://aws.amazon.com/rds/aurora/
+    DocumentationUrl: https://aws.amazon.com/documentdb/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:
       production:
         DisplayName: Production
         Description: Configuration designed for production deployments
-        LongDescription: Creates an Amazon Aurora MySQL database optimised for
-          production use
-        Cost: https://aws.amazon.com/rds/aurora/pricing/
-        ParameterValues:          
-          NumberOfAvailabilityZones: '3'
-          NumberofAuroraReplicas: '2'
-          AvailabilityZones: Auto          
-          CidrSize: '27'
-          CidrBlocks: Auto
-          DBName: Auto
-          DBPort: 3306
-          StorageEncrypted: 'true'                    
+        LongDescription: Creates an Amazon DocumentDB optimised for production use
+        Cost: https://aws.amazon.com/documentdb/pricing/
+        ParameterValues:        
+          AvailabilityZones: Auto
           BackupRetentionPeriod: 35
-          MonitoringInterval: '1'          
-          AutoMinorVersionUpgrade: 'true'
+          CidrBlocks: Auto
+          CidrSize: 27
+          DBPort: 27017
           DBUsername: master
-          DBPassword: Auto
+          DBPassword: Auto                
+          NumberOfAvailabilityZones: 3
+          NumberofReplicas: 2        
+          AutoMinorVersionUpgrade: true
+          StorageEncrypted: true        
       dev:
         DisplayName: Development
         Description: Configuration designed for development and testing deployments
-        LongDescription: Creates an Amazon Aurora MySQL database optimised for
-          dev/test use
-        Cost: https://aws.amazon.com/rds/aurora/pricing/
-        ParameterValues:          
-          NumberOfAvailabilityZones: '2'
-          NumberofAuroraReplicas: '1'
-          AvailabilityZones: Auto          
-          CidrSize: '28'
-          CidrBlocks: Auto
-          DBName: Auto
-          DBPort: 3306
-          StorageEncrypted: 'true'                    
+        LongDescription: Creates an Amazon DocumentDB optimised for development use
+        Cost: https://aws.amazon.com/documentdb/pricing/
+        ParameterValues:        
+          AvailabilityZones: Auto
           BackupRetentionPeriod: 0
-          MonitoringInterval: '60'          
-          AutoMinorVersionUpgrade: 'true'
-          DBUsername: master          
+          CidrBlocks: Auto
+          CidrSize: 27
+          DBPort: 27017
+          DBUsername: master
           DBPassword: Auto
-          PreferredBackupWindow: 04:00-06:00
-          PreferredMaintenanceWindowDay: Sat
-          PreferredMaintenanceWindowStartTime: 06:00
-          PreferredMaintenanceWindowEndTime: 07:00
+          NumberOfAvailabilityZones: 2
+          NumberofReplicas: 0        
+          AutoMinorVersionUpgrade: true
+          StorageEncrypted: true
+          PreferredBackupWindow: 00:00-02:00
+          PreferredMaintenanceWindowDay: Sun
+          PreferredMaintenanceWindowEndTime: 06:00
+          PreferredMaintenanceWindowStartTime: 04:00
       custom:
         DisplayName: Custom
         Description: Custom Configuration for Advanced deployments
-        LongDescription: Creates an Amazon Aurora MySQL database with custom
-          configuration
-        Cost: https://aws.amazon.com/rds/aurora/pricing/
+        LongDescription: Creates an Amazon DocumentDB optimised for Custom use
+        Cost: https://aws.amazon.com/documentdb/pricing/
         ParameterValues: {}
-
-
+  
 ###############################################################################
 # Parameter groups
 ###############################################################################
@@ -94,50 +80,39 @@ Metadata:
           - NumberOfAvailabilityZones    
       -
         Label:
-          default: Database Instance Specification
+          default: Database Instance Specifications
         Parameters:
-          - DBInstanceClass    
+          - DBInstanceClass
       -
         Label:
           default: Database Replication
         Parameters:     
-          - NumberofAuroraReplicas     
+          - NumberofReplicas     
       -
         Label:
           default: Database Specification
         Parameters:                  
-          - DBEngineVersion                                
-          - DBEngineMode
-          - DBName
+          - DBEngineVersion                                                    
           - DBPort
           - DBUsername
-          - DBPassword             
+          - DBPassword 
       -
         Label:
           default: Database Parameters
         Parameters:               
-          - AutoMinorVersionUpgrade    
-          - MonitoringInterval
+          - AutoMinorVersionUpgrade              
           - BackupRetentionPeriod
-          - StorageEncrypted
-          - DeletionProtection
-          - RDSTimeZone
-      -
-        Label:
-          default: Severless Specification (only applicable if Engine Version is 'MySQL 5.6-compatible' and Engine Mode is 'Serverless')
-        Parameters:                  
-          - ServerlessMinCapacityUnit                                
-          - ServerlessMaxCapacityUnit
-          - ServerlessAutoPause
-          - ServerlessSecondsUntilAutoPause  
+          - StorageEncrypted                    
       -
         Label:
           default: Maintainance Parameters
-        Parameters:               
+        Parameters:                     
+          - PreferredBackupWindow
           - PreferredMaintenanceWindowDay    
           - PreferredMaintenanceWindowStartTime
           - PreferredMaintenanceWindowEndTime
-                            
+          
+             
     ParameterLabels:
       DBUsername:
         default: Master Username
@@ -154,23 +129,17 @@ Metadata:
       DBPort:
         default: Port Number
       DBInstanceClass:
-        default: DB Instance Class
+        default: DB Instance Class      
       DBEngineVersion:
-       default: Engine Version
-      DBEngineMode:
-        default: Engine Mode      
+        default: Engine Version
       VpcId:
-        default: VPC Id
-      PubliclyAccessible:
-        default: Publicly Accessible
+        default: VPC Id     
       AccessCidr:
         default: Access CIDR            
-      NumberofAuroraReplicas:
-        default: Number of Aurora Replicas
-      DeletionProtection:
-        default: Deletion Protection
-      RDSTimeZone:
-        default: DB Server Timezone
+      NumberofReplicas:
+        default: Number of Replicas   
+      PreferredBackupWindow:
+        default: Preferred Backup Window  
       PreferredMaintenanceWindowDay:
         default: Preferred Maintenance Window Day
       PreferredMaintenanceWindowStartTime:
@@ -178,21 +147,11 @@ Metadata:
       PreferredMaintenanceWindowEndTime:
         default: Preferred Maintenance Window End Time
       AutoMinorVersionUpgrade:
-        default: Auto Minor Version Upgrade
-      MonitoringInterval:
-        default: Monitoring Interval
+        default: Auto Minor Version Upgrade      
       BackupRetentionPeriod:
         default: Backup Retention Period
       StorageEncrypted:
         default: Storage Encrypted
-      ServerlessMinCapacityUnit:
-        default: Minimum Aurora capacity unit
-      ServerlessMaxCapacityUnit:
-        default: Maximum Aurora capacity unit
-      ServerlessAutoPause:
-        default: Pause compute capacity
-      ServerlessSecondsUntilAutoPause:
-        default: Pause after time of inactivity
 
 ###############################################################################
 # Parameters 
@@ -208,15 +167,6 @@ Parameters:
     Type: CommaDelimitedList
     Default: Auto
 
-  AutoMinorVersionUpgrade:
-    Description: Indicates that minor engine upgrades are applied automatically to
-      the DB instance during the maintenance window.
-    Type: String
-    Default: 'true'
-    AllowedValues:
-    - 'true'
-    - 'false'
-
   BackupRetentionPeriod:
     Description: The number of days during which automatic DB snapshots are retained. Min is 1 and Max value is 35.
     Type: Number
@@ -225,7 +175,7 @@ Parameters:
     MaxValue: '35'
     
   CidrBlocks:
-    Description: comma seperated list of CIDR blocks to place RDS into, must be the
+    Description: comma seperated list of CIDR blocks to place Cluster into, must be the
       same quantity as specified in NumberOfAvailabilityZones
     Type: CommaDelimitedList
     Default: Auto
@@ -233,21 +183,12 @@ Parameters:
   CidrSize:
     Description: Size of Cidr block to allocate if CidrBlocks is set to Auto.
     Type: String
-    Default: 27
-
-  DBName:
-    Description: The name of the database to create when the DB instance is created, will be autogenerated if set to "Auto".
-    Type: String
-    MinLength: '1'
-    MaxLength: '64'
-    Default: Auto
-    AllowedPattern: ^(?!^mysql$)(?!^performance_schema$)(?!^information_schema$)[a-zA-Z0-9]*$
-    ConstraintDescription: must contain from 1 to 64 alphanumeric characters, and not be reserved.
+    Default: 27 
 
   DBPort:
     Description: TCP/IP Port for the Database Instance
     Type: Number
-    Default: 3306
+    Default: 27017
     ConstraintDescription: 'Must be in the range [1150-65535]'
     MinValue: 1150
     MaxValue: 65535
@@ -258,7 +199,7 @@ Parameters:
     MinLength: '1'
     MaxLength: '16'
     AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z_]*$"
-    ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 16 characters. Note 'admin' is reserved and cannot be used here.
+    ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 16 characters. Note 'admin' is AWS reserved.
     Default: 'master'
 
   DBPassword:
@@ -268,66 +209,29 @@ Parameters:
     NoEcho: 'True'
 
   DBEngineVersion:
-    Description: Select Database Engine Version.
+    Description: Select Database Engine Version
     Type: String
-    Default: 'Aurora-MySQL5.6.10a'
+    Default: 3.6.0
     AllowedValues:
-    - 'Aurora-MySQL5.6.10a'
-    - 'Aurora-MySQL5.6-1.19.0'
-    - 'Aurora-MySQL5.7.12'
-    - 'Aurora-MySQL5.7-2.03.2'
-    - 'Aurora-MySQL5.7-2.03.3'
-    - 'Aurora-MySQL5.7-2.03.4'
-    - 'Aurora-MySQL5.7-2.03.4.2'
-    - 'Aurora-MySQL5.7-2.04.0'
-    - 'Aurora-MySQL5.7-2.04.1'
-    - 'Aurora-MySQL5.7-2.04.1.2'      
+    - 3.6.0
      
   DBInstanceClass:
-    Default: db.r4.large
-    Description: Database Instance Class (Aurora MySQL supports the db.t3 instance classes for Aurora MySQL 1.15 and higher, and all Aurora MySQL 2.* versions). Not applicable if Engine Mode is Serverless.
+    Default: db.r5.large
+    Description: Database Instance Class
     Type: String
-    AllowedValues:
-    - db.r5.12xlarge
-    - db.r5.4xlarge
-    - db.r5.2xlarge
-    - db.r5.xlarge
-    - db.r5.large
+    AllowedValues:  
     - db.r4.16xlarge
     - db.r4.8xlarge
     - db.r4.4xlarge
     - db.r4.2xlarge
     - db.r4.xlarge
     - db.r4.large
-    - db.r3.8xlarge
-    - db.r3.4xlarge
-    - db.r3.2xlarge
-    - db.r3.xlarge
-    - db.r3.large
-    - db.t3.2xlarge
-    - db.t3.xlarge
-    - db.t3.large
-    - db.t3.medium
-    - db.t3.small
-    - db.t3.micro
-    - db.t2.medium
-    - db.t2.small
-
-  DeletionProtection:
-    Description: Indicates if the DB cluster should have deletion protection enabled. 
-    Type: String
-    Default: 'false'
-    AllowedValues:
-    - 'true'
-    - 'false'
-
-  DBEngineMode:
-    Description: The DB engine mode of the DB cluster, either provisioned, serverless (currently available for Aurora MySQL 5.6)
-    Type: String
-    Default: 'provisioned'
-    AllowedValues:
-    - 'provisioned'
-    - 'serverless'
+    - db.r5.24xlarge
+    - db.r5.12xlarge
+    - db.r5.4xlarge
+    - db.r5.2xlarge
+    - db.r5.xlarge
+    - db.r5.large
 
   NumberOfAvailabilityZones:
     Description: Quantity of subnets to use, if selecting more than 2 the region this
@@ -340,39 +244,68 @@ Parameters:
     - '4'
     - '5'
 
-  NumberofAuroraReplicas:
-    Description: Number of Aurora Replicas to deploy in addition to the Primary. Not provisioned if engine mode is Serverless. If selecting 2 replicas, Number Of Availability Zones must be more than 2
+  NumberofReplicas:
+    Description: Number of Replicas to deploy in addition to the Primary. If selecting 2 replicas, 3 are required in Number Of Availability Zones.
     Type: String
     Default: '0'
     AllowedValues:    
     - '0'
     - '1'
     - '2'     
+    
+  VpcId:
+    Description: The ID of the VPC to launch the Cluster instance into
+    Type: AWS::EC2::VPC::Id
 
-  PubliclyAccessible:
-    Description: Indicates whether the DB instance is an Internet-facing instance.
+  AutoMinorVersionUpgrade:
+    Description: Indicates that minor engine upgrades are applied automatically to
+      the DB instance during the maintenance window.
     Type: String
-    Default: 'false'
+    Default: 'true'
     AllowedValues:
     - 'true'
     - 'false'
-    
-  MonitoringInterval:
-    Description: The interval, in seconds, between points when Enhanced Monitoring
-      metrics are collected for the DB instance.
+
+  StorageEncrypted:
+    Description: Indicates whether the DB instance is encrypted.
     Type: String
-    Default: '1'
+    Default: 'true'
     AllowedValues:
-    - '0'
-    - '1'
-    - '5'
-    - '10'
-    - '15'
-    - '30'
-    - '60'  
+    - 'true'
+    - 'false'
+
+  PreferredBackupWindow:
+    Description: The daily time range in UTC during which automated backups are created
+      (if automated backups are enabled). Cannot overlap with PreferredMaintenanceWindowTime
+    Type: String
+    Default: 00:00-02:00
+    AllowedValues:
+    - 00:00-02:00
+    - 01:00-03:00
+    - 02:00-04:00
+    - 03:00-05:00
+    - 04:00-06:00
+    - 05:00-07:00
+    - 06:00-08:00
+    - 07:00-09:00
+    - 08:00-10:00
+    - 09:00-11:00
+    - 10:00-12:00
+    - 11:00-13:00
+    - 12:00-14:00
+    - 13:00-15:00
+    - 14:00-16:00
+    - 15:00-17:00
+    - 16:00-18:00
+    - 17:00-19:00
+    - 18:00-20:00
+    - 19:00-21:00
+    - 20:00-22:00
+    - 21:00-23:00
+    - 22:00-24:00
 
   PreferredMaintenanceWindowDay:
-    Description: The day of the week which RDS maintenance will be performed
+    Description: The day of the week which Cluster maintenance will be performed
     Type: String
     Default: Sun
     AllowedValues:
@@ -385,7 +318,7 @@ Parameters:
     - Sun
 
   PreferredMaintenanceWindowEndTime:
-    Description: The weekly end time in UTC for the RDS maintenance window, must be
+    Description: The weekly end time in UTC for the Cluster maintenance window, must be
       more than PreferredMaintenanceWindowStartTime.
     Type: String
     Default: 06:00
@@ -415,7 +348,7 @@ Parameters:
     - '22:00'
 
   PreferredMaintenanceWindowStartTime:
-    Description: The weekly start time in UTC for the RDS maintenance window, must
+    Description: The weekly start time in UTC for the Cluster maintenance window, must
       be less than PreferredMaintenanceWindowEndTime.
     Type: String
     Default: 04:00
@@ -442,227 +375,18 @@ Parameters:
     - '19:00'
     - '20:00'
     - '21:00'
-    - '22:00'
-
-  RDSTimeZone:
-    Description: The default timezone for the database engine to use.
-    Type: String
-    Default: UTC
-    AllowedValues:
-    - Africa/Cairo
-    - Africa/Casablanca
-    - Africa/Harare
-    - Africa/Monrovia
-    - Africa/Nairobi
-    - Africa/Tripoli
-    - Africa/Windhoek
-    - America/Araguaina
-    - America/Asuncion
-    - America/Bogota
-    - America/Caracas
-    - America/Chihuahua
-    - America/Cuiaba
-    - America/Denver
-    - America/Fortaleza
-    - America/Guatemala
-    - America/Halifax
-    - America/Manaus
-    - America/Matamoros
-    - America/Monterrey
-    - America/Montevideo
-    - America/Phoenix
-    - America/Santiago
-    - America/Tijuana
-    - Asia/Amman
-    - Asia/Ashgabat
-    - Asia/Baghdad
-    - Asia/Baku
-    - Asia/Bangkok
-    - Asia/Beirut
-    - Asia/Calcutta
-    - Asia/Damascus
-    - Asia/Dhaka
-    - Asia/Irkutsk
-    - Asia/Jerusalem
-    - Asia/Kabul
-    - Asia/Karachi
-    - Asia/Kathmandu
-    - Asia/Krasnoyarsk
-    - Asia/Magadan
-    - Asia/Muscat
-    - Asia/Novosibirsk
-    - Asia/Riyadh
-    - Asia/Seoul
-    - Asia/Shanghai
-    - Asia/Singapore
-    - Asia/Taipei
-    - Asia/Tehran
-    - Asia/Tokyo
-    - Asia/Ulaanbaatar
-    - Asia/Vladivostok
-    - Asia/Yakutsk
-    - Asia/Yerevan
-    - Atlantic/Azores
-    - Australia/Adelaide
-    - Australia/Brisbane
-    - Australia/Darwin
-    - Australia/Hobart
-    - Australia/Perth
-    - Australia/Sydney
-    - Canada/Newfoundland
-    - Canada/Saskatchewan
-    - Brazil/East
-    - Europe/Amsterdam
-    - Europe/Athens
-    - Europe/Dublin
-    - Europe/Helsinki
-    - Europe/Istanbul
-    - Europe/Kaliningrad
-    - Europe/Moscow
-    - Europe/Paris
-    - Europe/Prague
-    - Europe/Sarajevo
-    - Pacific/Auckland
-    - Pacific/Fiji
-    - Pacific/Guam
-    - Pacific/Honolulu
-    - Pacific/Samoa
-    - US/Alaska
-    - US/Central
-    - US/Eastern
-    - US/East-Indiana
-    - US/Pacific
-    - UTC
+    - '22:00' 
   
-  StorageEncrypted:
-    Description: Indicates whether the DB instance is encrypted.
-    Type: String
-    Default: 'true'
-    AllowedValues:
-    - 'true'
-    - 'false'
-
-  VpcId:
-    Description: The ID of the VPC to launch the RDS instance into
-    Type: AWS::EC2::VPC::Id
-
-  ServerlessMinCapacityUnit:
-    Description: The minimum capacity for an Aurora DB cluster in serverless DB engine mode. The minimum capacity must be less than or equal to the maximum capacity.
-    Type: String
-    Default: '2'
-    AllowedValues:
-    - '2'
-    - '4'
-    - '8'
-    - '16'
-    - '32'
-    - '64'
-    - '128'
-    - '256'
-
-  ServerlessMaxCapacityUnit:
-    Description: The maximum capacity for an Aurora DB cluster in serverless DB engine mode. The maximum capacity must be greater than or equal to the minimum capacity.
-    Type: String
-    Default: '64'
-    AllowedValues:
-    - '2'
-    - '4'
-    - '8'
-    - '16'
-    - '32'
-    - '64'
-    - '128'
-    - '256'  
-  
-  ServerlessAutoPause:
-    Description: Specifies whether to allow or disallow automatic pause for an Aurora DB cluster in serverless DB engine mode. A DB cluster can be paused only when its idle (it has no connections).
-    Type: String
-    Default: 'true'
-    AllowedValues:
-    - 'true'
-    - 'false'
-
-  ServerlessSecondsUntilAutoPause:
-    Description: The time, in seconds, before an Aurora DB cluster in serverless mode is auto paused. Min = 300, Max = 86400 (24hrs)
-    Type: Number
-    Default: 300
-    MaxValue: 86400
-    MinValue: 300
-      
           
 ###############################################################################
 # Mappings
 ###############################################################################
  
 Mappings: 
-  
   DBFamilyMap: 
-    "Aurora-MySQL5.6.10a": 
-      "family" : "aurora5.6"
-    "Aurora-MySQL5.6-1.19.0": 
-      "family" : "aurora5.6"      
-    "Aurora-MySQL5.7.12":
-      "family" : "aurora-mysql5.7"
-    "Aurora-MySQL5.7-2.03.2":
-      "family" : "aurora-mysql5.7"
-    "Aurora-MySQL5.7-2.03.3":
-      "family" : "aurora-mysql5.7"
-    "Aurora-MySQL5.7-2.03.4":
-      "family" : "aurora-mysql5.7"
-    "Aurora-MySQL5.7-2.03.4.2":
-      "family" : "aurora-mysql5.7"
-    "Aurora-MySQL5.7-2.04.0":
-      "family" : "aurora-mysql5.7"
-    "Aurora-MySQL5.7-2.04.1":
-      "family" : "aurora-mysql5.7"
-    "Aurora-MySQL5.7-2.04.1.2":
-      "family" : "aurora-mysql5.7"
-
-  DBEngineVersionMap: 
-    "Aurora-MySQL5.6.10a": 
-      "engineversion" : "5.6.10a"
-    "Aurora-MySQL5.6-1.19.0": 
-      "engineversion" : "5.6.mysql_aurora.1.19.0"
-    "Aurora-MySQL5.7.12":
-      "engineversion" : "5.7.12"
-    "Aurora-MySQL5.7-2.03.2":
-      "engineversion" : "5.7.mysql_aurora.2.03.2"
-    "Aurora-MySQL5.7-2.03.3":
-      "engineversion" : "5.7.mysql_aurora.2.03.3"
-    "Aurora-MySQL5.7-2.03.4":
-      "engineversion" : "5.7.mysql_aurora.2.03.4"
-    "Aurora-MySQL5.7-2.03.4.2":
-      "engineversion" : "5.7.mysql_aurora.2.03.4.2"
-    "Aurora-MySQL5.7-2.04.0":
-      "engineversion" : "5.7.mysql_aurora.2.04.0"
-    "Aurora-MySQL5.7-2.04.1":
-      "engineversion" : "5.7.mysql_aurora.2.04.1"
-    "Aurora-MySQL5.7-2.04.1.2":
-      "engineversion" : "5.7.mysql_aurora.2.04.1.2"
-
-  DBEngineNameMap:
-    "Aurora-MySQL5.6.10a": 
-      "enginename" : "aurora"
-    "Aurora-MySQL5.6-1.19.0": 
-      "enginename" : "aurora"
-    "Aurora-MySQL5.7.12":
-      "enginename" : "aurora-mysql"
-    "Aurora-MySQL5.7-2.03.2":
-      "enginename" : "aurora-mysql"
-    "Aurora-MySQL5.7-2.03.3":
-      "enginename" : "aurora-mysql"
-    "Aurora-MySQL5.7-2.03.4":
-      "enginename" : "aurora-mysql"
-    "Aurora-MySQL5.7-2.03.4.2":
-      "enginename" : "aurora-mysql"
-    "Aurora-MySQL5.7-2.04.0":
-      "enginename" : "aurora-mysql"
-    "Aurora-MySQL5.7-2.04.1":
-      "enginename" : "aurora-mysql"
-    "Aurora-MySQL5.7-2.04.1.2":
-      "enginename" : "aurora-mysql"
- 
-        
+    "3.6.0": 
+      "family": "docdb3.6"
+      
 ###############################################################################
 # Conditions
 ############################################################################### 
@@ -671,40 +395,20 @@ Conditions:
     !Equals
     - !Ref StorageEncrypted
     - 'true'
-  
-  ServerlessEnabled:
-    !Equals
-    - !Ref DBEngineMode
-    - 'serverless'  
 
-  ServerlessDisabled:
-    !Equals
-    - !Ref DBEngineMode
-    - 'provisioned'  
- 
-  1replica: 
+  1replica:
     !Or
     - !Equals
-      - !Ref NumberofAuroraReplicas
+      - !Ref NumberofReplicas
       - '1'
     - !Equals
-      - !Ref NumberofAuroraReplicas
+      - !Ref NumberofReplicas
       - '2'    
 
   2replica:
     !Equals
-    - !Ref NumberofAuroraReplicas
+    -  !Ref NumberofReplicas
     - '2'
-
-  CanCreate1Replica:
-    !And
-    - !Condition ServerlessDisabled
-    - !Condition 1replica
-
-  CanCreate2Replica:
-   !And
-   - !Condition ServerlessDisabled
-   - !Condition 2replica
 
   3az:
     !Or
@@ -736,47 +440,108 @@ Conditions:
       - 0
       - !Ref CidrBlocks
     - Auto
-
   AutoAzs:
     !Equals
     - !Select
       - 0
       - !Ref AvailabilityZones
     - Auto
-
   AutoPassword:
     !Equals
     - !Ref DBPassword
-    - Auto
-
-  AutoDBName:
-    !Equals
-    - !Ref DBName
-    - Auto
+    - Auto 
 
 ###############################################################################
 # Resources 
 ###############################################################################   
     
-Resources:     
+Resources:      
+  DBCluster:
+    Type: AWS::DocDB::DBCluster
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:      
+      EngineVersion: !Ref DBEngineVersion
+      Port: !Ref DBPort
+      MasterUsername: !Ref DBUsername        
+      MasterUserPassword: 
+        !If
+        - AutoPassword
+        - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
+        - !Ref DBPassword  
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+      - !Ref ClusterSecurityGroup  
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
+      DBClusterParameterGroupName: !Ref RDSDBClusterParameterGroup      
+      StorageEncrypted: !Ref StorageEncrypted      
+      KmsKeyId:  !If
+        - EncryptionEnabled
+        - !GetAtt KMSCMK.Arn
+        - !Ref AWS::NoValue    
+      PreferredBackupWindow: !Ref PreferredBackupWindow  
+      PreferredMaintenanceWindow: !Sub ${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}
+        
+  DBPrimaryInstance:    
+    Type: AWS::DocDB::DBInstance
+    Properties:      
+      DBInstanceClass:
+        Ref: DBInstanceClass
+      DBClusterIdentifier: !Ref DBCluster        
+      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade            
+      AvailabilityZone:
+        !Select
+        - 0
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
 
-  MonitoringIAMRole: 
-    Type: AWS::IAM::Role    
-    Properties: 
-      AssumeRolePolicyDocument: 
-        Version: "2012-10-17"
-        Statement: 
-          - 
-            Effect: "Allow"
-            Principal: 
-              Service: 
-                - "monitoring.rds.amazonaws.com"
-            Action: 
-              - "sts:AssumeRole"
-      Path: "/"
-      ManagedPolicyArns: 
-        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+  DBReplicaOneInstance:
+    Condition: 1replica
+    Type: AWS::DocDB::DBInstance
+    Properties:      
+      DBInstanceClass:
+        Ref: DBInstanceClass
+      DBClusterIdentifier: !Ref DBCluster        
+      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade            
+      AvailabilityZone:
+        !Select
+        - 1
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones              
 
+  DBReplicaTwoInstance:
+    Condition: 2replica
+    Type: AWS::DocDB::DBInstance
+    Properties:      
+      DBInstanceClass:
+        Ref: DBInstanceClass
+      DBClusterIdentifier: !Ref DBCluster        
+      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade            
+      AvailabilityZone:
+        !Select
+        - 2
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+  
+  RDSDBClusterParameterGroup:
+    Type: AWS::DocDB::DBClusterParameterGroup
+    Properties:
+      Description: !Sub DocDB Parameter Group for Cloudformation Stack ${AWS::StackId}
+      Family: !FindInMap [DBFamilyMap, !Ref DBEngineVersion, "family"] 
+      Parameters:
+        audit_logs: disabled
+        tls: enabled
+        ttl_monitor: enabled
+
+###############################################################################
+# Network
+###############################################################################  
   DBSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -876,9 +641,9 @@ Resources:
           - !Ref CidrBlocks
                  
   DBSubnetGroup:
-    Type: 'AWS::RDS::DBSubnetGroup'
+    Type: 'AWS::DocDB::DBSubnetGroup'
     Properties:
-      DBSubnetGroupDescription: !Sub Database ${DBName}
+      DBSubnetGroupDescription: !Sub DocDB Cluster
       SubnetIds:
       - !Ref DBSubnet1
       - !Ref DBSubnet2
@@ -898,17 +663,17 @@ Resources:
   ClusterSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: !Sub Allow Client connections to Database ${DBName}
+      GroupDescription: !Sub Allow Client connections to DocDB Cluster
       SecurityGroupIngress:
       - IpProtocol: tcp
         FromPort: !Ref DBPort
         ToPort: !Ref DBPort
-        CidrIp: !Ref AccessCidr    
+        CidrIp: !Ref AccessCidr          
       SecurityGroupEgress:
       - IpProtocol: '-1'
         FromPort: '-1'
         ToPort: '-1'
-        CidrIp: 0.0.0.0/0   
+        CidrIp: 0.0.0.0/0       
       VpcId: !Ref VpcId
         
   ClusterSecurityGroupIngress:
@@ -918,16 +683,11 @@ Resources:
       IpProtocol: -1
       SourceSecurityGroupId: !Ref ClusterSecurityGroup
       Description: 'Self Reference'        
-      
-  RDSDBClusterParameterGroup:
-    Type: AWS::RDS::DBClusterParameterGroup
-    Properties:
-      Description: !Join [ "- ", [ "Aurora PG Cluster Parameter Group for Cloudformation Stack ", !Ref DBName ] ]
-      Family: !FindInMap [DBFamilyMap, !Ref DBEngineVersion, "family"] 
-      Parameters:        
-        time_zone: !Ref RDSTimeZone    
-
-  AuroraKMSCMK:
+ 
+###############################################################################
+# Security 
+###############################################################################  
+  KMSCMK:
     Type: 'AWS::KMS::Key'
     DeletionPolicy: Retain
     Properties:
@@ -956,120 +716,14 @@ Resources:
               'kms:CallerAccount': !Ref 'AWS::AccountId'
               'kms:ViaService': !Sub 'rds.${AWS::Region}.amazonaws.com'
 
-  AuroraKMSCMKAlias:
+  KMSCMKAlias:
     Type: 'AWS::KMS::Alias'
     DeletionPolicy: Retain
-    DependsOn: AuroraDBCluster
+    DependsOn: DBCluster
     Properties:
-      AliasName: !Sub 'alias/${AuroraDBCluster}'
-      TargetKeyId: !Ref AuroraKMSCMK
-        
-  AuroraDBCluster:
-    Type: AWS::RDS::DBCluster
-    DeletionPolicy: Snapshot
-    UpdateReplacePolicy: Snapshot
-    Properties:
-      Engine:  !FindInMap [DBEngineNameMap, !Ref DBEngineVersion, "enginename"] 
-      EngineVersion: !FindInMap [DBEngineVersionMap, !Ref DBEngineVersion, "engineversion"] 
-      EngineMode: !Ref DBEngineMode
-      ScalingConfiguration:  !If
-        - ServerlessEnabled
-        - AutoPause: !Ref ServerlessAutoPause
-          MaxCapacity: !Ref ServerlessMaxCapacityUnit
-          MinCapacity: !Ref ServerlessMinCapacityUnit
-          SecondsUntilAutoPause: !Ref ServerlessSecondsUntilAutoPause
-        - !Ref AWS::NoValue
-      DatabaseName: 
-        !If
-        - AutoDBName
-        - !GetAtt AWSSBInjectedGenerateDBName.DBName
-        - !Ref DBName
-      Port: !Ref DBPort
-      MasterUsername: !Ref DBUsername        
-      MasterUserPassword: 
-        !If
-        - AutoPassword
-        - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
-        - !Ref DBPassword  
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      VpcSecurityGroupIds:
-      - !Ref ClusterSecurityGroup  
-      BackupRetentionPeriod: !Ref BackupRetentionPeriod
-      DBClusterParameterGroupName: !Ref RDSDBClusterParameterGroup      
-      StorageEncrypted: !Ref StorageEncrypted      
-      KmsKeyId:  !If
-        - EncryptionEnabled
-        - !GetAtt AuroraKMSCMK.Arn
-        - !Ref AWS::NoValue
-      DeletionProtection: !Ref DeletionProtection
-      PreferredMaintenanceWindow: !Sub ${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}
-        
-  AuroraDBPrimaryInstance:    
-    Condition: ServerlessDisabled
-    Type: AWS::RDS::DBInstance
-    Properties:      
-      DBInstanceClass:
-        Ref: DBInstanceClass
-      DBClusterIdentifier: !Ref AuroraDBCluster  
-      Engine:  !FindInMap [DBEngineNameMap, !Ref DBEngineVersion, "enginename"]           
-      MonitoringInterval: !Ref MonitoringInterval
-      MonitoringRoleArn: !GetAtt MonitoringIAMRole.Arn      
-      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      PubliclyAccessible: !Ref PubliclyAccessible      
-      AvailabilityZone:
-        !Select
-        - 0
-        - !If
-          - AutoAzs
-          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
-          - !Ref AvailabilityZones
-
-  AuroraDBReplicaOneInstance:
-    Condition: CanCreate1Replica     
-    Type: AWS::RDS::DBInstance
-    DependsOn: 
-      - AuroraDBPrimaryInstance
-    Properties:      
-      DBInstanceClass:
-        Ref: DBInstanceClass
-      DBClusterIdentifier: !Ref AuroraDBCluster  
-      Engine:  !FindInMap [DBEngineNameMap, !Ref DBEngineVersion, "enginename"] 
-      MonitoringInterval: !Ref MonitoringInterval
-      MonitoringRoleArn: !GetAtt MonitoringIAMRole.Arn      
-      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      PubliclyAccessible: !Ref PubliclyAccessible      
-      AvailabilityZone:
-        !Select
-        - 1
-        - !If
-          - AutoAzs
-          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
-          - !Ref AvailabilityZones                
-
-  AuroraDBReplicaTwoInstance:
-    Condition: CanCreate2Replica    
-    Type: AWS::RDS::DBInstance
-    DependsOn: 
-      - AuroraDBPrimaryInstance
-    Properties:      
-      DBInstanceClass:
-        Ref: DBInstanceClass
-      DBClusterIdentifier: !Ref AuroraDBCluster  
-      Engine:  !FindInMap [DBEngineNameMap, !Ref DBEngineVersion, "enginename"] 
-      MonitoringInterval: !Ref MonitoringInterval
-      MonitoringRoleArn: !GetAtt MonitoringIAMRole.Arn      
-      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      PubliclyAccessible: !Ref PubliclyAccessible      
-      AvailabilityZone:
-        !Select
-        - 2
-        - !If
-          - AutoAzs
-          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
-          - !Ref AvailabilityZones
+      AliasName: !Sub 'alias/${DBCluster}'
+      TargetKeyId: !Ref KMSCMK       
+ 
 
 ###############################################################################
 # Injected Lambdas
@@ -1371,16 +1025,24 @@ Resources:
 # Outputs 
 ###############################################################################   
 Outputs:
+  ClusterIdentifier:
+    Description: 'Cluster Id'
+    Value: !GetAtt 'DBCluster.ClusterResourceId'
   ClusterEndpoint:
-    Description: 'Aurora Cluster/Writer Endpoint'
-    Value: !GetAtt 'AuroraDBCluster.Endpoint.Address'
+    Description: ' Cluster Writer Endpoint'
+    Value: !GetAtt 'DBCluster.Endpoint'
   ReaderEndpoint:
-    Condition: ServerlessDisabled
-    Description: 'Aurora Reader Endpoint'
-    Value: !GetAtt 'AuroraDBCluster.ReadEndpoint.Address'
+    Description: 'Cluster Reader Endpoint'
+    Value: !GetAtt 'DBCluster.ReadEndpoint'
   Port:
-    Description: 'Aurora Endpoint Port'
-    Value: !GetAtt 'AuroraDBCluster.Endpoint.Port'
+    Description: 'Cluster Port'
+    Value: !GetAtt 'DBCluster.Port'
+  InstanceId:
+    Description: 'DB Id'
+    Value: !Ref DBPrimaryInstance  
+  InstanceEndpoint:
+    Description: 'DB Endpoint Port'
+    Value: !GetAtt DBPrimaryInstance.Endpoint
   DBUsername:
     Description: 'Database master username'
     Value: !Ref DBUsername
@@ -1390,10 +1052,5 @@ Outputs:
       - AutoPassword
       - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
       - !Ref DBPassword
-  DBName:
-    Value:
-      !If
-      - AutoDBName
-      - !GetAtt AWSSBInjectedGenerateDBName.DBName
-      - !Ref DBName
+ 
 

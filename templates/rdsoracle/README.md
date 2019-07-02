@@ -107,6 +107,7 @@ At a minimum these parameters must be declared when provisioning an instance of 
 Name           | Description     | Accepted Values
 -------------- | --------------- | ---------------
 AccessCidr|CIDR block to allow to connect to database|string
+MasterUsername|Master database Username|string
 
 ### Optional
 
@@ -144,6 +145,7 @@ Name            | Description     | Default         | Accepted Values
 target_account_id | AWS Account ID to provision into(optional) ||
 target_role_name | IAM Role name to provision with(optional), must be used in combination with target_account_id ||
 region | AWS Region to create RDS instance in.| us-west-2 | ap-northeast-1, ap-northeast-2, ap-south-1, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-west-1, eu-west-2, sa-east-1, us-east-1, us-east-2, us-west-1, us-west-2
+VpcId|The ID of the VPC to launch the RDS instance into||
 
 <a id="bind-credentials"></a>
 
