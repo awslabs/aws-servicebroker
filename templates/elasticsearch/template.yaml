@@ -1,0 +1,913 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS Service Broker - Amazon Elasticsearch (qs-1poknmeof)
+
+###############################################################################
+# Service Broker MetaData
+###############################################################################
+Metadata:
+  AWS::ServiceBroker::Specification:
+    Version: 1.0
+    Tags:
+    - 'AWS'
+    - 'Elasticsearch'
+    Name: elasticsearch
+    DisplayName: Amazon Elasticsearch
+    LongDescription: Amazon Elasticsearch Service is a fully managed service that makes it easy for you to deploy, secure, and operate Elasticsearch at scale with zero down time.
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/elasticsearch-service/
+    ProviderDisplayName: Amazon Web Services
+    ServicePlans:
+      production:
+        DisplayName: Production
+        Description: Configuration designed for production deployments
+        LongDescription: Creates an Amazon Elasticsearch optimised for production use
+        Cost: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3
+        ParameterValues:          
+          AvailabilityZones: Auto
+          CidrBlocks: Auto
+          CidrSize: 27          
+          ESDomainName: Auto
+          NodeAvailabilityZones: 3
+          NodeInstanceCount: 3          
+          DedicatedMasterInstanceCount: 3          
+          NodeToNodeEncryption: true
+          EncryptionAtRest: true
+      dev:
+        DisplayName: Development
+        Description: Configuration designed for development and testing deployments
+        LongDescription: Creates an Amazon Elasticsearch optimised for development and testing use
+        Cost: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3
+        ParameterValues:          
+          AvailabilityZones: Auto
+          CidrBlocks: Auto
+          CidrSize: 27          
+          ESDomainName: Auto
+          NodeAvailabilityZones: 1          
+          NodeInstanceCount: 1          
+          DedicatedMasterInstanceCount: 0          
+          NodeToNodeEncryption: true
+          EncryptionAtRest: true
+      custom:
+        DisplayName: Custom
+        Description: Custom Configuration for Advanced deployments
+        LongDescription: Creates an Amazon Elasticsearch optimised for advanced use
+        Cost: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3        
+        ParameterValues: {}  
+
+
+###############################################################################
+# Parameter groups
+###############################################################################
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -       
+        Label:
+          default: Network and Security
+        Parameters:
+          - VpcId                    
+          - AccessCidr
+          - CidrBlocks
+          - CidrSize
+          - AvailabilityZones          
+      -       
+        Label:
+          default: Elasticsearch Version
+        Parameters:
+          - ESDomainName
+          - EngineVersion          
+      -       
+        Label:
+          default: Data instances
+        Parameters:
+          - NodeAvailabilityZones
+          - NodeInstanceType
+          - NodeInstanceCount
+      -       
+        Label:
+          default: Dedicated master instances
+        Parameters:          
+          - DedicatedMasterInstanceType
+          - DedicatedMasterInstanceCount
+      -       
+        Label:
+          default: Storage
+        Parameters:
+          - StorageType
+          - AllocatedStorageAndIops
+          - PreferredSnapshotTime
+      -       
+        Label:
+          default: Encryption
+        Parameters:
+          - NodeToNodeEncryption
+          - EncryptionAtRest  
+        
+    ParameterLabels:
+      VpcId:
+        default: Vpc Id      
+      CidrBlocks:
+        default: CIDR Blocks
+      CidrSize:
+        default: CIDR Size
+      AvailabilityZones:
+        default: Availability Zones            
+      AccessCidr:
+        default: Access CIDR
+      EngineVersion:
+        default: Engine Version
+      ESDomainName:
+        default: ES Domain Name
+      NodeAvailabilityZones:
+        default: Node Availability Zones
+      NodeInstanceType:
+        default: Node Instance Type
+      NodeInstanceCount:
+        default: Node Instance Count      
+      DedicatedMasterInstanceType:
+        default: Dedicated Master Instance Type
+      DedicatedMasterInstanceCount:
+        default: Dedicated Master Instance Count
+      StorageType:
+        default: Storage Type
+      AllocatedStorageAndIops:
+        default: Allocated Storage And Iops
+      PreferredSnapshotTime:
+        default: Preferred Snapshot Time
+      NodeToNodeEncryption:
+         default: Node To Node Encryption
+      EncryptionAtRest:
+        default: Encryption At Rest
+
+
+###############################################################################
+# Parameters 
+###############################################################################  
+
+Parameters:
+
+  AccessCidr:
+    Description: CIDR block to allow to connect to ElasticSearch Cluster
+    Type: String    
+
+  VpcId:
+    Description: The ID of the VPC to launch the ElasticSearch instance into
+    Type: AWS::EC2::VPC::Id
+
+  AvailabilityZones:
+    Description: list of availability zones to use, must be the same quantity as specified
+      in NodeAvailabilityZones
+    Type: CommaDelimitedList
+    Default: Auto
+  
+  CidrBlocks:
+    Description: comma seperated list of CIDR blocks to place into, must be the
+      same quantity as specified in NodeAvailabilityZones
+    Type: CommaDelimitedList
+    Default: Auto
+ 
+  CidrSize:
+    Description: Size of Cidr block to allocate if CidrBlocks is set to Auto.
+    Type: String
+    Default: 27
+
+  EngineVersion:
+    Description: Version of Elasticsearch
+    Type: String
+    Default: '6.7'
+    AllowedValues:
+      - '6.7'
+      - '6.5'
+      - '6.4'
+      - '6.3'
+      - '6.2'
+      - '6.0'
+      - '5.6'
+      - '5.5'
+      - '5.3'
+      - '5.1'
+      - '2.3'
+      - '1.5'
+
+  ESDomainName:
+    Description: A name for the Amazon ES domain, will be autogenerated if set to "Auto".
+    Type: String
+    MinLength: '1'
+    MaxLength: '28'
+    Default: Auto    
+    ConstraintDescription: The name must start with a lowercase letter and must be between 3 and 28 characters. Valid characters are a-z (lowercase only), 0-9, and - (hyphen).
+  
+  NodeAvailabilityZones: 
+    Description: Number of AZs. For two AZs, you must choose instances in multiples of two. For three AZs, we recommend instances in multiples of three for equal distribution across the Availability Zones. 
+    Type: Number
+    Default: '2'
+    AllowedValues:
+    - '1'
+    - '2'
+    - '3' 
+
+  NodeInstanceType:
+    Description: The node type to be provisioned for the Elasticsearch cluster
+    Type: String
+    Default: r5.large.elasticsearch
+    AllowedValues:
+    - t2.micro.elasticsearch
+    - t2.small.elasticsearch
+    - t2.medium.elasticsearch
+    - m5.large.elasticsearch
+    - m5.xlarge.elasticsearch
+    - m5.2xlarge.elasticsearch
+    - m5.4xlarge.elasticsearch
+    - m5.12xlarge.elasticsearch
+    - m4.large.elasticsearch
+    - m4.xlarge.elasticsearch
+    - m4.2xlarge.elasticsearch
+    - m4.4xlarge.elasticsearch
+    - m4.10xlarge.elasticsearch    
+    - c5.large.elasticsearch
+    - c5.xlarge.elasticsearch
+    - c5.2xlarge.elasticsearch
+    - c5.4xlarge.elasticsearch
+    - c5.9xlarge.elasticsearch
+    - c5.18xlarge.elasticsearch
+    - c4.large.elasticsearch
+    - c4.xlarge.elasticsearch
+    - c4.2xlarge.elasticsearch
+    - c4.4xlarge.elasticsearch
+    - c4.8xlarge.elasticsearch
+    - r5.large.elasticsearch
+    - r5.xlarge.elasticsearch
+    - r5.2xlarge.elasticsearch
+    - r5.4xlarge.elasticsearch
+    - r5.12xlarge.elasticsearch
+    - r4.large.elasticsearch
+    - r4.xlarge.elasticsearch
+    - r4.2xlarge.elasticsearch
+    - r4.4xlarge.elasticsearch
+    - r4.8xlarge.elasticsearch
+    - r4.16xlarge.elasticsearch
+    - i3.large.elasticsearch
+    - i3.xlarge.elasticsearch
+    - i3.2xlarge.elasticsearch
+    - i3.4xlarge.elasticsearch
+    - i3.8xlarge.elasticsearch
+    - i3.16xlarge.elasticsearch 
+
+  NodeInstanceCount:
+    Description: Number of Data Nodes for the ES Domain
+    Type: Number
+    Default: '2'
+  
+  DedicatedMasterInstanceType:
+    Description: Master Instance Type
+    Type: String
+    Default: r5.large.elasticsearch
+    AllowedValues:
+    - t2.micro.elasticsearch
+    - t2.small.elasticsearch
+    - t2.medium.elasticsearch
+    - m5.large.elasticsearch
+    - m5.xlarge.elasticsearch
+    - m5.2xlarge.elasticsearch
+    - m5.4xlarge.elasticsearch
+    - m5.12xlarge.elasticsearch
+    - m4.large.elasticsearch
+    - m4.xlarge.elasticsearch
+    - m4.2xlarge.elasticsearch
+    - m4.4xlarge.elasticsearch
+    - m4.10xlarge.elasticsearch    
+    - c5.large.elasticsearch
+    - c5.xlarge.elasticsearch
+    - c5.2xlarge.elasticsearch
+    - c5.4xlarge.elasticsearch
+    - c5.9xlarge.elasticsearch
+    - c5.18xlarge.elasticsearch
+    - c4.large.elasticsearch
+    - c4.xlarge.elasticsearch
+    - c4.2xlarge.elasticsearch
+    - c4.4xlarge.elasticsearch
+    - c4.8xlarge.elasticsearch
+    - r5.large.elasticsearch
+    - r5.xlarge.elasticsearch
+    - r5.2xlarge.elasticsearch
+    - r5.4xlarge.elasticsearch
+    - r5.12xlarge.elasticsearch
+    - r4.large.elasticsearch
+    - r4.xlarge.elasticsearch
+    - r4.2xlarge.elasticsearch
+    - r4.4xlarge.elasticsearch
+    - r4.8xlarge.elasticsearch
+    - r4.16xlarge.elasticsearch
+    - i3.large.elasticsearch
+    - i3.xlarge.elasticsearch
+    - i3.2xlarge.elasticsearch
+    - i3.4xlarge.elasticsearch
+    - i3.8xlarge.elasticsearch
+    - i3.16xlarge.elasticsearch 
+
+  DedicatedMasterInstanceCount:
+    Description: 'The number of dedicated master nodes (instances) to use in the ES domain (set to 0 to disable dedicated master nodes).'    
+    Type: Number
+    Default: 3
+    AllowedValues: 
+    - 0
+    - 3
+    - 5
+
+  StorageType:
+    Description: Specifies the storage type to be associated to the Data Nodes
+    Type: String
+    Default: io1
+    AllowedValues:
+    - io1
+    - gp2
+    - standard
+  
+  AllocatedStorageAndIops:
+    Description: Storage/IOPS to allocate. Total cluster size will be (EBS volume size x Instance count).
+    Type: String
+    Default:  100GB 1000IOPS
+    AllowedValues:
+    - 100GB 1000IOPS
+    - 300GB 3000IOPS
+    - 600GB 6000IOPS
+    - 1000GB 10000IOPS
+  
+  PreferredSnapshotTime:
+    Description: The hour in UTC during which the service takes an automated daily snapshot of the indices in the Amazon ES domain
+    Type: Number
+    Default: 0
+    AllowedValues:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+  
+  NodeToNodeEncryption:
+    Description: Specifies whether node-to-node encryption is enabled.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  EncryptionAtRest:
+    Description: Whether the domain should encrypt data at rest, and if so, the AWS Key Management Service (KMS) key to use. Can only be used to create a new domain, not update an existing one.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+###############################################################################
+# Conditions
+###############################################################################
+Conditions:
+  100GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 100GB 1000IOPS
+  300GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 300GB 3000IOPS
+  600GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 600GB 6000IOPS
+  1000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 1000GB 10000IOPS
+
+  AutoCidrs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref CidrBlocks
+    - Auto
+
+  AutoAzs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref AvailabilityZones
+    - Auto
+
+  3az:    
+    !Equals
+    - !Ref NodeAvailabilityZones
+    - '3' 
+
+  EncryptionEnabled:
+    !Equals
+    - !Ref EncryptionAtRest
+    - 'true' 
+
+  AutoDBName:
+    !Equals
+    - !Ref ESDomainName
+    - Auto 
+
+  HasSingleClusterInstance: !Equals [!Ref NodeInstanceCount, '1']
+  HasDedicatedMasterNodes: !Not [!Equals [!Ref DedicatedMasterInstanceCount, 0]]
+
+###############################################################################
+# Resources 
+###############################################################################      
+
+Resources:
+  ElasticsearchDomain:
+    Type: 'AWS::Elasticsearch::Domain'    
+    Properties:      
+      DomainName:    
+        !If
+        - AutoDBName
+        - !GetAtt AWSSBInjectedGenerateDBName.DBName
+        - !Ref ESDomainName
+      AccessPolicies: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              AWS: "*"
+            Action: "es:*"
+            Resource: 
+              !If 
+              - AutoDBName
+              - !Sub "arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${AWSSBInjectedGenerateDBName.DBName}/*"
+              - !Sub "arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${ESDomainName}/*"
+      AdvancedOptions:
+        rest.action.multi.allow_explicit_index: 'true'    
+      EBSOptions:
+        EBSEnabled: true
+        Iops: 
+          !If
+          - 100GB
+          - '1000'
+          - !If
+            - 300GB
+            - '3000'
+            - !If
+              - 600GB
+              - '6000'
+              - '10000'
+        VolumeSize: 
+          !If
+          - 100GB
+          - '100'
+          - !If
+            - 300GB
+            - '300'
+            - !If
+              - 600GB
+              - '600'
+              - '1000'
+        VolumeType: !Ref StorageType
+      ElasticsearchClusterConfig:
+        DedicatedMasterCount: !If 
+          - HasDedicatedMasterNodes
+          - !Ref DedicatedMasterInstanceCount
+          - !Ref 'AWS::NoValue'
+        DedicatedMasterEnabled: !If 
+          - HasDedicatedMasterNodes
+          - true
+          - false
+        DedicatedMasterType: !If 
+          - HasDedicatedMasterNodes
+          - !Ref DedicatedMasterInstanceType
+          - !Ref 'AWS::NoValue'
+        InstanceCount: !Ref NodeInstanceCount        
+        InstanceType: !Ref NodeInstanceType
+        ZoneAwarenessEnabled: !If 
+          - HasSingleClusterInstance
+          - false
+          - true
+      ElasticsearchVersion: !Ref EngineVersion
+      EncryptionAtRestOptions: !If 
+        - EncryptionEnabled
+        - Enabled: true
+          KmsKeyId: !GetAtt KMSKey.Arn
+        - !Ref 'AWS::NoValue'  
+      NodeToNodeEncryptionOptions: 
+        Enabled: !Ref NodeToNodeEncryption        
+      SnapshotOptions:
+        AutomatedSnapshotStartHour: !Ref PreferredSnapshotTime
+      VPCOptions:     
+        SecurityGroupIds: 
+        - !Ref SecurityGroup
+        SubnetIds: 
+          !If
+          - HasSingleClusterInstance
+          - - !Ref Subnet1
+          - - !Ref Subnet1
+            - !Ref Subnet2
+            - !If
+              - 3az
+              - !Ref Subnet3
+              - !Ref AWS::NoValue
+                  
+###############################################################################
+# Subnet 
+###############################################################################
+
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 0
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 0
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+  Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 1
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 1
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+  Subnet3:
+    Condition: 3az
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 2
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 2
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub Allow Client connections to ElasticSearch ${AWS::StackName}
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: 'tcp'
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: !Ref AccessCidr
+      SecurityGroupEgress:
+      - IpProtocol: '-1'
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: 0.0.0.0/0
+
+###############################################################################
+# Encryption
+############################################################################### 
+
+  KMSKey:
+    Condition: EncryptionEnabled
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub Database ${AWS::StackName}
+      Enabled: 'true'
+      EnableKeyRotation: 'true'
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+        - Sid: Allow administration of the key
+          Effect: Allow
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Action:
+          - kms:Create*
+          - kms:Describe*
+          - kms:Enable*
+          - kms:List*
+          - kms:Put*
+          - kms:Update*
+          - kms:Revoke*
+          - kms:Disable*
+          - kms:Get*
+          - kms:Delete*
+          - kms:ScheduleKeyDeletion
+          - kms:CancelKeyDeletion
+          Resource: '*'
+
+###############################################################################
+# Injected Lambdas
+############################################################################### 
+
+  AWSSBInjectedLambdaZipsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: []
+  AWSSBInjectedCopyZips:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedCopyZipsLambda.Arn
+      DestBucket: !Ref AWSSBInjectedLambdaZipsBucket
+      SourceBucket: awsservicebrokeralpha
+      Prefix: functions/
+      Objects:
+      - get_cidrs/lambda_function.zip
+      - get_azs/lambda_function.zip  
+      - generate_dbname/lambda_function.zip   
+  AWSSBInjectedCopyZipsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+      - PolicyName: lambda-copier
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - arn:aws:s3:::awsservicebrokeralpha/*
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:DeleteObject
+            Resource:
+            - !Sub arn:aws:s3:::${AWSSBInjectedLambdaZipsBucket}/*
+  AWSSBInjectedCopyZipsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python2.7
+      Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+
+
+          def copy_objects(source_bucket, dest_bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              for o in objects:
+                  key = prefix + o
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': key
+                  }
+                  print('copy_source: %s' % copy_source)
+                  print('dest_bucket = %s' % dest_bucket)
+                  print('key = %s' % key)
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket, Key=key)
+
+
+          def delete_objects(bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3.delete_objects(Bucket=bucket, Delete=objects)
+
+
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+
+
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(dest_bucket, prefix, objects)
+                  else:
+                      copy_objects(source_bucket, dest_bucket, prefix, objects)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+  AWSSBInjectedGetCidrsRole:
+    Condition: AutoCidrs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeVpcs
+            - ec2:DescribeSubnets
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetCidrsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoCidrs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetCidrsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_cidrs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetCidrs:
+    Condition: AutoCidrs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetCidrsLambda.Arn
+      Qty: 2
+      VpcId: !Ref VpcId
+      CidrSize: !Ref CidrSize
+  AWSSBInjectedGetAzsRole:
+    Condition: AutoAzs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetAzsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoAzs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetAzsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_azs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetAzs:
+    Condition: AutoAzs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetAzsLambda.Arn
+      Qty: 2
+  AWSSBInjectedGenerateDBNameRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGenerateDBNameLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGenerateDBNameRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_dbname/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGenerateDBName:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGenerateDBNameLambda.Arn
+      Length: 28
+   
+
+###############################################################################
+# Outputs 
+###############################################################################  
+
+Outputs:  
+  ElasticsearchEndpoint:
+    Description: Elasticsearch domain endpoint
+    Value: !GetAtt 
+      - ElasticsearchDomain
+      - DomainEndpoint
+  ElasticsearchDomainARN:
+    Description: Elasticsearch domain ARN
+    Value: !GetAtt 
+      - ElasticsearchDomain
+      - DomainArn
+  ESDomainName:
+    Value:
+      !If
+      - AutoDBName
+      - !GetAtt AWSSBInjectedGenerateDBName.DBName
+      - !Ref ESDomainName
