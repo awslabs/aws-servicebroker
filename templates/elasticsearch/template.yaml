@@ -1,9 +1,63 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: AWS Service Broker - Amazon Elasticsearch
+
+###############################################################################
+# Service Broker MetaData
+###############################################################################
+Metadata:
+  AWS::ServiceBroker::Specification:
+    Version: 1.0
+    Tags:
+    - 'AWS'
+    - 'Elasticsearch'
+    Name: elasticsearch
+    DisplayName: Amazon Elasticsearch
+    LongDescription: Amazon Elasticsearch Service is a fully managed service that makes it easy for you to deploy, secure, and operate Elasticsearch at scale with zero down time.
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/elasticsearch-service/
+    ProviderDisplayName: Amazon Web Services
+    ServicePlans:
+      production:
+        DisplayName: Production
+        Description: Configuration designed for production deployments
+        LongDescription: Creates an Amazon Elasticsearch optimised for production use
+        Cost: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3
+        ParameterValues:          
+          AvailabilityZones: Auto
+          CidrBlocks: Auto
+          CidrSize: 27          
+          ESDomainName: Auto
+          NodeAvailabilityZones: 3
+          NodeInstanceCount: 3          
+          DedicatedMasterInstanceCount: 3          
+          NodeToNodeEncryption: true
+          EncryptionAtRest: true
+      dev:
+        DisplayName: Development
+        Description: Configuration designed for development and testing deployments
+        LongDescription: Creates an Amazon Elasticsearch optimised for development and testing use
+        Cost: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3
+        ParameterValues:          
+          AvailabilityZones: Auto
+          CidrBlocks: Auto
+          CidrSize: 27          
+          ESDomainName: Auto
+          NodeAvailabilityZones: 1          
+          NodeInstanceCount: 1          
+          DedicatedMasterInstanceCount: 0          
+          NodeToNodeEncryption: true
+          EncryptionAtRest: true
+      custom:
+        DisplayName: Custom
+        LongDescription: Creates an Amazon Elasticsearch optimised for advanced use
+        Cost: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3        
+        ParameterValues: {}  
+
+
 ###############################################################################
 # Parameter groups
 ###############################################################################
-Metadata:
+
   AWS::CloudFormation::Interface:
     ParameterGroups:
       -       
@@ -93,8 +147,7 @@ Parameters:
 
   AccessCidr:
     Description: CIDR block to allow to connect to ElasticSearch Cluster
-    Type: String
-    Default: 0.0.0.0/0
+    Type: String    
 
   VpcId:
     Description: The ID of the VPC to launch the ElasticSearch instance into
