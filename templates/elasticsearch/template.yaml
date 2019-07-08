@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: AWS Service Broker - Amazon Elasticsearch
+Description: AWS Service Broker - Amazon Elasticsearch (qs-1poknmeof)
 
 ###############################################################################
 # Service Broker MetaData
@@ -49,6 +49,7 @@ Metadata:
           EncryptionAtRest: true
       custom:
         DisplayName: Custom
+        Description: Custom Configuration for Advanced deployments
         LongDescription: Creates an Amazon Elasticsearch optimised for advanced use
         Cost: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3        
         ParameterValues: {}  
