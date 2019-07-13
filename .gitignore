@@ -119,3 +119,12 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+templates/rdsmsql-sep/SQLWeb/template.yaml
+templates/rdsmsql-sep/SQLStandard/template.yaml
+templates/rdsmsql-sep/SQLStandard/README.md
+templates/rdsmsql-sep/SQLWeb/README.md
+templates/rdsmsql-sep/SQLExpress/README.md
+templates/rdsmsql-sep/SQLEnterprise/README.md
+templates/rdsmsql-sep/SQLExpress/README.md
+templates/rdsmsql-sep/SQLExpress/template.yaml
+templates/rdsmsql-sep/SQLEnterprise/template.yaml

@@ -1,0 +1,399 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Service Broker - Amazon Cognito'
+
+###############################################################################
+# MetaData - ServiceBroker 
+###############################################################################   
+Metadata:
+  AWS::ServiceBroker::Specification:
+    Version: 1.0
+    Tags:
+    - AWS    
+    - Cognito
+    Name: cognito
+    DisplayName: Amazon Cognito
+    LongDescription: Amazon Cognito lets you add user sign-up, sign-in, and access control to your web and mobile apps quickly and easily. Amazon Cognito scales to millions of users and supports sign-in with social identity providers, such as Facebook, Google, and Amazon, and enterprise identity providers via SAML 2.0.
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    DocumentationUrl: https://docs.aws.amazon.com/cognito/index.html
+    ProviderDisplayName: Amazon Web Services
+    ServicePlans:
+      production:
+        DisplayName: Production
+        Description: Configuration designed for production deployments
+        LongDescription: Creates an Amazon Cognito optimised for
+          production use
+        Cost: https://aws.amazon.com/cognito/pricing/
+        ParameterValues:          
+          AuthName: 'Auto'
+      dev:
+        DisplayName: Development
+        Description: Configuration designed for development and testing deployments
+        LongDescription: Creates an Amazon Cognito optimised for
+          dev/test use
+        Cost: https://aws.amazon.com/cognito/pricing/
+        ParameterValues:          
+          AuthName: 'Auto'
+      custom:
+        DisplayName: Custom
+        Description: Custom Configuration for Advanced deployments
+        LongDescription: Creates an Amazon Cognito with custom
+          configuration
+        Cost: https://aws.amazon.com/cognito/pricing/
+        ParameterValues: {}
+
+###############################################################################
+# Parameter groups
+###############################################################################
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -       
+        Label:
+          default: Cognito Settings
+        Parameters:
+          - AuthName        
+
+    ParameterLabels:
+      AuthName:
+        default: Name for Cognito Resources  
+
+###############################################################################
+# Parameters 
+###############################################################################   
+
+Parameters:
+  AuthName:
+    Type: String
+    Description: Name for Cognito Resources
+    Default: Auto
+
+###############################################################################
+# Conditons
+###############################################################################   
+
+Conditions:
+  AutoName:
+    !Equals
+    - !Ref AuthName
+    - Auto
+
+###############################################################################
+# Resources 
+###############################################################################   
+Resources:
+  # Creates a role that allows Cognito to send SNS messages
+  SNSRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+                - "cognito-idp.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "CognitoSNSPolicy"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action: "sns:publish"
+                Resource: "*"
+
+  # Create User Pool in Cognito for app to auth against.  
+  UserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName: 
+       !If
+        - AutoName
+        - !Sub ${AWSSBInjectedGenerateDBName.DBName}-user-pool
+        - !Sub ${AuthName}-user-pool      
+      AutoVerifiedAttributes:
+        - phone_number
+      MfaConfiguration: "ON"
+      SmsConfiguration:
+        ExternalId: 
+          !If
+          - AutoName
+          - !Sub ${AWSSBInjectedGenerateDBName.DBName}-external
+          - !Sub ${AuthName}-external        
+        SnsCallerArn: !GetAtt SNSRole.Arn
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+        - Name: phone_number
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+  
+  # Create User Pool Client to be used by Identity Pool
+  UserPoolClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Properties:
+      ClientName:
+        !If
+          - AutoName
+          - !Sub ${AWSSBInjectedGenerateDBName.DBName}-client
+          - !Sub ${AuthName}-client    
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+  
+  # Create a Federeated Identity Pool
+  IdentityPool:
+    Type: "AWS::Cognito::IdentityPool"
+    Properties:
+      IdentityPoolName: 
+          !If
+          - AutoName
+          - !Sub ${AWSSBInjectedGenerateDBName.DBName}Identity
+          - !Sub ${AuthName}Identity          
+      AllowUnauthenticatedIdentities: true
+      CognitoIdentityProviders: 
+        - ClientId: !Ref UserPoolClient
+          ProviderName: !GetAtt UserPool.ProviderName
+
+  # Create a Role for unauth acces to AWS resources. Allows users in the IdentityPool
+  CognitoUnAuthRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: 
+              Federated: "cognito-identity.amazonaws.com"
+            Action: 
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals: 
+                "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": unauthenticated
+      Policies:
+        - PolicyName: "CognitoUnauthorizedPolicy"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action:                  
+                  - "cognito-sync:*"
+                  - "mobileanalytics:PutEvents"
+                Resource: "*"
+
+  # Create a Role for auth accesx to AWS resources. Allows users IdentityPool
+  CognitoAuthRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: 
+              Federated: "cognito-identity.amazonaws.com"
+            Action: 
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals: 
+                "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": authenticated
+      Policies:
+        - PolicyName: "CognitoAuthorizedPolicy"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action:                  
+                  - "cognito-sync:*"
+                  - "cognito-identity:*"
+                  - "mobileanalytics:PutEvents"
+                Resource: "*"
+  
+  # Assign Roles to the IdentityPool
+  IdentityPoolRoleMapping:
+    Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+    Properties:
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+        authenticated: !GetAtt CognitoAuthRole.Arn
+        unauthenticated: !GetAtt CognitoUnAuthRole.Arn
+
+###############################################################################
+# Injected Lambdas
+############################################################################### 
+
+  AWSSBInjectedLambdaZipsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: []
+  AWSSBInjectedCopyZips:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedCopyZipsLambda.Arn
+      DestBucket: !Ref AWSSBInjectedLambdaZipsBucket
+      SourceBucket: awsservicebrokeralpha
+      Prefix: functions/
+      Objects:      
+      - generate_dbname/lambda_function.zip
+  AWSSBInjectedCopyZipsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+      - PolicyName: lambda-copier
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - arn:aws:s3:::awsservicebrokeralpha/*
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:DeleteObject
+            Resource:
+            - !Sub arn:aws:s3:::${AWSSBInjectedLambdaZipsBucket}/*
+  AWSSBInjectedCopyZipsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python2.7
+      Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+
+
+          def copy_objects(source_bucket, dest_bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              for o in objects:
+                  key = prefix + o
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': key
+                  }
+                  print('copy_source: %s' % copy_source)
+                  print('dest_bucket = %s' % dest_bucket)
+                  print('key = %s' % key)
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket, Key=key)
+
+
+          def delete_objects(bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3.delete_objects(Bucket=bucket, Delete=objects)
+
+
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+
+
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(dest_bucket, prefix, objects)
+                  else:
+                      copy_objects(source_bucket, dest_bucket, prefix, objects)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+  AWSSBInjectedGenerateDBNameRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGenerateDBNameLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGenerateDBNameRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_dbname/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGenerateDBName:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGenerateDBNameLambda.Arn
+      Length: 16
+
+###############################################################################
+# Outputs 
+###############################################################################  
+Outputs:
+  IdentityPoolId:
+    Value: !Ref IdentityPool
+    Export:
+      Name: "IdentityPool::Id"
+  UserPoolId:
+    Value: !Ref UserPool
+    Export:
+      Name: "UserPool::Id"
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+    Export:
+      Name: "UserPoolClient::Id"
+  
