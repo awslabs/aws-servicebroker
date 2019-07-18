@@ -257,9 +257,9 @@ Parameters:
   PortNumber:
     Description: The port number for the Cluster to listen on
     Type: Number
-    Default: '5439'
-    MinValue: '1150'
-    MaxValue: '65535'
+    Default: 5439
+    MinValue: 1150
+    MaxValue: 65535
   AZMode:
     Description: Specifies whether the nodes in this Memcached cluster are created
       in a single Availability Zone or created across multiple Availability Zones

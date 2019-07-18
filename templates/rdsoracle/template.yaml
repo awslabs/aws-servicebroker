@@ -208,9 +208,9 @@ Parameters:
     Description: The number of days during which automatic DB snapshots are retained.
       Setting 0 disables automatic snapshots, maximum value is 35
     Type: Number
-    Default: '35'
-    MinValue: '0'
-    MaxValue: '35'
+    Default: 35
+    MinValue: 0
+    MaxValue: 35
   CidrBlocks:
     Description: comma seperated list of CIDR blocks to place RDS into, must be the
       same quantity as specified in NumberOfAvailabilityZones
@@ -506,9 +506,9 @@ Parameters:
   PortNumber:
     Description: The port number for the database server to listen on
     Type: Number
-    Default: '1521'
-    MinValue: '1150'
-    MaxValue: '65535'
+    Default: 1521
+    MinValue: 1150
+    MaxValue: 65535
   PreferredBackupWindow:
     Description: The daily time range in UTC during which automated backups are created
       (if automated backups are enabled). Cannot overlap with PreferredMaintenanceWindowTime
