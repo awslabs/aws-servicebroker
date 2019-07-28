@@ -27,8 +27,8 @@ Metadata:
           CidrBlocks: Auto
           CidrSize: 27          
           ESDomainName: Auto
-          NodeAvailabilityZones: 3
-          NodeInstanceCount: 3          
+          NodeAvailabilityZones: 2
+          NodeInstanceCount: 2          
           DedicatedMasterInstanceCount: 3          
           NodeToNodeEncryption: true
           EncryptionAtRest: true
@@ -198,13 +198,12 @@ Parameters:
     ConstraintDescription: The name must start with a lowercase letter and must be between 3 and 28 characters. Valid characters are a-z (lowercase only), 0-9, and - (hyphen).
   
   NodeAvailabilityZones: 
-    Description: Number of AZs. For two AZs, you must choose instances in multiples of two. For three AZs, we recommend instances in multiples of three for equal distribution across the Availability Zones. 
+    Description: Number of AZs. For two AZs, you must choose instances in multiples of two. 
     Type: Number
     Default: '2'
     AllowedValues:
     - '1'
-    - '2'
-    - '3' 
+    - '2'    
 
   NodeInstanceType:
     Description: The node type to be provisioned for the Elasticsearch cluster
@@ -414,11 +413,6 @@ Conditions:
       - !Ref AvailabilityZones
     - Auto
 
-  3az:    
-    !Equals
-    - !Ref NodeAvailabilityZones
-    - '3' 
-
   EncryptionEnabled:
     !Equals
     - !Ref EncryptionAtRest
@@ -429,6 +423,11 @@ Conditions:
     - !Ref ESDomainName
     - Auto 
 
+  2az:    
+    !Equals
+    - !Ref NodeAvailabilityZones
+    - '2'
+   
   HasSingleClusterInstance: !Equals [!Ref NodeInstanceCount, '1']
   HasDedicatedMasterNodes: !Not [!Equals [!Ref DedicatedMasterInstanceCount, 0]]
 
@@ -521,11 +520,7 @@ Resources:
           - HasSingleClusterInstance
           - - !Ref Subnet1
           - - !Ref Subnet1
-            - !Ref Subnet2
-            - !If
-              - 3az
-              - !Ref Subnet3
-              - !Ref AWS::NoValue
+            - !Ref Subnet2            
                   
 ###############################################################################
 # Subnet 
@@ -550,6 +545,7 @@ Resources:
           - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
           - !Ref CidrBlocks
   Subnet2:
+    Condition: 2az
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
@@ -567,26 +563,7 @@ Resources:
           - AutoCidrs
           - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
           - !Ref CidrBlocks
-  Subnet3:
-    Condition: 3az
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone:
-        !Select
-        - 2
-        - !If
-          - AutoAzs
-          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
-          - !Ref AvailabilityZones
-      VpcId: !Ref VpcId
-      CidrBlock:
-        !Select
-        - 2
-        - !If
-          - AutoCidrs
-          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
-          - !Ref CidrBlocks
-
+  
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -795,7 +772,7 @@ Resources:
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt AWSSBInjectedGetCidrsLambda.Arn
-      Qty: 2
+      Qty: !Ref NodeAvailabilityZones
       VpcId: !Ref VpcId
       CidrSize: !Ref CidrSize
   AWSSBInjectedGetAzsRole:
@@ -844,7 +821,7 @@ Resources:
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt AWSSBInjectedGetAzsLambda.Arn
-      Qty: 2
+      Qty: !Ref NodeAvailabilityZones
   AWSSBInjectedGenerateDBNameRole:
     Type: AWS::IAM::Role
     Properties:
