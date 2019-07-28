@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Service Broker - Amazon Aurora Postgresql.'
+Description: 'AWS Service Broker - Amazon Aurora Postgresql (qs-1pn9kr5df)'
 
 ###############################################################################
 # MetaData - ServiceBroker 
@@ -193,9 +193,9 @@ Parameters:
   BackupRetentionPeriod:
     Description: The number of days during which automatic DB snapshots are retained. Min is 1 and Max value is 35.
     Type: Number
-    Default: '35'
-    MinValue: '1'
-    MaxValue: '35'
+    Default: 35
+    MinValue: 1
+    MaxValue: 35
     
   CidrBlocks:
     Description: comma seperated list of CIDR blocks to place RDS into, must be the

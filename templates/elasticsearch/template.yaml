@@ -200,11 +200,11 @@ Parameters:
   NodeAvailabilityZones: 
     Description: Number of AZs. For two AZs, you must choose instances in multiples of two. 
     Type: Number
-    Default: '2'
+    Default: 2
     AllowedValues:
     - '1'
-    - '2'    
-
+    - '2' 
+    
   NodeInstanceType:
     Description: The node type to be provisioned for the Elasticsearch cluster
     Type: String
@@ -255,7 +255,7 @@ Parameters:
   NodeInstanceCount:
     Description: Number of Data Nodes for the ES Domain
     Type: Number
-    Default: '2'
+    Default: 2
   
   DedicatedMasterInstanceType:
     Description: Master Instance Type

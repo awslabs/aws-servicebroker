@@ -284,15 +284,15 @@ Parameters:
     Description: The number of days during which automatic DB snapshots are retained.
       Setting 0 disables automatic snapshots, maximum value is 35
     Type: Number
-    Default: '35'
-    MinValue: '0'
-    MaxValue: '35'
+    Default: 35
+    MinValue: 0
+    MaxValue: 35
   PortNumber:
     Description: The port number for the Cluster to listen on
     Type: Number
-    Default: '5439'
-    MinValue: '1150'
-    MaxValue: '65535'
+    Default: 5439
+    MinValue: 1150
+    MaxValue: 65535
   PubliclyAccessible:
     Description: Indicates whether the Cluster is an Internet-facing instance.
     Type: String

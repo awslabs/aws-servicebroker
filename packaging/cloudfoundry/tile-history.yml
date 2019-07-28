@@ -30,4 +30,7 @@ history:
 - 1.0.0-beta
 - 1.0.0-beta.2
 - 1.0.0-beta.3
-version: 1.0.0-beta.4
+- 1.0.0-beta.4
+- 1.0.0
+- 1.0.1
+version: 1.0.1

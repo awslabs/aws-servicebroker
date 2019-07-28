@@ -1,0 +1,30 @@
+applications:
+- name: aws-service-broker
+  buildpacks:
+  - binary_buildpack
+  command: |
+    export PARAM_OVERRIDE_${BROKER_ID}_all_all_all_region=${AWS_DEFAULT_REGION} ; ./cfnsb --logtostderr --prescribeOverrides=${PRESCRIBE} --v=${VERBOSITY} --brokerId=${BROKER_ID} --enableBasicAuth=true --insecure=${INSECURE} --port=${PORT} --region=${AWS_DEFAULT_REGION} --s3Bucket=${S3_BUCKET} --s3Key=${S3_KEY} --s3Region=${S3_REGION} --tableName=${TABLE_NAME} --templateFilter=${TEMPLATE_FILTER} --tlsCert=${TLS_CERT} --tlsKey=${TLS_KEY}
+  disk_quota: 1G
+  env:
+    # Required
+    AWS_ACCESS_KEY_ID:
+    AWS_SECRET_ACCESS_KEY:
+    SECURITY_USER_NAME: awssb
+    SECURITY_USER_PASSWORD:
+    AWS_DEFAULT_REGION: us-east-1
+    # Optional
+    BROKER_ID: awsservicebroker
+    INSECURE: "true"
+    PRESCRIBE: "true"
+    S3_BUCKET: awsservicebroker
+    S3_KEY: templates/latest
+    S3_REGION: us-east-1
+    TABLE_NAME: awssb
+    TEMPLATE_FILTER: -main.yaml
+    TLS_CERT: ""
+    TLS_KEY: ""
+    VERBOSITY: "5"
+    ROOT: $HOME
+    SCHEME: https
+  instances: 1
+  memory: 1G
