@@ -1,0 +1,903 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS Service Broker - Amazon MQ ()
+
+###############################################################################
+# Service Broker MetaData
+###############################################################################
+Metadata:
+  AWS::ServiceBroker::Specification:
+    Version: 1.0
+    Tags:
+    - 'AWS'
+    - 'MQ'
+    Name: mq
+    DisplayName: Amazon MQ
+    LongDescription: Amazon MQ is a managed message broker service for Apache ActiveMQ that makes it easy to set up and operate message brokers in the cloud
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    DocumentationUrl: https://aws.amazon.com/amazon-mq/
+    ProviderDisplayName: Amazon Web Services
+    ServicePlans:
+      production:
+        DisplayName: Production
+        Description: Configuration designed for production deployments
+        LongDescription: Creates an Amazon MQ optimised for production use
+        Cost: https://aws.amazon.com/amazon-mq/pricing/
+        ParameterValues:          
+          AvailabilityZones: Auto
+          CidrBlocks: Auto
+          CidrSize: 27          
+          ConsoleAccess: 'true'
+          Username: master
+          Password: auto          
+          EngineVersion: 5.15.9
+          InstanceType: mq.m5.large                    
+          DeploymentMode: ACTIVE_STANDBY_MULTI_AZ
+          AuditLog: 'true'
+          GeneralLog: 'true'
+          AutoMinorVersionUpgrade: 'true'             
+      dev:
+        DisplayName: Development
+        Description: Configuration designed for development deployments
+        LongDescription: Creates an Amazon MQ optimised for development use
+        Cost: https://aws.amazon.com/amazon-mq/pricing/
+        ParameterValues:
+          AvailabilityZones: Auto
+          CidrBlocks: Auto
+          CidrSize: 27       
+          ConsoleAccess: 'true'
+          Username: master
+          Password: auto                                              
+          BrokerName: Auto          
+          DeploymentMode: SINGLE_INSTANCE
+          AuditLog: 'false'
+          GeneralLog: 'false'
+          AutoMinorVersionUpgrade: 'true'
+          PreferredMaintenanceWindowDay: SUNDAY
+          PreferredMaintenanceWindowStartTime: 04:00
+      custom:
+        DisplayName: Custom
+        Description: Configuration designed for advanced deployments
+        LongDescription: Creates an Amazon MQ optimised for advanced use
+        Cost: https://aws.amazon.com/amazon-mq/pricing/
+        ParameterValues: {}
+  
+###############################################################################
+# Parameter groups
+###############################################################################
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -       
+        Label:
+          default: "Network and Security"
+        Parameters:
+          - VpcId                    
+          - AccessCidr
+          - CidrBlocks
+          - CidrSize
+          - AvailabilityZones
+      -      
+        Label:
+          default: "Amazon MQ Configuration"
+        Parameters:
+          - EngineVersion
+          - InstanceType
+          - BrokerName
+          - PubliclyAccessible
+          - DeploymentMode
+      -      
+        Label:
+          default: "ActiveMQ Console Configuration"
+        Parameters:          
+          - ConsoleAccess
+          - Username
+          - Password 
+      -
+        Label:
+          default: "Maintenance and Logs"
+        Parameters:
+          - AuditLog
+          - GeneralLog
+          - AutoMinorVersionUpgrade
+          - PreferredMaintenanceWindowDay
+          - PreferredMaintenanceWindowStartTime
+
+    ParameterLabels:
+      VpcId:
+        default: Vpc Id      
+      CidrBlocks:
+        default: CIDR Blocks
+      CidrSize:
+        default: CIDR Size
+      AvailabilityZones:
+        default: Availability Zones            
+      AccessCidr:
+        default: Access CIDR      
+      ConsoleAccess:
+       default: ActiveMQ Console Enabled
+      Username:
+        default: ActiveMQ Web Console access username
+      Password:
+        default: ActiveMQ Web Console access password
+      EngineVersion:
+        default: Broker Engine Version
+      InstanceType:
+        default: Broker Instance Type
+      BrokerName:
+        default: Broker Name
+      PubliclyAccessible:
+        default: Publicly Accessible
+      DeploymentMode:
+        default: Deployment mode
+      AuditLog:
+        default: Cloudwatch Audit Log
+      GeneralLog:
+        default: Cloudwatch General Log     
+      AutoMinorVersionUpgrade:
+        default: Auto Minor Version Upgrade
+      PreferredMaintenanceWindowDay:
+        default: Preferred Maintenance Window Day
+      PreferredMaintenanceWindowStartTime:
+        default: Preferred Maintenance Start Time
+###############################################################################
+# Parameters 
+###############################################################################  
+
+Parameters:
+
+  AccessCidr:
+    Description: CIDR block to allow to connect to Broker MQ
+    Type: String    
+
+  VpcId:
+    Description: The ID of the VPC to launch the Broker instance into
+    Type: AWS::EC2::VPC::Id
+
+  AvailabilityZones:
+    Description: list of availability zones to use, Min 1, max 2 AZs      
+    Type: CommaDelimitedList
+    Default: Auto
+  
+  CidrBlocks:
+    Description: comma seperated list of CIDR blocks to place into    
+    Type: CommaDelimitedList
+    Default: Auto
+ 
+  CidrSize:
+    Description: Size of Cidr block to allocate if CidrBlocks is set to Auto.
+    Type: String
+    Default: 27
+
+  ConsoleAccess: 
+    Description: Enables access to the the ActiveMQ Web Console for the ActiveMQ user.
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  Username:
+    Description: ActiveMQ Web Console access username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z_]*$"
+    ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 16 characters. Note 'admin' is AWS reserved.
+    Default: 'master'
+
+  Password: 
+    Description: ActiveMQ Web Console access password, if left at default a 32 character password will be generated. Not contain [.,=]. Minimum 12 characters, at least 4 unique characters     
+    Type: String
+    Default: Auto
+    NoEcho: 'True'    
+
+  EngineVersion:
+    Description: Version of Broker Engine
+    Type: String
+    Default: '5.15.9'
+    AllowedValues:
+      - '5.15.9'
+      - '5.15.8'
+      - '5.15.6'     
+      - '5.15.0'     
+
+  InstanceType:
+    Description: The instance type for the broker
+    Type: String
+    Default: mq.m5.large
+    AllowedValues:    
+    - mq.t2.micro
+    - mq.m5.large
+    - mq.m5.xlarge
+    - mq.m5.2xlarge
+    - mq.m5.4xlarge
+    - mq.m4.large
+
+  BrokerName:
+    Description: Broker Naeme will be autogenerated if set to "Auto".
+    Type: String
+    MinLength: '1'
+    MaxLength: '50'
+    Default: Auto    
+    ConstraintDescription: Must be 1-50 characters long. Limited to alphanumeric characters, dashes, and underscores.  
+
+  PubliclyAccessible:
+    Description: Whether the broker can be accessed directly, outside of a VPC.
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  DeploymentMode:
+    Description: The deployment mode of the broker. 
+    Type: String
+    Default: SINGLE_INSTANCE
+    AllowedValues:
+    - SINGLE_INSTANCE
+    - ACTIVE_STANDBY_MULTI_AZ
+
+  AuditLog:
+    Description: Select the log type to publish to Amazon CloudWatch Logs.
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  GeneralLog:
+    Description: Select the log type to publish to Amazon CloudWatch Logs.
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  AutoMinorVersionUpgrade:
+    Description: Indicates that minor engine upgrades are applied automatically to
+      the DB instance during the maintenance window.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+    - 'true'
+    - 'false'
+  
+  PreferredMaintenanceWindowDay:
+    Description: The day of the week which RDS maintenance will be performed
+    Type: String
+    Default: SUNDAY
+    AllowedValues:
+    - MONDAY
+    - TUESDAY
+    - WEDNESDAY
+    - THURSDAY
+    - FRIDAY
+    - SATURDAY
+    - SUNDAY
+
+  PreferredMaintenanceWindowStartTime:
+    Description: The weekly start time in UTC for the RDS maintenance window, must
+      be less than PreferredMaintenanceWindowEndTime.
+    Type: String
+    Default: 04:00
+    AllowedValues:
+    - 00:00
+    - 01:00
+    - 02:00
+    - 03:00
+    - 04:00
+    - 05:00
+    - 06:00
+    - 07:00
+    - 08:00
+    - 09:00
+    - '10:00'
+    - '11:00'
+    - '12:00'
+    - '13:00'
+    - '14:00'
+    - '15:00'
+    - '16:00'
+    - '17:00'
+    - '18:00'
+    - '19:00'
+    - '20:00'
+    - '21:00'
+    - '22:00'
+  
+###############################################################################
+# Conditions
+###############################################################################
+Conditions:
+
+  AutoCidrs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref CidrBlocks
+    - Auto
+
+  AutoAzs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref AvailabilityZones
+    - Auto
+
+  AutoDBName:
+    !Equals
+    - !Ref BrokerName
+    - Auto
+
+  AutoPassword:
+    !Equals
+    - !Ref Password
+    - Auto
+
+  Deploy2az:
+    !Equals
+    - !Ref DeploymentMode
+    - 'ACTIVE_STANDBY_MULTI_AZ'    
+
+###############################################################################
+# Resources 
+###############################################################################      
+
+Resources:
+  MQBroker:
+    Type: AWS::AmazonMQ::Broker
+    Properties: 
+      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
+      BrokerName:  
+        !If
+        - AutoDBName
+        - !GetAtt AWSSBInjectedGenerateDBName.DBName
+        - !Ref BrokerName           
+      Configuration:
+        Id: !Ref Configuration
+        Revision: 2
+      DeploymentMode: !Ref DeploymentMode
+      EncryptionOptions: 
+        KmsKeyId: !GetAtt KMSKey.Arn
+        UseAwsOwnedKey: false
+      EngineType: ACTIVEMQ
+      EngineVersion: !Ref EngineVersion
+      HostInstanceType: !Ref InstanceType
+      Logs: 
+        Audit: !Ref AuditLog
+        General: !Ref GeneralLog
+      MaintenanceWindowStartTime: 
+        DayOfWeek: !Sub ${PreferredMaintenanceWindowDay}
+        TimeOfDay: !Sub ${PreferredMaintenanceWindowStartTime}
+        TimeZone: UTC 
+      PubliclyAccessible: !Ref PubliclyAccessible
+      SecurityGroups: 
+        - !Ref SecurityGroup
+      SubnetIds: 
+      - !Ref DBSubnet1      
+      - !If
+        - Deploy2az
+        - !Ref DBSubnet2
+        - !Ref AWS::NoValue     
+      Users: 
+      - ConsoleAccess: !Ref ConsoleAccess  
+        Password: 
+          !If
+          - AutoPassword
+          - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
+          - !Ref Password  
+        Username: !Ref Username
+    
+  Configuration: 
+    Type: "AWS::AmazonMQ::Configuration"
+    Properties: 
+      Data: 
+        ? "Fn::Base64"
+        : |
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <broker xmlns="http://activemq.apache.org/schema/core" schedulePeriodForDestinationPurge="10000">
+              <destinationPolicy>
+                <policyMap>
+                  <policyEntries>
+                    <policyEntry topic="&gt;" gcInactiveDestinations="true" inactiveTimoutBeforeGC="600000">
+                      <pendingMessageLimitStrategy>
+                        <constantPendingMessageLimitStrategy limit="1000"/>
+                      </pendingMessageLimitStrategy>
+                    </policyEntry>
+                    <policyEntry queue="&gt;" gcInactiveDestinations="true" inactiveTimoutBeforeGC="600000" />
+                  </policyEntries>
+                </policyMap>
+              </destinationPolicy>
+              <plugins>
+              </plugins>
+            </broker>
+      EngineType: ACTIVEMQ
+      EngineVersion: !Ref EngineVersion
+      Name: 
+        !If
+        - AutoDBName
+        - !GetAtt AWSSBInjectedGenerateDBName.DBName
+        - !Ref BrokerName     
+      
+###############################################################################
+# Subnet 
+###############################################################################
+
+  DBSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 0
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 0
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+  DBSubnet2:
+    Condition: Deploy2az
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 1
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 1
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks  
+  
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub Allow Client connections to ActiveMQ Web Console ${AWS::StackName}
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: 'tcp'
+        FromPort: 8162
+        ToPort: 8162
+        CidrIp: !Ref AccessCidr
+      - IpProtocol: 'tcp'
+        FromPort: 5671
+        ToPort: 5671
+        CidrIp: !Ref AccessCidr
+      - IpProtocol: 'tcp'
+        FromPort: 8883
+        ToPort: 8883
+        CidrIp: !Ref AccessCidr
+      - IpProtocol: 'tcp'
+        FromPort: 61617
+        ToPort: 61617
+        CidrIp: !Ref AccessCidr
+      - IpProtocol: 'tcp'
+        FromPort: 61614
+        ToPort: 61614
+        CidrIp: !Ref AccessCidr
+      - IpProtocol: 'tcp'
+        FromPort: 61619
+        ToPort: 61619
+        CidrIp: !Ref AccessCidr
+      SecurityGroupEgress:
+      - IpProtocol: '-1'
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: 0.0.0.0/0
+
+###############################################################################
+# Encryption
+############################################################################### 
+
+  KMSKey:    
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub Database ${AWS::StackName}
+      Enabled: 'true'
+      EnableKeyRotation: 'true'
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+        - Sid: Allow administration of the key
+          Effect: Allow
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Action:
+          - kms:Create*
+          - kms:Describe*
+          - kms:Enable*
+          - kms:List*
+          - kms:Put*
+          - kms:Update*
+          - kms:Revoke*
+          - kms:Disable*
+          - kms:Get*
+          - kms:Delete*
+          - kms:ScheduleKeyDeletion
+          - kms:CancelKeyDeletion
+          Resource: '*'
+
+###############################################################################
+# Injected Lambdas
+############################################################################### 
+
+  AWSSBInjectedLambdaZipsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: []
+  AWSSBInjectedCopyZips:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedCopyZipsLambda.Arn
+      DestBucket: !Ref AWSSBInjectedLambdaZipsBucket
+      SourceBucket: awsservicebrokeralpha
+      Prefix: functions/
+      Objects:
+      - get_cidrs/lambda_function.zip
+      - get_azs/lambda_function.zip
+      - generate_password/lambda_function.zip
+      - generate_dbname/lambda_function.zip
+  AWSSBInjectedCopyZipsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+      - PolicyName: lambda-copier
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - arn:aws:s3:::awsservicebrokeralpha/*
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:DeleteObject
+            Resource:
+            - !Sub arn:aws:s3:::${AWSSBInjectedLambdaZipsBucket}/*
+  AWSSBInjectedCopyZipsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python2.7
+      Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+
+
+          def copy_objects(source_bucket, dest_bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              for o in objects:
+                  key = prefix + o
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': key
+                  }
+                  print('copy_source: %s' % copy_source)
+                  print('dest_bucket = %s' % dest_bucket)
+                  print('key = %s' % key)
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket, Key=key)
+
+
+          def delete_objects(bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3.delete_objects(Bucket=bucket, Delete=objects)
+
+
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+
+
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(dest_bucket, prefix, objects)
+                  else:
+                      copy_objects(source_bucket, dest_bucket, prefix, objects)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+  AWSSBInjectedGetCidrsRole:
+    Condition: AutoCidrs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeVpcs
+            - ec2:DescribeSubnets
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetCidrsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoCidrs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetCidrsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_cidrs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetCidrs:
+    Condition: AutoCidrs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetCidrsLambda.Arn
+      Qty: 
+        !If
+        - Deploy2az
+        - '2'
+        - '1'
+      VpcId: !Ref VpcId
+      CidrSize: !Ref CidrSize
+  AWSSBInjectedGetAzsRole:
+    Condition: AutoAzs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetAzsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoAzs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetAzsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_azs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetAzs:
+    Condition: AutoAzs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetAzsLambda.Arn
+      Qty: 
+        !If
+        - Deploy2az
+        - '2'
+        - '1'
+  AWSSBInjectedGeneratePasswordRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGeneratePasswordLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGeneratePasswordRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_password/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGeneratePassword:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGeneratePasswordLambda.Arn
+      Length: 32
+  AWSSBInjectedGenerateDBNameRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGenerateDBNameLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGenerateDBNameRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_dbname/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGenerateDBName:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGenerateDBNameLambda.Arn
+      Length: 32
+   
+
+###############################################################################
+# Outputs 
+###############################################################################  
+
+Outputs:  
+  Arn:
+    Value: !GetAtt 'MQBroker.Arn'
+  
+  IpAddresses:
+    Value: 
+      !Join
+      - ','
+      - !GetAtt 'MQBroker.IpAddresses'    
+
+  ConfigurationId :
+    Value: !GetAtt 'MQBroker.ConfigurationId' 
+
+  AtmqWebConsole:
+    Value: !Sub 'https://${MQBroker}-1.mq.${AWS::Region}.amazonaws.com:8162' 
+
+  ActiveMQUsername:   
+    Value: !Ref Username
+  
+  ActiveMQPassword:
+    Value:
+      !If
+      - AutoPassword
+      - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
+      - !Ref Password
+
+  AmqpEndpoints:
+    Value: 
+      !Join
+      - ','
+      - !GetAtt 'MQBroker.AmqpEndpoints'
+  
+  MqttEndpoints:
+    Value: 
+      !Join
+      - ','
+      - !GetAtt 'MQBroker.MqttEndpoints'
+  
+  OpenWireEndpoints:
+    Value: 
+      !Join
+      - ','
+      - !GetAtt 'MQBroker.OpenWireEndpoints'
+  
+  StompEndpoints:
+    Value: 
+      !Join
+      - ','
+      - !GetAtt 'MQBroker.StompEndpoints'
+
+  WssEndpoints:
+    Value: 
+      !Join
+      - ','
+      - !GetAtt 'MQBroker.WssEndpoints'  
+   
+  BrokerName:
+    Value:
+      !If
+      - AutoDBName
+      - !GetAtt AWSSBInjectedGenerateDBName.DBName
+      - !Ref BrokerName
