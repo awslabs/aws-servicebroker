@@ -149,15 +149,15 @@ Resources:
         Statement:
         - Effect: Allow
           Action:
-          - polly:SynthesizeSpeech
           - polly:DeleteLexicon
           - polly:GetLexicon
-          - polly:PutLexicon
           Resource: !Sub arn:aws:polly:${AWS::Region}:${AWS::AccountId}:lexicon/${LexiconPrefix}*
         - Effect: Allow
           Action:
           - polly:ListLexicons
           - polly:DescribeVoices
+          - polly:SynthesizeSpeech
+          - polly:PutLexicon
           Resource: '*'
 Outputs:
   PollyLexiconPrefix:
