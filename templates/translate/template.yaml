@@ -16,7 +16,7 @@ Metadata:
       uses machine learning and deep learning models to deliver more accurate and
       more natural sounding translation than traditional statistical and rule-based
       translation algorithms.'
-    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AWSPreview_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonTranslate_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/translate/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:
