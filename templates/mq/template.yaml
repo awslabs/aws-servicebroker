@@ -28,7 +28,7 @@ Metadata:
           CidrSize: 27          
           ConsoleAccess: 'true'
           Username: master
-          Password: auto          
+          Password: Auto          
           EngineVersion: 5.15.9
           InstanceType: mq.m5.large                    
           DeploymentMode: ACTIVE_STANDBY_MULTI_AZ
@@ -46,7 +46,7 @@ Metadata:
           CidrSize: 27       
           ConsoleAccess: 'true'
           Username: master
-          Password: auto                                              
+          Password: Auto                                              
           BrokerName: Auto          
           DeploymentMode: SINGLE_INSTANCE
           AuditLog: 'false'
