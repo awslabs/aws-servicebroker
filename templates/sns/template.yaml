@@ -12,7 +12,7 @@ Metadata:
     LongDescription: Amazon Simple Notification Service (Amazon SNS) is a web service
       that enables applications, end-users, and devices to instantly send and receive
       notifications from the cloud.
-    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Messaging_AmazonSNS_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/Messaging_AmazonSNS_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/sns/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

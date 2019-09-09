@@ -1,6 +1,6 @@
 # AWS Service Broker - KMS Key Documentation
 
-<img  align="left" src="https://s3.amazonaws.com/awsservicebroker/icons/aws-service-broker.png" width="120"><img align="right" src="https://s3.amazonaws.com/thp-aws-icons-dev/SecurityIdentityCompliance_AWSKMS_LARGE.png" width="108"> <p align="center">AWS Key Management Service (KMS) is a managed service that makes it easy for you to create and control the encryption keys used to encrypt your data, and uses FIPS 140-2 validated hardware security modules to protect the security of your keys.
+<img  align="left" src="https://s3.amazonaws.com/awsservicebroker/icons/aws-service-broker.png" width="120"><img align="right" src="https://s3.amazonaws.com/awsservicebroker/icons/SecurityIdentityCompliance_AWSKMS_LARGE.png" width="108"> <p align="center">AWS Key Management Service (KMS) is a managed service that makes it easy for you to create and control the encryption keys used to encrypt your data, and uses FIPS 140-2 validated hardware security modules to protect the security of your keys.
 https://aws.amazon.com/documentation/kms/</p>
 
 Table of contents

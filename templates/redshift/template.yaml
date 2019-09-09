@@ -16,7 +16,7 @@ Metadata:
       for datasets ranging from a few hundred gigabytes to a petabyte or more and
       costs less than $1,000 per terabyte per year, a tenth the cost of most traditional
       data warehousing solutions.
-    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Database_AmazonRedshift_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/Database_AmazonRedshift_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/redshift/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

@@ -13,7 +13,7 @@ Metadata:
       queuing service that makes it easy to decouple and scale microservices, distributed
       systems, and serverless applications. Amazon SQS moves data between distributed
       application components and helps you decouple these components."
-    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Messaging_AmazonSQS_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/Messaging_AmazonSQS_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/sqs/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

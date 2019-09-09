@@ -19,7 +19,7 @@ Metadata:
       open source databases. The MySQL-compatible edition of Aurora delivers up to 5X the throughput 
       of standard MySQL running on the same hardware, and enables existing MySQL applications and 
       tools to run without requiring modification.
-    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonAurora_LARGE.png
     DocumentationUrl: https://aws.amazon.com/rds/aurora/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

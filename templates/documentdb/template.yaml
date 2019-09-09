@@ -13,7 +13,7 @@ Metadata:
     Name: documentdb
     DisplayName: Amazon DocumentDB (with MongoDB compatibility)
     LongDescription: Amazon DocumentDB (with MongoDB compatibility) is a fast, scalable, highly available, and fully managed document database service that supports MongoDB workloads.
-    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonDocumentDBwithMongoDBcompatibility_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentdb/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

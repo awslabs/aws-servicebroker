@@ -15,7 +15,7 @@ Metadata:
       It provides a high performance, resizeable, and cost-effective in-memory cache,
       while removing the complexity associated with deploying and managing a distributed
       cache environment.
-    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Database_AmazonElasticCache_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/Database_AmazonElasticCache_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/elasticache/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

@@ -18,7 +18,7 @@ Metadata:
       spreads the data and traffic for the table over a sufficient number of servers
       to handle the request capacity specified by the customer and the amount of data
       stored, while maintaining consistent and fast performance.
-    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Database_AmazonDynamoDB_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/Database_AmazonDynamoDB_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/dynamodb/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

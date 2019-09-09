@@ -13,7 +13,7 @@ Metadata:
       Internet. You can use Amazon S3 to store and retrieve any amount of data at
       any time, from anywhere on the web. You can accomplish these tasks using the
       simple and intuitive web interface of the AWS Management Console.
-    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/Storage_AmazonS3_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/Storage_AmazonS3_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/s3/'
     ProviderDisplayName: "Amazon Web Services"
     Bindings:

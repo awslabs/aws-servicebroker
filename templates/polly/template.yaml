@@ -167,3 +167,5 @@ Outputs:
     Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbAccessKeyId}"
   PollyAwsSecretAccessKey:
     Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbSecretAccessKey}"
+  PollyAwsRegion:
+    Value: !Ref 'AWS::Region'

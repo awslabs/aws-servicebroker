@@ -13,7 +13,7 @@ Metadata:
     Name: mq
     DisplayName: Amazon MQ
     LongDescription: Amazon MQ is a managed message broker service for Apache ActiveMQ that makes it easy to set up and operate message brokers in the cloud
-    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonMQ_LARGE.png
     DocumentationUrl: https://aws.amazon.com/amazon-mq/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

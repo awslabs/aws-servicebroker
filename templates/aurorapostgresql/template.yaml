@@ -21,7 +21,7 @@ Metadata:
       applications and tools to run without requiring modification. The combination of PostgreSQL
       compatibility with Aurora enterprise database capabilities provides an ideal target for 
       commercial database migrations.
-    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonAurora_LARGE.png
     DocumentationUrl: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

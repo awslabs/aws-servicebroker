@@ -1,6 +1,6 @@
 # AWS Service Broker - Amazon Route 53 Documentation
 
-<img  align="left" src="https://s3.amazonaws.com/awsservicebroker/icons/aws-service-broker.png" width="120"><img align="right" src="https://s3.amazonaws.com/thp-aws-icons-dev/NetworkingContentDelivery_AmazonRoute53_LARGE.png" width="108"> <p align="center">Amazon Route 53 is a highly available and scalable Domain Name System (DNS) web service.
+<img  align="left" src="https://s3.amazonaws.com/awsservicebroker/icons/aws-service-broker.png" width="120"><img align="right" src="https://s3.amazonaws.com/awsservicebroker/icons/NetworkingContentDelivery_AmazonRoute53_LARGE.png" width="108"> <p align="center">Amazon Route 53 is a highly available and scalable Domain Name System (DNS) web service.
 https://aws.amazon.com/documentation/route53/</p>
 
 Table of contents

@@ -11,7 +11,7 @@ Metadata:
     DisplayName: Amazon Route 53
     LongDescription: Amazon Route 53 is a highly available and scalable Domain Name
       System (DNS) web service.
-    ImageUrl: https://s3.amazonaws.com/thp-aws-icons-dev/NetworkingContentDelivery_AmazonRoute53_LARGE.png
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/NetworkingContentDelivery_AmazonRoute53_LARGE.png
     DocumentationUrl: https://aws.amazon.com/documentation/route53/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:

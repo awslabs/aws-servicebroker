@@ -1,6 +1,6 @@
 # AWS Service Broker - Amazon SNS Documentation
 
-<img  align="left" src="https://s3.amazonaws.com/awsservicebroker/icons/aws-service-broker.png" width="120"><img align="right" src="https://s3.amazonaws.com/thp-aws-icons-dev/Messaging_AmazonSNS_LARGE.png" width="108"> <p align="center">Amazon Simple Notification Service (Amazon SNS) is a web service that enables applications, end-users, and devices to instantly send and receive notifications from the cloud.
+<img  align="left" src="https://s3.amazonaws.com/awsservicebroker/icons/aws-service-broker.png" width="120"><img align="right" src="https://s3.amazonaws.com/awsservicebroker/icons/Messaging_AmazonSNS_LARGE.png" width="108"> <p align="center">Amazon Simple Notification Service (Amazon SNS) is a web service that enables applications, end-users, and devices to instantly send and receive notifications from the cloud.
 https://aws.amazon.com/documentation/sns/</p>
 
 Table of contents
