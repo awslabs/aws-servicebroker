@@ -428,16 +428,6 @@ Conditions:
     - !Ref NodeAvailabilityZones
     - '2'
    
-  gp2:
-    !Equals
-   - !Ref StorageType
-   - gp2
-  standard:
-    !Equals
-    - !Ref StorageType
-    - standard
-
-
   HasSingleClusterInstance: !Equals [!Ref NodeInstanceCount, '1']
   HasDedicatedMasterNodes: !Not [!Equals [!Ref DedicatedMasterInstanceCount, 0]]
 
@@ -471,22 +461,16 @@ Resources:
       EBSOptions:
         EBSEnabled: true
         Iops: 
-          !If 
-          - gp2
-          - !Ref AWS::NoValue          
+          !If
+          - 100GB
+          - '1000'
           - !If
-            - standard
-            - !Ref AWS::NoValue 
+            - 300GB
+            - '3000'
             - !If
-              - 100GB
-              - '1000'
-              - !If
-                - 300GB
-                - '3000'
-                - !If
-                  - 600GB
-                  - '6000'
-                  - '10000'          
+              - 600GB
+              - '6000'
+              - '10000'
         VolumeSize: 
           !If
           - 100GB
