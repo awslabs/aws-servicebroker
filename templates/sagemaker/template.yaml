@@ -1,0 +1,367 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Service Broker - Amazon Sagemaker'
+
+###############################################################################
+# MetaData - ServiceBroker 
+###############################################################################   
+Metadata:
+  AWS::ServiceBroker::Specification:
+    Version: 1.0
+    Tags:
+    - AWS    
+    - Sagemaker
+    Name: Sagemaker
+    DisplayName: Amazon Sagemaker
+    LongDescription: Amazon Sagemaker lets you add user sign-up, sign-in, and access control to your web and mobile apps quickly and easily. Amazon Sagemaker scales to millions of users and supports sign-in with social identity providers, such as Facebook, Google, and Amazon, and enterprise identity providers via SAML 2.0.
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    DocumentationUrl: https://docs.aws.amazon.com/Sagemaker/index.html
+    ProviderDisplayName: Amazon Web Services
+    ServicePlans:
+      production:
+        DisplayName: Production
+        Description: Configuration designed for production deployments
+        LongDescription: Creates an Amazon Sagemaker optimised for
+          production use
+        Cost: https://aws.amazon.com/Sagemaker/pricing/
+        ParameterValues:          
+          AuthName: 'Auto'
+      dev:
+        DisplayName: Development
+        Description: Configuration designed for development and testing deployments
+        LongDescription: Creates an Amazon Sagemaker optimised for
+          dev/test use
+        Cost: https://aws.amazon.com/Sagemaker/pricing/
+        ParameterValues:          
+          AuthName: 'Auto'
+      custom:
+        DisplayName: Custom
+        Description: Custom Configuration for Advanced deployments
+        LongDescription: Creates an Amazon Sagemaker with custom
+          configuration
+        Cost: https://aws.amazon.com/Sagemaker/pricing/
+        ParameterValues: {}
+
+###############################################################################
+# Parameter groups
+###############################################################################
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -       
+        Label:
+          default: Sagemaker Settings
+        Parameters:
+          - AuthName        
+
+    ParameterLabels:
+      AuthName:
+        default: Name for Sagemaker Resources  
+
+###############################################################################
+# Parameters 
+###############################################################################   
+
+Parameters:
+  NotebookName:
+    Type: String
+    Default: Auto
+    Description: Name of the SageMaker notebook instance.
+
+  InstanceType:
+    Type: String
+    Default: ml.p2.xlarge
+    AllowedValues:
+      - ml.p2.xlarge
+      - ml.p3.2xlarge
+    Description: Selext the Notebook instance size
+
+  VolumeSize:
+    Type: Number
+    Default: 50
+    MinValue: 5
+    MaxValue: 16384
+    ConstraintDescription: Must be an integer between 5 (GB) and 16384 (16 TB).
+    Description: Enter the size of the EBS volume in GB.
+
+###############################################################################
+# Conditons
+###############################################################################   
+
+Conditions:
+  AutoName:
+    !Equals
+    - !Ref AuthName
+    - Auto
+
+###############################################################################
+# Resources 
+###############################################################################   
+Resources:
+  SageMakerIamRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+      
+  FastaiNbLifecycleConfig:
+    Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
+    Properties:
+      OnCreate:
+        - Content:
+            Fn::Base64: |
+              #!/bin/bash
+              sudo -H -i -u ec2-user bash << EOF
+              # create symlinks to EBS volume
+              echo "Creating symlinks"
+              mkdir /home/ec2-user/SageMaker/.torch && ln -s /home/ec2-user/SageMaker/.torch /home/ec2-user/.torch
+              mkdir /home/ec2-user/SageMaker/.fastai && ln -s /home/ec2-user/SageMaker/.fastai /home/ec2-user/.fastai
+
+              # clone the course notebooks
+              echo "Clone the course repo"
+              git clone https://github.com/fastai/course-v3.git /home/ec2-user/SageMaker/course-v3
+
+              echo "Finished running onCreate script"
+              EOF
+                
+      OnStart:
+        - Content:
+            Fn::Base64: |
+              #!/bin/bash
+
+              sudo -H -i -u ec2-user bash << EOF
+              echo "Creating symlinks"
+              [ ! -L "/home/ec2-user/.torch" ] && ln -s /home/ec2-user/SageMaker/.torch /home/ec2-user/.torch
+              [ ! -L "/home/ec2-user/.fastai" ] && ln -s /home/ec2-user/SageMaker/.fastai /home/ec2-user/.fastai
+
+              echo "Install a new kernel for fastai with name 'Python 3'"
+              source /home/ec2-user/anaconda3/bin/activate pytorch_p36
+              python -m ipykernel install --name 'fastai' --display-name 'Python 3' --user
+
+              # uncomment if you want to update PyTorch on every start
+              #echo "Update PyTorch library"
+              #conda install -y pytorch torchvision -c pytorch
+
+              echo "Update fastai library"
+              conda install -y fastai -c fastai
+
+              echo "Install jupyter nbextension"
+              source /home/ec2-user/anaconda3/bin/activate JupyterSystemEnv
+              pip install jupyter_contrib_nbextensions
+              jupyter contrib nbextensions install --user
+
+              echo "Restarting jupyter notebook server"
+              pkill -f jupyter-notebook
+
+              echo "Getting latest version of fastai course"
+              cd /home/ec2-user/SageMaker/course-v3
+              git pull
+
+              echo "Finished running onStart script"
+              EOF
+
+  FastaiNotebookInstance:
+    Type: "AWS::SageMaker::NotebookInstance"
+    Properties:
+      InstanceType: !Ref InstanceType
+      LifecycleConfigName: !GetAtt FastaiNbLifecycleConfig.NotebookInstanceLifecycleConfigName
+      NotebookInstanceName: !Ref NotebookName
+      RoleArn: !GetAtt SageMakerIamRole.Arn
+      VolumeSizeInGB: !Ref VolumeSize
+
+  Endpoint:
+    Type: "AWS::SageMaker::Endpoint"
+    DependsOn: EndpointConfig
+    Properties:
+      EndpointName: !Sub ${Environment}-${ParentStackName}-${CommitID}-${Timestamp}
+      EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+      
+  EndpointConfig:
+    Type: "AWS::SageMaker::EndpointConfig"
+    DependsOn: Model
+    Properties:
+        EndpointConfigName: !Sub ${Environment}-${ParentStackName}-${CommitID}-${Timestamp}
+        ProductionVariants:  
+        - ModelName: !GetAtt Model.ModelName
+          VariantName: AllTraffic
+          InitialInstanceCount: 1
+          InstanceType: ml.t2.medium
+          InitialVariantWeight: 1
+  
+###############################################################################
+# Injected Lambdas
+############################################################################### 
+
+  AWSSBInjectedLambdaZipsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: []
+  AWSSBInjectedCopyZips:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedCopyZipsLambda.Arn
+      DestBucket: !Ref AWSSBInjectedLambdaZipsBucket
+      SourceBucket: awsservicebrokeralpha
+      Prefix: functions/
+      Objects:      
+      - generate_dbname/lambda_function.zip
+  AWSSBInjectedCopyZipsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+      - PolicyName: lambda-copier
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - arn:aws:s3:::awsservicebrokeralpha/*
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:DeleteObject
+            Resource:
+            - !Sub arn:aws:s3:::${AWSSBInjectedLambdaZipsBucket}/*
+  AWSSBInjectedCopyZipsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python2.7
+      Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+
+
+          def copy_objects(source_bucket, dest_bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              for o in objects:
+                  key = prefix + o
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': key
+                  }
+                  print('copy_source: %s' % copy_source)
+                  print('dest_bucket = %s' % dest_bucket)
+                  print('key = %s' % key)
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket, Key=key)
+
+
+          def delete_objects(bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3.delete_objects(Bucket=bucket, Delete=objects)
+
+
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+
+
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(dest_bucket, prefix, objects)
+                  else:
+                      copy_objects(source_bucket, dest_bucket, prefix, objects)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+  AWSSBInjectedGenerateDBNameRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGenerateDBNameLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGenerateDBNameRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_dbname/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGenerateDBName:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGenerateDBNameLambda.Arn
+      Length: 16
+
+###############################################################################
+# Outputs 
+###############################################################################  
+Outputs:
+  IdentityPoolId:
+    Value: !Ref IdentityPool
+    Export:
+      Name: "IdentityPool::Id"
+  UserPoolId:
+    Value: !Ref UserPool
+    Export:
+      Name: "UserPool::Id"
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+    Export:
+      Name: "UserPoolClient::Id"
+  
