@@ -3,8 +3,9 @@
 This guide uses helm, for documentation on installing the helm and tiller see [https://docs.helm.sh/using_helm/#install-helm](https://docs.helm.sh/using_helm/#install-helm)
 
 ### Prerequisites
-1. Deploying and using the AWS Service Broker requires the following:
-Cloud Application Platform has been successfully deployed on Amazon EKS as described in the deployment guide (see Chapter 10, Deploying SUSE Cloud Application Platform on Amazon Elastic Kubernetes Service (EKS)) here: https://documentation.suse.com/suse-cap/1/single-html/cap-guides/#cha-cap-depl-eks
+Deploying and using the AWS Service Broker requires the following:
+
+1. Cloud Application Platform has been successfully deployed on Amazon EKS as described in the deployment guide (see Chapter 10, Deploying SUSE Cloud Application Platform on Amazon Elastic Kubernetes Service (EKS)) here: https://documentation.suse.com/suse-cap/1/single-html/cap-guides/#cha-cap-depl-eks
 2. The AWS Command Line Interface (CLI)
 3. The OpenSSL command line tool
 4. Ensure the user or role running the broker has an IAM policy set as specified in the IAM section of the AWS Service Broker documentation on Github.
