@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS Service Broker - Amazon CodeCommit
+Metadata:
+  AWS::ServiceBroker::Specification:
+    Version: 1.0
+    Tags:
+    - AWS
+    - CodeCommit
+    - GIT
+    Name: codecommit
+    DisplayName: AWS CodeCommit
+    LongDescription: AWS CodeCommit is a fully-managed source control service that hosts secure Git-based repositories. It makes it easy for teams to collaborate on code in a secure and highly scalable ecosystem. CodeCommit eliminates the need to operate your own source control system or worry about scaling its infrastructure. You can use CodeCommit to securely store anything from source code to binaries, and it works seamlessly with your existing Git tools.
+
+    DocumentationUrl: https://aws.amazon.com/codecommit/
+    ProviderDisplayName: Amazon Web Services
+    ServicePlans:
+      default:
+        DisplayName: Default
+        Description: AWS CodeCommit
+        LongDescription: AWS CodeCommit is a fully-managed source control service that hosts secure Git-based repositories. It makes it easy for teams to collaborate on code in a secure and highly scalable ecosystem. CodeCommit eliminates the need to operate your own source control system or worry about scaling its infrastructure. You can use CodeCommit to securely store anything from source code to binaries, and it works seamlessly with your existing Git tools.
+        Cost: https://aws.amazon.com/codecommit/pricing/
+        ParameterValues: {}
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: CodeCommit Settings
+      Parameters:
+      - RepositoryName 
+      - RepositoryDescription 
+    ParameterLabels:
+      RepositoryName :
+        default: Name of CodeCommit repository
+      RepositoryDescription:
+        default: Description of CodeCommit repository
+Parameters:
+  RepositoryName:
+    Type: String
+    Description: Name of CodeCommit repository
+    Default: "Auto"
+    AllowedPattern: "[\\w\\.-]+"
+    MaxLength : 100
+  RepositoryDescription:
+    Default: ""
+    Type: String
+    Description: Description of CodeCommit repository
+    MaxLength : 1000
+Conditions:
+  NoRepositoryDescription: !Equals
+    - !Ref RepositoryDescription
+    - ""
+  AutoRepositoryName: !Equals
+    - !Ref RepositoryName
+    - "Auto"
+Resources:
+  CodeCommitRepo:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName:  !If [ AutoRepositoryName, !Ref "AWS::StackName", !Ref RepositoryName]
+      RepositoryDescription: !If [ NoRepositoryDescription, !Ref "AWS::NoValue", !Ref RepositoryDescription]
+  AWSSBInjectedIAMUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: iam_user_creation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - iam:PutUserPolicy
+            - iam:ListAttachedUserPolicies
+            - iam:DeleteUserPolicy
+            - iam:AttachUserPolicy
+            - iam:DeleteUser
+            - iam:ListUserPolicies
+            - iam:DetachUserPolicy
+            - iam:CreateUser
+            - iam:CreateServiceSpecificCredential 
+            - iam:DeleteServiceSpecificCredential 
+            - iam:ListServiceSpecificCredentials 
+            - ssm:DeleteParameters
+            - ssm:PutParameter
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedIAMUserLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedIAMUserRole
+        - Arn
+      Code:
+        ZipFile: |-
+          import cfnresponse
+          import random
+          import string
+          import boto3
+          import traceback
+
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          iam_client = boto3.client('iam')
+          ssm_client = boto3.client('ssm')
+
+
+          def handler(event, context):
+              response_code = cfnresponse.SUCCESS
+              response_data = {}
+              if event['RequestType'] == 'Create':
+                  phys_id = ''.join(random.choice(alnum) for _ in range(16))
+              else:
+                  phys_id = event['PhysicalResourceId']
+              response_data['AsbCodeCommitRepositoryPassword'] = 'AsbCodeCommitRepositoryPassword-%s' % phys_id
+              response_data['AsbCodeCommitRepositoryUserName'] = 'AsbCodeCommitRepositoryUserName-%s' % phys_id
+              try:
+                  username = event['ResourceProperties']['Username']
+                  if event['RequestType'] == 'Create':
+                      response = iam_client.create_service_specific_credential(UserName=username, ServiceName='codecommit.amazonaws.com')
+                      code_commit_repository_username = response['ServiceSpecificCredential']['ServiceUserName']
+                      code_commit_repository_password = response['ServiceSpecificCredential']['ServicePassword']
+                      ssm_client.put_parameter(Name=response_data['AsbCodeCommitRepositoryUserName'], Value=code_commit_repository_username, Type='SecureString')
+                      ssm_client.put_parameter(Name=response_data['AsbCodeCommitRepositoryPassword'], Value=code_commit_repository_password, Type='SecureString')
+                  elif event['RequestType'] == 'Update':
+                      print('Update operation unsupported')
+                      response_code = cfnresponse.FAILED
+                  elif event['RequestType'] == 'Delete':
+                      for credential in iam_client.list_service_specific_credentials(UserName=username, ServiceName='codecommit.amazonaws.com')['ServiceSpecificCredentials']:
+                          iam_client.delete_service_specific_credential(UserName=username,ServiceSpecificCredentialId=credential['ServiceSpecificCredentialId'])
+                      ssm_client.delete_parameters(Names=[response_data['AsbCodeCommitRepositoryPassword'], response_data['AsbCodeCommitRepositoryUserName']])
+                  cfnresponse.send(event, context, response_code, response_data, phys_id)
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
+      Runtime: python3.7
+      Timeout: '60'
+  AWSSBInjectedIAMUser:
+    Type: AWS::IAM::User
+  AWSSBInjectedIAMUserCreator:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedIAMUserLambda.Arn
+      Username: !Ref AWSSBInjectedIAMUser
+  AWSSBInjectedIAMUserPolicy1:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AWSSBInjectedIAMUserPolicy1
+      Users:
+      - !Ref AWSSBInjectedIAMUser
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - codecommit:BatchGetRepositories
+          - codecommit:CreateBranch
+          - codecommit:Get*
+          - codecommit:GitPull
+          - codecommit:GitPush
+          - codecommit:List*
+          - codecommit:Put*
+          - codecommit:Post*
+          - codecommit:Merge*
+          - codecommit:TagResource
+          - codecommit:Test*
+          - codecommit:UntagResource
+          - codecommit:Update
+          Resource: !GetAtt CodeCommitRepo.Arn
+Outputs:
+  RepositoryID:
+    Description: CodeCommit repository ID
+    Value: !Ref CodeCommitRepo
+  RepositoryName:
+    Description: Name of the repository
+    Value: !GetAtt CodeCommitRepo.Name
+  RepositoryUrlHttp:
+    Description: HTTP Url to the repository
+    Value: !GetAtt CodeCommitRepo.CloneUrlHttp
+  RepositoryArn:
+    Description: Arn of the repository
+    Value: !GetAtt CodeCommitRepo.Arn
+  RepositoryUserName:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbCodeCommitRepositoryUserName}"
+  RepositoryPassword:
+    Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbCodeCommitRepositoryPassword}"
