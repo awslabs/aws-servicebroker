@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Service Broker - Amazon Cognito'
+Description: 'AWS Service Broker - Amazon Cognito (qs-1q1qqlmil)'
 
 ###############################################################################
 # MetaData - ServiceBroker 

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Service Broker - Amazon DocumentDB (with MongoDB compatibility)'
+Description: 'AWS Service Broker - Amazon DocumentDB (qs-1q1qqlmlj)'
 
 ###############################################################################
 # MetaData - ServiceBroker 
