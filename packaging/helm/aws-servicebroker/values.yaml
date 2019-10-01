@@ -17,6 +17,9 @@ aws:
   targetaccountid: ""
   targetrolename: ""
   vpcid: ""
+  existingSecret: ""
+  accesskeyidName: "accesskeyid"
+  secretkeyName: "secretkey"
 brokerconfig:
   verbosity: 10
   brokerid: awsservicebroker
