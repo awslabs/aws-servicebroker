@@ -110,7 +110,7 @@ If provided, it will be used in place of the aws service catalog process region.
 
 > **NOTE:** Current releases of the Service Broker have the DynamoDB mechanism disabled, please use the Environment Variable approach to prescribing overrides
 
-The broker can override parameter values using override records in the metadata DynamoDB table, or by providing environemnt variables in the broker execution environment.
+The broker can override parameter values using override records in the metadata DynamoDB table, or by providing environment variables in the broker execution environment.
 
 The broker provides a hierarchy of parameter overrides to prescribe values for common parameters like AWS credentials, region,
 VPC ID or any other parameter in a service plan.
