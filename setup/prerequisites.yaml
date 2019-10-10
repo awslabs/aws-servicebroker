@@ -76,7 +76,8 @@ Resources:
             Resource: !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/aws-service-broker-*/*"
             Effect: "Allow"
           - Action: [ "athena:*", "dynamodb:*", "kms:*", "elasticache:*", "elasticmapreduce:*", "kinesis:*", "rds:*",
-                      "redshift:*", "route53:*", "s3:*", "sns:*", "sns:*", "sqs:*", "ec2:*", "iam:*", "lambda:*" ]
+                      "redshift:*", "route53:*", "s3:*", "sns:*", "sns:*", "sqs:*", "ec2:*", "iam:*", "lambda:*" ,
+                      "codecommit:*"]
             Resource: "*"
             Effect: "Allow"
 Outputs:
