@@ -6,7 +6,7 @@ SECRETKEY=$(echo -n $2 | base64)
 # On OpenShift 4.x the project name has changed to "openshift-service-catalog-apiserver"
 oc projects -q | grep -q "^kube-service-catalog$" && proj=kube-service-catalog
 oc projects -q | grep -q "^openshift-service-catalog-apiserver$" && proj=openshift-service-catalog-apiserver
-[ "$proj" ] || echo "Warning: Cannot find project ..."
+[ ! "$proj" ] && echo "Error: Cannot find project" && exit 1
 
 # Fetch the cert 
 CA=`oc get secret -n $proj -o go-template='{{ range .items }}{{ if eq .type "kubernetes.io/service-account-token" }}{{ index .data "service-ca.crt" }}{{end}}{{"\n"}}{{end}}' | grep -v '^$' | tail -n 1`
