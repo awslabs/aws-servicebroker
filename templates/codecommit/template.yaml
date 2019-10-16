@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: AWS Service Broker - Amazon CodeCommit
+Description: AWS Service Broker - Amazon CodeCommit (qs-1q3cuk3b9)
 Metadata:
   AWS::ServiceBroker::Specification:
     Version: 1.0
@@ -10,8 +10,8 @@ Metadata:
     Name: codecommit
     DisplayName: AWS CodeCommit
     LongDescription: AWS CodeCommit is a fully-managed source control service that hosts secure Git-based repositories. It makes it easy for teams to collaborate on code in a secure and highly scalable ecosystem. CodeCommit eliminates the need to operate your own source control system or worry about scaling its infrastructure. You can use CodeCommit to securely store anything from source code to binaries, and it works seamlessly with your existing Git tools.
-
-    DocumentationUrl: https://aws.amazon.com/codecommit/
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AWSCodeCommit_LARGE.png
+    DocumentationUrl: https://docs.aws.amazon.com/codecommit/
     ProviderDisplayName: Amazon Web Services
     ServicePlans:
       default:
