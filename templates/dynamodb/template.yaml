@@ -94,9 +94,9 @@ Resources:
         KeyType: RANGE
       AttributeDefinitions:
       - AttributeName: !Ref HashAttributeName
-        AttributeType: S
+        AttributeType: !Ref HashAttributeType
       - AttributeName: !Ref RangeAttributeName
-        AttributeType: S
+        AttributeType: !Ref RangeAttributeType
       ProvisionedThroughput:
         ReadCapacityUnits: !Ref ReadCapacityUnits
         WriteCapacityUnits: !Ref WriteCapacityUnits
