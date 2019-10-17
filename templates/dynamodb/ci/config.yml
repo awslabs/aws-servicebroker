@@ -9,7 +9,7 @@ plans:
       HashAttributeName: test
       HashAttributeType: S
       RangeAttributeName: test2
-      RangeAttributeType: S
+      RangeAttributeType: N
       ReadCapacityUnits: 5
       WriteCapacityUnits: 5
     sample_app: dynamodb-sample-app-apb
