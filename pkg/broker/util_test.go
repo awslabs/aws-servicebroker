@@ -292,7 +292,7 @@ func TestAwsCredentialsGetter(t *testing.T) {
 			&credentials.EnvProvider{},
 			&credentials.SharedCredentialsProvider{},
 			&ec2rolecreds.EC2RoleProvider{Client: client},
-			stscreds.NewWebIdentityRoleProvider(stsClient, os.Getenv("AWS_ROLE_ARN"), os.Getenv("AWS_ROLE_SESSION_NAME"),os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")),
+			stscreds.NewWebIdentityRoleProvider(stsClient, os.Getenv("AWS_ROLE_ARN"), os.Getenv("AWS_ROLE_SESSION_NAME"), os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")),
 		})
 	assertor.Equal(expected, actual, "should return credential chain creds")
 
