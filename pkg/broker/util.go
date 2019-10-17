@@ -3,6 +3,9 @@ package broker
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"net/http"
 	"os"
 	"regexp"
@@ -198,6 +201,7 @@ func awsCredentialsGetter(keyid string, secretkey string, profile string, params
 			&credentials.EnvProvider{},
 			&credentials.SharedCredentialsProvider{},
 			&ec2rolecreds.EC2RoleProvider{Client: client},
+			stscreds.NewWebIdentityRoleProvider(sts.New(session.Must(session.NewSession())), os.Getenv("AWS_ROLE_ARN"), os.Getenv("AWS_ROLE_SESSION_NAME"),os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")),
 		})
 }
 
