@@ -164,6 +164,7 @@ type CfnTemplate struct {
 			DocumentationUrl    string   `yaml:"DocumentationUrl,omitempty"`
 			ProviderDisplayName string   `yaml:"ProviderDisplayName,omitempty"`
 			OutputsAsIs         bool     `yaml:"OutputsAsIs,omitempty"`
+			CloudFoundry        bool     `yaml:"CloudFoundry,omitempty"`
 			Bindings            struct {
 				IAM struct {
 					AddKeypair bool `yaml:"AddKeypair,omitempty"`

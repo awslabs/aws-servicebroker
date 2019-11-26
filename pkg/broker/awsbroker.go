@@ -242,6 +242,7 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			"imageUrl":            sd.Metadata.Spec.ImageUrl,
 			"longDescription":     sd.Metadata.Spec.LongDescription,
 			"outputsAsIs":         sd.Metadata.Spec.OutputsAsIs,
+			"cloudFoundry":        sd.Metadata.Spec.CloudFoundry,
 		},
 		PlanUpdatable: aws.Bool(false),
 	}
