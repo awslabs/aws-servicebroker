@@ -453,7 +453,6 @@ func getCredentials(service *osb.Service, outputs []*cloudformation.Output, ssmS
 	}
 
 	if (service.Metadata["cloudFoundry"] == true){
-		fmt.Println("in switch for creds")
 		switch service.Name {
 		case "rdsmysql":
 			credentials = cfmysqlcreds(credentials)
