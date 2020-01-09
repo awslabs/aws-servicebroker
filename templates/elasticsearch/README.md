@@ -201,7 +201,9 @@ These are the environment variables that are available to an application on bind
 
 Name           | Description
 -------------- | ---------------
-ENDPOINT_ADDRESS
+ELASTICSEARCH_DOMAIN_ARN | The ARN of the Elasticsearch domain.
+ELASTICSEARCH_ENDPOINT | The endpoint address of the Elasticsearch cluster.
+ES_DOMAIN_NAME | The Elasticsearch domain name.
 
 # Kubernetes/Openshift Examples
 
