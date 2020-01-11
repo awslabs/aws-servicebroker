@@ -396,18 +396,10 @@ func paramValue(v interface{}) string {
 }
 
 func leaveOutputsAsIs(service *osb.Service) bool {
-	if service.Metadata == nil {
-		return false
+	if (service.Metadata["outputsAsIs"]  == true || service.Metadata["cloudFoundry"] == true ) {
+		return true
 	}
-	v, found := service.Metadata["outputsAsIs"]
-	if !found {
-		return false
-	}
-	b, ok := v.(bool)
-	if !ok {
-		return false
-	}
-	return b
+	return false
 }
 
 func toScreamingSnakeCaseIfAppropriate(service *osb.Service, s string) string {
@@ -457,6 +449,19 @@ func getCredentials(service *osb.Service, outputs []*cloudformation.Output, ssmS
 					credentials[k] = aws.StringValue(p.Value)
 				}
 			}
+		}
+	}
+
+	if (service.Metadata["cloudFoundry"] == true){
+		switch service.Name {
+		case "rdsmysql":
+			credentials = cfmysqlcreds(credentials)
+		case "rdsmariadb":
+			credentials = cfmysqlcreds(credentials)
+		case "rdspostgresql":
+			credentials = cfpostgrecreds(credentials)
+		case "s3":
+			credentials = cfs3creds(credentials)
 		}
 	}
 
