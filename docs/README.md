@@ -120,8 +120,10 @@ An override can be broker wide, or only apply to a particular org/cluster, space
 #### Environment Variables
 The following structure is used for override Environment Variables:
 ```
-PARAM_OVERRIDE_<BROKER_ID>_<ORG_GUID/CLUSTER_ID>_<SPACE_GUID/NAMESPACE>_all_region
+PARAM_OVERRIDE_<BROKER_ID>_<ORG_GUID/CLUSTER_ID>_<SPACE_GUID/NAMESPACE>_<SERVICE>_<PARAMETER>=<value>
 ```
+
+`<ORG_GUID/CLUSTER_ID>`, `<SPACE_GUID/NAMESPACE>`, and `<SERVICE>` can all have the literal value `all`.
 
 #### DynamoDB
 
