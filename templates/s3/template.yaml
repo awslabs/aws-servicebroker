@@ -122,7 +122,7 @@ Parameters:
     Type: String
     Default: Archive
   EnableLogging:
-    Description: enable or discable S3 logging
+    Description: enable or disable S3 logging
     Type: String
     AllowedValues:
       - 'True'
