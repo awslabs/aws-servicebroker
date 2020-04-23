@@ -3,9 +3,9 @@
 ACCESSKEYID=$(echo -n $1 | base64)
 SECRETKEY=$(echo -n $2 | base64)
 
-# On OpenShift 4.x the project name has changed to "openshift-service-catalog-apiserver"
+# On OpenShift 4.2 the project name has changed to "openshift-service-catalog-apiserver-operator"
 oc projects -q | grep -q "^kube-service-catalog$" && proj=kube-service-catalog
-oc projects -q | grep -q "^openshift-service-catalog-apiserver$" && proj=openshift-service-catalog-apiserver
+oc projects -q | grep -q "^openshift-service-catalog-apiserver-operator$" && proj=openshift-service-catalog-apiserver-operator
 [ ! "$proj" ] && echo "Error: Cannot find project" && exit 1
 
 # Fetch the cert 
