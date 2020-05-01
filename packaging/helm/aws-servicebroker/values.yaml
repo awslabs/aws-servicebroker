@@ -26,3 +26,13 @@ brokerconfig:
   prescribeoverrides: true
 annotations: {}
 clusterDomain: cluster.local
+
+# Allow overridding the .Capabilities.KubeVersion.GitVersion (useful for "helm template" command)
+kubeTargetVersionOverride: ""
+
+# Add any extra environment variables to the deployment
+extraEnv: []
+
+## Node labels for pod assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+nodeSelector: {}
