@@ -20,6 +20,7 @@ Table of contents
 # Parameters
 
 <a id = "param-production"></a>
+## production parameters
 
 Creates an Amazon Elasticsearch optimised for production use.  
 Pricing: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3
@@ -83,6 +84,7 @@ NodeToNodeEncryption|Specifies whether node-to-node encryption is enabled.|true
 EncryptionAtRest|Whether the domain should encrypt data at rest, and if so, the AWS Key Management Service (KMS) key to use. Can only be used to create a new domain, not update an existing one.|true
 
 <a id = "param-dev"></a>
+## Dev Parameters
 
 Creates an Amazon Elasticsearch optimised for dev/test use.  
 Pricing: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3
@@ -146,6 +148,7 @@ NodeToNodeEncryption|Specifies whether node-to-node encryption is enabled.|true
 EncryptionAtRest|Whether the domain should encrypt data at rest, and if so, the AWS Key Management Service (KMS) key to use. Can only be used to create a new domain, not update an existing one.|true
 
 <a id = "param-custom"></a>
+## Custom parameters
 
 Creates an Amazon Elasticsearch with custom configuration.  
 Pricing: https://aws.amazon.com/elasticsearch-service/pricing/?nc=sn&loc=3
