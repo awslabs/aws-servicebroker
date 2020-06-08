@@ -143,21 +143,30 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 	}
 
+	urlP := b.generateS3HTTPUrl(service.Name)
+	stackName := getStackName(service.Name, instance.ID)
+	capabilities := []string{cloudformation.CapabilityCapabilityNamedIam}
+	cfnParams := toCFNParams(params)
+
 	// Create the CFN stack
 	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, params))
 	resp, err := cfnSvc.Client.CreateStack(&cloudformation.CreateStackInput{
-		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}),
-		Parameters:   toCFNParams(params),
-		StackName:    aws.String(getStackName(service.Name, instance.ID)),
+		Capabilities: aws.StringSlice(capabilities),
+		Parameters:   cfnParams,
+		StackName:    aws.String(stackName),
 		Tags:         tags,
-		TemplateURL:  b.generateS3HTTPUrl(service.Name),
+		TemplateURL:  urlP,
 	})
 	if err != nil {
-		glog.Errorf("TemplateURL: %v", b.generateS3HTTPUrl(service.Name))
+		var url string
+		if urlP != nil {
+			url = *urlP
+		}
+		glog.Errorf("TemplateURL: %s", url)
 		glog.Errorf("Tags: %v", tags)
-		glog.Errorf("StackName: %v", aws.String(getStackName(service.Name, instance.ID)))
+		glog.Errorf("StackName:  %s", stackName)
 		glog.Errorf("Parameters: %v", toCFNParams(params))
-		glog.Errorf("Capabilities: %v", aws.StringSlice([]string{cloudformation.CapabilityCapabilityNamedIam}))
+		glog.Errorf("Capabilities: %v ", capabilities)
 		desc := fmt.Sprintf("Failed to create the CloudFormation stack: %v", err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
