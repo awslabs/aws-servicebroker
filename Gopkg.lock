@@ -10,7 +10,7 @@
   version = "v0.4.0"
 
 [[projects]]
-  digest = "1:f7e6fd21a27a13da641f31872d070599783b44052015469519bfecf95ae39a3c"
+  digest = "1:805fadb53b6a19286fb1f540cf27b261e52f66fce10b86a8d6064de232bcab7e"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -22,7 +22,10 @@
     "aws/credentials",
     "aws/credentials/ec2rolecreds",
     "aws/credentials/endpointcreds",
+    "aws/credentials/processcreds",
     "aws/credentials/stscreds",
+    "aws/crr",
+    "aws/csm",
     "aws/defaults",
     "aws/ec2metadata",
     "aws/endpoints",
@@ -30,10 +33,16 @@
     "aws/session",
     "aws/signer/v4",
     "awstesting/mock",
+    "internal/ini",
+    "internal/s3err",
     "internal/sdkio",
+    "internal/sdkmath",
     "internal/sdkrand",
+    "internal/sdkuri",
     "internal/shareddefaults",
     "private/protocol",
+    "private/protocol/eventstream",
+    "private/protocol/eventstream/eventstreamapi",
     "private/protocol/json/jsonutil",
     "private/protocol/jsonrpc",
     "private/protocol/query",
@@ -56,8 +65,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "NUT"
-  revision = "827e7eac8c2680d5bdea7bc3ef29c596eabe1eae"
-  version = "v1.13.59"
+  revision = "15cbab53359072d0801eb32d16d0a406207e8716"
+  version = "v1.25.14"
 
 [[projects]]
   branch = "master"
@@ -82,14 +91,6 @@
   pruneopts = "NUT"
   revision = "a6af135bd4e28680facf08a3d206b454abc877a4"
   version = "v1.0.1"
-
-[[projects]]
-  digest = "1:30b09d75e7e16119e85020374df10ea06f263c9bdff72afdc1522838b9609375"
-  name = "github.com/go-ini/ini"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "06f5f3d67269ccec1fe5fe4134ba6e982984f7f5"
-  version = "v1.37.0"
 
 [[projects]]
   branch = "master"
@@ -132,11 +133,11 @@
   revision = "18f3aa144f1880846501710964f645fdbcc534b5"
 
 [[projects]]
-  digest = "1:ac6d01547ec4f7f673311b4663909269bfb8249952de3279799289467837c3cc"
+  digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "0b12d6b5"
+  revision = "c2b33e84"
 
 [[projects]]
   branch = "master"

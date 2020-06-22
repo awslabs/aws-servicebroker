@@ -3,6 +3,8 @@ package broker
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"net/http"
 	"os"
 	"regexp"
@@ -177,7 +179,7 @@ func getOverrides(brokerid string, params []string, space string, service string
 }
 
 // Build aws credentials using global or override keys, or the credential chain
-func awsCredentialsGetter(keyid string, secretkey string, profile string, params map[string]string, client *ec2metadata.EC2Metadata) credentials.Credentials {
+func awsCredentialsGetter(keyid string, secretkey string, profile string, params map[string]string, client *ec2metadata.EC2Metadata, stsClient *sts.STS) credentials.Credentials {
 	if _, ok := params["aws_access_key"]; ok {
 		keyid = params["aws_access_key"]
 		glog.V(10).Infof("Using override credentials with keyid %q\n", keyid)
@@ -198,6 +200,7 @@ func awsCredentialsGetter(keyid string, secretkey string, profile string, params
 			&credentials.EnvProvider{},
 			&credentials.SharedCredentialsProvider{},
 			&ec2rolecreds.EC2RoleProvider{Client: client},
+			stscreds.NewWebIdentityRoleProvider(stsClient, os.Getenv("AWS_ROLE_ARN"), os.Getenv("AWS_ROLE_SESSION_NAME"), os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")),
 		})
 }
 

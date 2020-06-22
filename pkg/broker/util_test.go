@@ -1,6 +1,8 @@
 package broker
 
 import (
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"os"
 	"strings"
 	"testing"
@@ -283,29 +285,31 @@ func TestAwsCredentialsGetter(t *testing.T) {
 	keyid, secretkey, profile := "", "", ""
 	params := make(map[string]string)
 	client := ec2metadata.New(session.Must(session.NewSession()))
-	actual := awsCredentialsGetter(keyid, secretkey, profile, params, client)
+	stsClient := sts.New(session.Must(session.NewSession()))
+	actual := awsCredentialsGetter(keyid, secretkey, profile, params, client, stsClient)
 	expected := *credentials.NewChainCredentials(
 		[]credentials.Provider{
 			&credentials.EnvProvider{},
 			&credentials.SharedCredentialsProvider{},
 			&ec2rolecreds.EC2RoleProvider{Client: client},
+			stscreds.NewWebIdentityRoleProvider(stsClient, os.Getenv("AWS_ROLE_ARN"), os.Getenv("AWS_ROLE_SESSION_NAME"), os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")),
 		})
 	assertor.Equal(expected, actual, "should return credential chain creds")
 
 	keyid, secretkey, profile = "testid", "testkey", ""
 	expected = *credentials.NewStaticCredentials(keyid, secretkey, "")
-	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client)
+	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client, stsClient)
 	assertor.Equal(expected, actual, "should return static creds")
 
 	keyid, secretkey, profile = "", "", "test"
 	expected = *credentials.NewChainCredentials([]credentials.Provider{&credentials.SharedCredentialsProvider{Profile: profile}})
-	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client)
+	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client, stsClient)
 	assertor.Equal(expected, actual, "should return shared creds")
 
 	keyid, secretkey, profile = "", "", ""
 	params = map[string]string{"aws_access_key": "testKeyId", "aws_secret_key": "testSecretKey"}
 	expected = *credentials.NewStaticCredentials("testKeyId", "testSecretKey", "")
-	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client)
+	actual = awsCredentialsGetter(keyid, secretkey, profile, params, client, stsClient)
 	assertor.Equal(expected, actual, "should return static creds")
 }
 
