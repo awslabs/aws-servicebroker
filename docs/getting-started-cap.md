@@ -63,7 +63,7 @@ Install the AWS service broker as documented at https://github.com/awslabs/aws-s
 helm install aws-sb/aws-servicebroker \
 	     --name aws-servicebroker \
 	     --namespace $BROKER_NAMESPACE \
-	     --version 1.0.1 \
+	     --version 1.0.2 \
 	     --set aws.secretkey=$AWS_ACCESS_KEY \
 	     --set aws.accesskeyid=$AWS_KEY_ID \
 	     --set deployClusterServiceBroker=false \

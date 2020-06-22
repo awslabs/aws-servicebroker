@@ -2,7 +2,7 @@ apiVersion: v1
 entries:
   aws-servicebroker:
   - apiVersion: v2
-    appVersion: 1.0.1
+    appVersion: 1.0.2
     created: "2020-05-01T11:10:51.935526-06:00"
     description: Implementation of the Open Service Broker API for AWS. Deploy Cloudformation
       templates using k8s resources.

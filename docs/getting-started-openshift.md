@@ -11,9 +11,9 @@ mkdir awssb
 cd awssb
 
 ### Fetch installation artifacts
-wget https://raw.githubusercontent.com/awslabs/aws-servicebroker/release-v1.0.1/packaging/openshift/deploy.sh
-wget https://raw.githubusercontent.com/awslabs/aws-servicebroker/release-v1.0.1/packaging/openshift/aws-servicebroker.yaml
-wget https://raw.githubusercontent.com/awslabs/aws-servicebroker/release-v1.0.1/packaging/openshift/parameters.env
+wget https://raw.githubusercontent.com/awslabs/aws-servicebroker/release-v1.0.2/packaging/openshift/deploy.sh
+wget https://raw.githubusercontent.com/awslabs/aws-servicebroker/release-v1.0.2/packaging/openshift/aws-servicebroker.yaml
+wget https://raw.githubusercontent.com/awslabs/aws-servicebroker/release-v1.0.2/packaging/openshift/parameters.env
 chmod +x deploy.sh
 
 ### Edit parameters.env and update parameters as needed
