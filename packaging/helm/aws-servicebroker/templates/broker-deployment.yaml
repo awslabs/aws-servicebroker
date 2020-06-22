@@ -1,5 +1,5 @@
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: {{ template "deployment.apiVersion" . }}
 metadata:
   name: {{ template "fullname" . }}
   labels:
@@ -25,6 +25,10 @@ spec:
 {{- end }}
     spec:
       serviceAccount: {{ template "fullname" . }}-service
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}
       containers:
       - name: awssb
         image: {{ .Values.image }}
@@ -98,13 +102,16 @@ spec:
               key: secretkey
               {{- end }}
         - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_region
-          value: {{ .Values.aws.region }}
+          value: {{ .Values.aws.region | quote }}
         - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_VpcId
-          value: {{ .Values.aws.vpcid }}
+          value: {{ .Values.aws.vpcid | quote }}
         - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_target_account_id
-          value: "{{ .Values.aws.targetaccountid }}"
+          value: {{ .Values.aws.targetaccountid | quote }}
         - name: PARAM_OVERRIDE_{{ .Values.brokerconfig.brokerid }}_all_all_all_target_role_name
-          value: {{ .Values.aws.targetrolename }}
+          value: {{ .Values.aws.targetrolename | quote }}
+      {{- if .Values.extraEnv }}
+{{ toYaml .Values.extraEnv | indent 8 }}
+      {{- end }}
       volumes:
       - name: awssb-ssl
         secret:
