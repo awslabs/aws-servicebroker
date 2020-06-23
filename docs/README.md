@@ -234,6 +234,17 @@ CloudFormation templates and ServiceClass specs. The bucket, prefix and AWS regi
 
 * [Example -spec.yaml file](/docs/examples/example-main.yaml)
 
+#### Generating unique credentials for each bind request
+
+It is possible to define a CloudFormation template that defines an AWS Lambda function to be run whenever the AWS Service Broker recieves a bind or unbind request.  This in turn allows for the bindings to be defined uniquely rather than returning the current state of the CloudFormation outputs for each new binding. In order to use this functionality you must define three things in your template:
+
+1. You must place the key/value pair `BindViaLambda: true` in your `Metadata` section.
+2. You must define a lambda function as a custom resource within you template.
+3. You must output the name or Arn of your lambda function, in the `Outputs` section of your template, with the key `BindLambda`. 
+
+* [Example -spec.yaml file with Lambda generated bindings](/docs/examples/example-with-lambda-bindings-main.yaml)
+
+
 ### Template Metadata Generator
 
 A tool that examines the parameters of the JSON Cloudformation template and automatically creates the Service Broker Metadata (AWS::ServiceBroker::Specification) for the template and outputs in JSON and YAML format. It will include all parameters in the template into the metadata.
