@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -695,7 +696,7 @@ func TestBind(t *testing.T) {
 				"PublicText": "this-is-public",
 			},
 			lambdas: map[string]mockLambdaFunc{"MyLambdaFunction": func(payload []byte) ([]byte, error) {
-				assert.JSONEq(t, `{"BIND_LAMBDA":"MyLambdaFunction","SECRET_TEXT":"this-is-secret"}`, string(payload))
+				assert.JSONEq(t, `{"BIND_LAMBDA":"MyLambdaFunction","SECRET_TEXT":"this-is-secret","RequestType":"bind"}`, string(payload))
 				return []byte(`{"PublicText": "this-is-public"}`), nil
 			}},
 		},
@@ -835,8 +836,14 @@ func TestUnbind(t *testing.T) {
 				ServiceID: "test-lambda-service-id",				
 			},
 			bindViaLambda: true,
-			lambdas: map[string]mockLambdaFunc{"MyLambdaFunction": func(params []byte) ([]byte, error) {
+			lambdas: map[string]mockLambdaFunc{"MyLambdaFunction": func(payload []byte) ([]byte, error) {
 				callCount++
+				var params map[string]string
+				err := json.Unmarshal(payload, &params)
+				if err != nil {
+					return nil, err
+				}
+				assert.Equal(t, params["RequestType"], "unbind")
 				return nil, nil
 			}},
 			cfnOutputs: map[string]string{

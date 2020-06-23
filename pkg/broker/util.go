@@ -625,33 +625,34 @@ func getCfnError(stackName string, cfnSvc CfnClient) *string {
 	return &message
 }
 
-func invokeLambdaBindFunc(sess *session.Session, newLambda GetLambdaClient, credentials map[string]interface{}) (map[string]interface{}, error) {
+func invokeLambdaBindFunc(sess *session.Session, newLambda GetLambdaClient, credentials map[string]interface{}, requestType string) (map[string]interface{}, error) {
 	bindLambda, ok := credentials[cfnOutputBindLambda].(string)
 	if !ok {
-		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", "Non string value for BindLambda")
+		return nil, fmt.Errorf("Non string value for BindLambda")
 	}
 	if bindLambda == "" {
-		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", "BindViaLambda is set to true, but no BindLambda is defined in template output")
+		return nil, fmt.Errorf("BindViaLambda is set to true, but no BindLambda is defined in template output")
 	}
 	lmbd := newLambda(sess)
 	if lmbd == nil {
-		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", "Lambda is Nil")
+		return nil, fmt.Errorf("Lambda is Nil")
 	}
 	f := aws.String(bindLambda)
+	credentials["RequestType"] = requestType
 	payload, err := json.Marshal(credentials)
 	if err != nil {
-		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", "Error marsheling outputs from cloud formation for use in lambda function")
+		return nil, fmt.Errorf("Error marsheling outputs from cloud formation for use in lambda function")
 	}
 	ii := &lambda.InvokeInput{FunctionName: f, Payload: payload}
 	out, err := lmbd.Invoke(ii)
 	if err != nil {
-		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", err.Error())
+		return nil, err
 	}
 	output := make(map[string]interface{})
 	if len(out.Payload) > 0 {
 		err = json.Unmarshal(out.Payload, &output)
 		if err != nil {
-			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", fmt.Sprintf("Error unmarshalling response from lambda function: %s", err.Error()))
+			return nil, fmt.Errorf(fmt.Sprintf("Error unmarshalling response from lambda function: %s", err.Error()))
 		}
 	}
 	return output, nil

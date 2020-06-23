@@ -379,10 +379,9 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 
 	if bindViaLambda(service) {
 		// Replace credentials with a derived set calculated by a lambda function
-		credentials, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials)
+		credentials, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials, "bind")
 		if err != nil {
-			desc := fmt.Sprintf("Error in lambda function calculating binding data: %v", err)
-			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", err.Error())
 		}
 	}
 
@@ -454,9 +453,9 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 		}
 
-		_, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials)
+		_, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials, "unbind")
 		if err != nil {
-			desc := fmt.Sprintf("Error running lambda function for unbind from: %v", err)
+			desc := fmt.Sprintf("Error running lambda function for unbind from: %vo", err)
 			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 		}
 	}
