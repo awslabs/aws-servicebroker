@@ -378,6 +378,16 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 	}
 
 	if bindViaLambda(service) {
+		// Copy instance and binding IDs into credentials to
+		// be used as identifiers for resources we create in
+		// lambda so that we can reference them when we unbind
+		// (for example, you can build a unique path for an
+		// IAM User with this information, and avoid the need
+		// to have persist extra identifiers, or have users
+		// provide them.
+		credentials["INSTANCE_ID"] = binding.InstanceID
+		credentials["BINDING_ID"] = binding.ID
+		
 		// Replace credentials with a derived set calculated by a lambda function
 		credentials, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials, "bind")
 		if err != nil {
@@ -453,6 +463,12 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 		}
 
+		// Copy in the instance and binding IDs because we can
+		// use this as a stable reference to uniquely identify
+		// dynamically created resources (for exmaple, you can
+		// use these in the Path prefix of an IAM User).
+		credentials["INSTANCE_ID"] = binding.InstanceID
+		credentials["BINDING_ID"] = binding.ID
 		_, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials, "unbind")
 		if err != nil {
 			desc := fmt.Sprintf("Error running lambda function for unbind from: %vo", err)

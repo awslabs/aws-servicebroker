@@ -696,7 +696,7 @@ func TestBind(t *testing.T) {
 				"PublicText": "this-is-public",
 			},
 			lambdas: map[string]mockLambdaFunc{"MyLambdaFunction": func(payload []byte) ([]byte, error) {
-				assert.JSONEq(t, `{"BIND_LAMBDA":"MyLambdaFunction","SECRET_TEXT":"this-is-secret","RequestType":"bind"}`, string(payload))
+				assert.JSONEq(t, `{"BINDING_ID":"test-binding-id","BIND_LAMBDA":"MyLambdaFunction","SECRET_TEXT":"this-is-secret","RequestType":"bind", "INSTANCE_ID": "exists"}`, string(payload))
 				return []byte(`{"PublicText": "this-is-public"}`), nil
 			}},
 		},
@@ -844,6 +844,8 @@ func TestUnbind(t *testing.T) {
 					return nil, err
 				}
 				assert.Equal(t, params["RequestType"], "unbind")
+				assert.Equal(t, params["INSTANCE_ID"], "exists")
+				assert.Equal(t, params["BINDING_ID"], "foo-role-name")
 				return nil, nil
 			}},
 			cfnOutputs: map[string]string{
