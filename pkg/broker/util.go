@@ -15,7 +15,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/golang/glog"
@@ -398,8 +400,15 @@ func paramValue(v interface{}) string {
 	return fmt.Sprintf("%v", v)
 }
 
+func bindViaLambda(service *osb.Service) bool {
+	if service.Metadata["bindViaLambda"] == true {
+		return true
+	}
+	return false
+}
+
 func leaveOutputsAsIs(service *osb.Service) bool {
-	if (service.Metadata["outputsAsIs"]  == true || service.Metadata["cloudFoundry"] == true ) {
+	if service.Metadata["outputsAsIs"] == true || service.Metadata["cloudFoundry"] == true {
 		return true
 	}
 	return false
@@ -455,7 +464,7 @@ func getCredentials(service *osb.Service, outputs []*cloudformation.Output, ssmS
 		}
 	}
 
-	if (service.Metadata["cloudFoundry"] == true){
+	if service.Metadata["cloudFoundry"] == true {
 		switch service.Name {
 		case "rdsmysql":
 			credentials = cfmysqlcreds(credentials)
@@ -614,4 +623,37 @@ func getCfnError(stackName string, cfnSvc CfnClient) *string {
 		}
 	}
 	return &message
+}
+
+func invokeLambdaBindFunc(sess *session.Session, newLambda GetLambdaClient, credentials map[string]interface{}) (map[string]interface{}, error) {
+	bindLambda, ok := credentials[cfnOutputBindLambda].(string)
+	if !ok {
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", "Non string value for BindLambda")
+	}
+	if bindLambda == "" {
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", "BindViaLambda is set to true, but no BindLambda is defined in template output")
+	}
+	lmbd := newLambda(sess)
+	if lmbd == nil {
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", "Lambda is Nil")
+	}
+	f := aws.String(bindLambda)
+	payload, err := json.Marshal(credentials)
+	if err != nil {
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", "Error marsheling outputs from cloud formation for use in lambda function")
+	}
+	ii := &lambda.InvokeInput{FunctionName: f, Payload: payload}
+	out, err := lmbd.Invoke(ii)
+	if err != nil {
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", err.Error())
+	}
+	output := make(map[string]interface{})
+	if len(out.Payload) > 0 {
+		err = json.Unmarshal(out.Payload, &output)
+		if err != nil {
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", fmt.Sprintf("Error unmarshalling response from lambda function: %s", err.Error()))
+		}
+	}
+	return output, nil
+
 }

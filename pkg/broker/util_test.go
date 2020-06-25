@@ -409,3 +409,21 @@ func TestGetCredentials(t *testing.T) {
 	assertor.Equal(nil, err, "err should be nil")
 	assertor.Equal(expected, actual, "not getting expected output")
 }
+
+func TestBindViaLambda(t *testing.T) {
+	assertor := assert.New(t)
+
+	assertor.False(bindViaLambda(&osb.Service{}), "should be False")
+	assertor.True(bindViaLambda(
+		&osb.Service{
+			Metadata: map[string]interface{}{
+				"bindViaLambda": true,
+			},
+		}))
+	assertor.False(bindViaLambda(
+		&osb.Service{
+			Metadata: map[string]interface{}{
+				"bindViaLambda": false,
+			},
+		}))
+}

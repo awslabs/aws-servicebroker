@@ -2,10 +2,11 @@ package broker
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -16,7 +17,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 // Runs at startup and bootstraps the broker
@@ -243,6 +244,7 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			"longDescription":     sd.Metadata.Spec.LongDescription,
 			"outputsAsIs":         sd.Metadata.Spec.OutputsAsIs,
 			"cloudFoundry":        sd.Metadata.Spec.CloudFoundry,
+			"bindViaLambda":       sd.Metadata.Spec.BindViaLambda,
 		},
 		PlanUpdatable: aws.Bool(false),
 	}

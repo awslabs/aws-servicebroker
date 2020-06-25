@@ -377,6 +377,15 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		binding.PolicyArn = policyArn
 	}
 
+	if bindViaLambda(service) {
+		// Replace credentials with a derived set calculated by a lambda function
+		credentials, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials)
+		if err != nil {
+			desc := fmt.Sprintf("Error in lambda function calculating binding data: %v", err)
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+		}
+	}
+
 	// Store the binding
 	err = b.db.DataStorePort.PutServiceBinding(*binding)
 	if err != nil {
@@ -406,18 +415,53 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 		return nil, newHTTPStatusCodeError(http.StatusGone, "", desc)
 	}
 
-	if binding.PolicyArn != "" {
-		instance, err := b.db.DataStorePort.GetServiceInstance(binding.InstanceID)
+	service, err := b.db.DataStorePort.GetServiceDefinition(request.ServiceID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service %s: %v", request.ServiceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if service == nil {
+		desc := fmt.Sprintf("The service %s was not found.", request.ServiceID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	// Get the instance
+	instance, err := b.db.DataStorePort.GetServiceInstance(binding.InstanceID)
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the service instance %s: %v", binding.InstanceID, err)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if instance == nil {
+		desc := fmt.Sprintf("The service instance %s was not found.", binding.InstanceID)
+		return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
+	}
+
+	sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params)
+
+	if bindViaLambda(service) {
+
+		// Get the CFN stack outputs
+		resp, err := b.Clients.NewCfn(sess).Client.DescribeStacks(&cloudformation.DescribeStacksInput{
+			StackName: aws.String(instance.StackID),
+		})
 		if err != nil {
-			desc := fmt.Sprintf("Failed to get the service instance %s: %v", binding.InstanceID, err)
+			desc := fmt.Sprintf("Failed to describe the CloudFormation stack %s: %v", instance.StackID, err)
 			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
-		} else if instance == nil {
-			desc := fmt.Sprintf("The service instance %s was not found.", binding.InstanceID)
-			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 		}
 
-		sess := b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params)
+		// Get the credentials from the CFN stack outputs
+		credentials, err := getCredentials(service, resp.Stacks[0].Outputs, b.Clients.NewSsm(sess))
+		if err != nil {
+			desc := fmt.Sprintf("Failed to get the credentials from CloudFormation stack %s: %v", instance.StackID, err)
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+		}
 
+		_, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials)
+		if err != nil {
+			desc := fmt.Sprintf("Error running lambda function for unbind from: %v", err)
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+		}
+	}
+
+	if binding.PolicyArn != "" {
 		// Detach the scoped policy from the role
 		_, err = b.Clients.NewIam(sess).DetachRolePolicy(&iam.DetachRolePolicyInput{
 			PolicyArn: aws.String(binding.PolicyArn),

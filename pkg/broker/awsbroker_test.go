@@ -2,6 +2,7 @@ package broker
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -16,6 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
+
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -101,6 +105,29 @@ func mockAwsIamClientGetter(sess *session.Session) iamiface.IAMAPI {
 	return &mockIAM{}
 }
 
+type mockLambdaFunc func(payload []byte) ([]byte, error)
+
+type mockLambda struct {
+	lambdaiface.LambdaAPI
+	lambdas map[string]mockLambdaFunc
+}
+
+func (ml *mockLambda) Invoke(ii *lambda.InvokeInput) (*lambda.InvokeOutput, error) {
+	f, found := ml.lambdas[aws.StringValue(ii.FunctionName)]
+	if !found {
+		return nil, fmt.Errorf("No lambda function named %s could be found.", aws.StringValue(ii.FunctionName))
+	}
+	result, err := f(ii.Payload)
+	if err != nil {
+		return nil, fmt.Errorf("Error in Lambda function: %s", err.Error())
+	}
+	return &lambda.InvokeOutput{Payload: result}, nil
+}
+
+func mockAwsLambdaClientGetter(sess *session.Session) lambdaiface.LambdaAPI {
+	return &mockLambda{}
+}
+
 type mockSSM struct {
 	ssmiface.SSMAPI
 	params map[string]string
@@ -125,12 +152,13 @@ func mockAwsSsmClientGetter(sess *session.Session) ssmiface.SSMAPI {
 }
 
 var mockClients = AwsClients{
-	NewCfn: mockAwsCfnClientGetter,
-	NewDdb: mockAwsDdbClientGetter,
-	NewIam: mockAwsIamClientGetter,
-	NewS3:  mockAwsS3ClientGetter,
-	NewSsm: mockAwsSsmClientGetter,
-	NewSts: mockAwsStsClientGetter,
+	NewCfn:    mockAwsCfnClientGetter,
+	NewDdb:    mockAwsDdbClientGetter,
+	NewIam:    mockAwsIamClientGetter,
+	NewLambda: mockAwsLambdaClientGetter,
+	NewS3:     mockAwsS3ClientGetter,
+	NewSsm:    mockAwsSsmClientGetter,
+	NewSts:    mockAwsStsClientGetter,
 }
 
 func mockGetAccountID(svc stsiface.STSAPI) (*sts.GetCallerIdentityOutput, error) {
@@ -156,8 +184,10 @@ func mockPollUpdate(interval int, l cache.Cache, c cache.Cache, bd BucketDetails
 // mock implementation of DataStore Adapter
 type mockDataStore struct{}
 
-func (db mockDataStore) PutServiceDefinition(sd osb.Service) error                   { return nil }
-func (db mockDataStore) GetParam(paramname string) (value string, err error)         { return "some-value", nil }
+func (db mockDataStore) PutServiceDefinition(sd osb.Service) error { return nil }
+func (db mockDataStore) GetParam(paramname string) (value string, err error) {
+	return "some-value", nil
+}
 func (db mockDataStore) PutParam(paramname string, paramvalue string) error          { return nil }
 func (db mockDataStore) PutServiceInstance(si serviceinstance.ServiceInstance) error { return nil }
 func (db mockDataStore) GetServiceDefinition(serviceuuid string) (*osb.Service, error) {

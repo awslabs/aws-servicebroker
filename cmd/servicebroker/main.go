@@ -81,12 +81,13 @@ func runWithContext(ctx context.Context) error {
 	addr := ":" + strconv.Itoa(options.Port)
 
 	clients := broker.AwsClients{
-		NewCfn: broker.AwsCfnClientGetter,
-		NewS3:  broker.AwsS3ClientGetter,
-		NewSsm: broker.AwsSsmClientGetter,
-		NewSts: broker.AwsStsClientGetter,
-		NewDdb: broker.AwsDdbClientGetter,
-		NewIam: broker.AwsIamClientGetter,
+		NewCfn:    broker.AwsCfnClientGetter,
+		NewS3:     broker.AwsS3ClientGetter,
+		NewSsm:    broker.AwsSsmClientGetter,
+		NewSts:    broker.AwsStsClientGetter,
+		NewDdb:    broker.AwsDdbClientGetter,
+		NewIam:    broker.AwsIamClientGetter,
+		NewLambda: broker.AwsLambdaClientGetter,
 	}
 
 	awsBroker, err := broker.NewAWSBroker(options.Options, broker.AwsSessionGetter, clients, broker.GetCallerId, broker.UpdateCatalog, broker.PollUpdate)
