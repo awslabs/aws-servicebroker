@@ -1,0 +1,209 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Example S3 Bucket with unique credentials for every binding'
+Metadata:
+  # Service Broker metadata section
+  AWS::ServiceBroker::Specification:
+    # Required - only valid value is 1.0 at this time
+    Version: 1.0
+    # Required - service definition name, all lowercase [a-z0-9-].*,
+    # must match the name of this file when the configured suffix, i.e
+    # -main.yaml, is removed.
+    Name: example-with-lambda-bindings
+    # Optional - used to enhance platforms with web ui
+    DisplayName:  Example s3 with lambda bindings
+    # Optional - used to enhance platforms with web ui    
+    LongDescription: Provision an S3 Bucket with unique credentials for every binding.
+    # Opitonal - used to indicate that this template provides a lambda
+    # function that should be invoked to complete binding and
+    # unbinding operations.  Note this requires that the key
+    # "BindLambda" is also included in the Outputs section of the
+    # template.
+    BindViaLambda: true
+    # Required - at least one service plan must be defined
+    ServicePlans:
+      # plan name all lowercase [a-z0-9-].*
+      plana:
+        # Optional - used to enhance platforms with web ui
+        DisplayName: Plan A
+        # Optional - used to enhance platforms with web ui
+        Description: Short plan description
+        # Optional - used to enhance platforms with web ui
+        LongDescription: Long plan description
+Resources:
+  # Resource being provisioned, in this example an S3 bucket
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      Tags: []
+  # Policies define access levels, must be used to successfully bind 
+  S3Full:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "S3Full-${S3Bucket}"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: 
+          - s3:DeleteObject
+          - s3:GetObject
+          - s3:PutObject
+          Effect: Allow
+          Resource: !Sub ${S3Bucket.Arn}/*
+  # This Role defines the permissions for the lambda function below,
+  # you must ensure that it contains the appropriate permissions for
+  # every action you wish to perform during bind/unbind requests.
+  AccessKeyCustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: iam_user_creation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - iam:CreateAccessKey
+            - iam:PutUserPolicy
+            - iam:ListAttachedUserPolicies
+            - iam:DeleteUserPolicy
+            - iam:AttachUserPolicy
+            - iam:DeleteUser
+            - iam:ListUserPolicies
+            - iam:DetachUserPolicy
+            - iam:CreateUser
+            - iam:DeleteAccessKey
+            - iam:ListAccessKeys
+            - iam:TagUser
+            - iam:ListUsers
+            - ssm:DeleteParameters
+            - ssm:PutParameter
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  # This custom resource creates a lambda function. It will not be
+  # invoked during the Provisioning phase, but rather when a bind or
+  # unbind request is made to the AWS Service Broker.  The event it
+  # will recieve contains the static Outputs from this CloudFormation
+  # template, plus the additional keys "INSTANCE_ID", "BINDING_ID" and
+  # "RequestType".  The instance identifier and binding identifier are
+  # provided so that resources created in the bind request can be
+  # rediscovered during an unbind request (in this example we use them
+  # in the Path of the IAM user we create).  The "RequestType" will be
+  # either "bind" or "unbind".
+  AccessKeyCustomResourceLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role:
+        Fn::GetAtt: [ AccessKeyCustomResourceRole, Arn ]
+      Code:
+        ZipFile: |-
+          import cfnresponse
+          import random
+          import string
+          import boto3
+          import traceback
+          import uuid
+          import base64
+          
+          
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          iam_client = boto3.client('iam')
+          
+          
+          def make_user_path(instance_id, binding_id):
+              return "/aws_servicebroker/%s/%s/" % (base64.b16encode(instance_id), base64.b16encode(binding_id))
+          
+          
+          def make_user(instance_id):
+              username = str(uuid.uuid4())
+              print instance_id
+              response = iam_client.create_user(
+                  Path=make_user_path(instance_id),
+                  UserName=username,
+                  Tags=[{"Key": "Origin",
+                         "Value": "aws-servicebroker"},
+                        {"Key": "ServerInstanceID",
+                         "Value": instance_id}])
+              return username
+          
+          
+          def attach_user_policy(username, policy):
+              response = iam_client.attach_user_policy(
+                  UserName=username,
+                  PolicyArn=policy)
+              
+          def make_access_key(username):
+              response = iam_client.create_access_key(UserName=username)
+              aws_access_key_id = response['AccessKey']['AccessKeyId']
+              secret_access_key = response['AccessKey']['SecretAccessKey']
+              return aws_access_key_id, secret_access_key
+          
+          
+          def delete_user(path, policy):
+              for user in iam_client.list_users(PathPrefix=path)["Users"]:
+                  username = user["UserName"]
+                  for access_key in iam_client.list_access_keys(UserName=username)['AccessKeyMetadata']:
+                      iam_client.delete_access_key(UserName=username, AccessKeyId=access_key['AccessKeyId'])
+                  iam_client.detach_user_policy(UserName=username, PolicyArn=policy)
+                  iam_client.delete_user(UserName=username)
+          
+          
+          def handler(event, context):
+              response_data = {}
+              try:
+                  if not event.has_key('BINDING_ID'):
+                      raise KeyError("No BINDING_ID key provided by template")
+                  binding_id = event['BINDING_ID']                         
+                  if not event.has_key('INSTANCE_ID'):
+                      raise KeyError("No INSTANCE_ID key provided by template")
+                  instance_id = event['INSTANCE_ID']                         
+                  if not event.has_key('POLICY'):
+                      raise KeyError("No POLICY key provided by template")
+                  policy = event['POLICY']
+                  
+                  username = make_user(instance_id, binding_id)
+                  if event['RequestType'] == 'bind':
+                      attach_user_policy(username, policy)
+                      access_key, secret_key =make_access_key(username)
+                      response_data["access_key_id"]= access_key
+                      response_data["secret_access_key"]= secret_key
+                      response_data["bucket"] = event["BUCKET"]
+                      response_data["region"] = event["REGION"]
+                  elif event['RequestType'] == 'unbind':
+                      delete_user(username, policy)
+                  return response_data
+                      
+              except Exception as e:
+                  print(str(e))
+                  traceback.print_exc()
+                  raise e            
+      Runtime: python2.7
+      Timeout: '60'
+# This section determines the content of the VACP_SERVICES.credentials
+# key that is generated during bing or "create service keys" actions
+# in the marketplace.
+Outputs:
+  # The following values should be passed through "As Is".
+  bucket:
+    Value: !Ref S3Bucket
+  bucketarn:
+    Value: !GetAtt S3Bucket.Arn
+  region:
+    Value: !Ref AWS::Region
+  BindLambda:
+    Value: !GetAtt AccessKeyCustomResourceLambda.Arn
+  Policy:
+    Value: !Ref S3Full

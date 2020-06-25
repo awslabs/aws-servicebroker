@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -16,7 +17,7 @@ import (
 	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
 	"github.com/koding/cache"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 // Options cli options
@@ -112,14 +113,16 @@ type GetS3Client func(sess *session.Session) S3Client
 type GetDdbClient func(sess *session.Session) *dynamodb.DynamoDB
 type GetStsClient func(sess *session.Session) *sts.STS
 type GetIamClient func(sess *session.Session) iamiface.IAMAPI
+type GetLambdaClient func(sess *session.Session) lambdaiface.LambdaAPI
 
 type AwsClients struct {
-	NewCfn GetCfnClient
-	NewSsm GetSsmClient
-	NewS3  GetS3Client
-	NewDdb GetDdbClient
-	NewSts GetStsClient
-	NewIam GetIamClient
+	NewCfn    GetCfnClient
+	NewSsm    GetSsmClient
+	NewS3     GetS3Client
+	NewDdb    GetDdbClient
+	NewSts    GetStsClient
+	NewIam    GetIamClient
+	NewLambda GetLambdaClient
 }
 
 type S3Client struct {
@@ -165,6 +168,7 @@ type CfnTemplate struct {
 			ProviderDisplayName string   `yaml:"ProviderDisplayName,omitempty"`
 			OutputsAsIs         bool     `yaml:"OutputsAsIs,omitempty"`
 			CloudFoundry        bool     `yaml:"CloudFoundry,omitempty"`
+			BindViaLambda       bool     `yaml:"BindViaLambda"`
 			Bindings            struct {
 				IAM struct {
 					AddKeypair bool `yaml:"AddKeypair,omitempty"`

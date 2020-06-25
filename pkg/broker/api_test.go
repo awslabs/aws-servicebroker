@@ -1,17 +1,20 @@
 package broker
 
 import (
+	"encoding/json"
 	"errors"
+	"net/http"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/awslabs/aws-servicebroker/pkg/serviceinstance"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"testing"
 )
 
 func TestGetCatalog(t *testing.T) {
@@ -70,6 +73,16 @@ func (db mockDataStoreProvision) PutServiceInstance(si serviceinstance.ServiceIn
 	return nil
 }
 func (db mockDataStoreProvision) GetServiceDefinition(serviceuuid string) (*osb.Service, error) {
+
+	if serviceuuid == "test-lambda-service-id" {
+
+		return &osb.Service{
+			ID:       "test-lambda-service-id",
+			Name:     "test-service-name",
+			Metadata: map[string]interface{}{"bindViaLambda": true},
+		}, nil
+
+	}
 	if serviceuuid == "test-service-id" {
 		return &osb.Service{
 			ID:   "test-service-id",
@@ -477,6 +490,8 @@ func TestBind(t *testing.T) {
 		expectedCreds  map[string]interface{}
 		expectedExists bool
 		expectedErr    error
+		bindViaLambda  bool
+		lambdas        map[string]mockLambdaFunc
 	}{
 		{
 			name: "unsupported_parameter",
@@ -665,10 +680,184 @@ func TestBind(t *testing.T) {
 			},
 			expectedCreds: make(map[string]interface{}),
 		},
+		{
+			name: "bind_via_lambda",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-lambda-service-id",
+			},
+			bindViaLambda: true,
+			cfnOutputs: map[string]string{
+				"SecretText": "this-is-secret",
+				"BindLambda": "MyLambdaFunction",
+			},
+			expectedCreds: map[string]interface{}{
+				"PublicText": "this-is-public",
+			},
+			lambdas: map[string]mockLambdaFunc{"MyLambdaFunction": func(payload []byte) ([]byte, error) {
+				assert.JSONEq(t, `{"BINDING_ID":"test-binding-id","BIND_LAMBDA":"MyLambdaFunction","SECRET_TEXT":"this-is-secret","RequestType":"bind", "INSTANCE_ID": "exists"}`, string(payload))
+				return []byte(`{"PublicText": "this-is-public"}`), nil
+			}},
+		},
+		{
+			name: "bind_via_lambda_missing_lambda",
+			request: &osb.BindRequest{
+				BindingID:  "test-binding-id",
+				InstanceID: "exists",
+				ServiceID:  "test-lambda-service-id",
+			},
+			bindViaLambda: true,
+			cfnOutputs: map[string]string{
+				"SecretText": "this-is-secret",
+				"BindLambda": "MyLambdaFunction",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "No lambda function named MyLambdaFunction could be found."),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		clients := AwsClients{
+			NewCfn: func(sess *session.Session) CfnClient {
+				return CfnClient{
+					Client: mockCfn{
+						DescribeStacksResponse: toDescribeStacksOutput(tt.cfnOutputs),
+					},
+				}
+			},
+			NewDdb: mockAwsDdbClientGetter,
+			NewIam: mockAwsIamClientGetter,
+			NewLambda: func(sess *session.Session) lambdaiface.LambdaAPI {
+				return &mockLambda{
+					lambdas: tt.lambdas,
+				}
+			},
+			NewS3: mockAwsS3ClientGetter,
+			NewSsm: func(sess *session.Session) ssmiface.SSMAPI {
+				return &mockSSM{
+					params: tt.ssmParams,
+				}
+			},
+			NewSts: mockAwsStsClientGetter,
+		}
+
+		b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+		b.db.DataStorePort = mockDataStoreProvision{}
+
+		resp, err := b.Bind(tt.request, &broker.RequestContext{})
+		if tt.expectedErr != nil {
+			assert.EqualError(t, err, tt.expectedErr.Error())
+		} else if assert.NoError(t, err) {
+			assert.Equal(t, tt.expectedExists, resp.Exists)
+			assert.Equal(t, tt.expectedCreds, resp.Credentials)
+		}
+		})
+	}
+}
+
+func TestUnbind(t *testing.T) {
+
+	var callCount int
+	tests := []struct {
+		name        string
+		request     *osb.UnbindRequest
+		expectedErr error
+		bindViaLambda  bool
+		lambdas        map[string]mockLambdaFunc
+		cfnOutputs map[string]string
+
+	}{
+		{
+			name: "error_getting_binding",
+			request: &osb.UnbindRequest{
+				BindingID: "err",
+				ServiceID: "test-service-id",				
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service binding err: test failure"),
+		},
+		{
+			name: "binding_not_found",
+			request: &osb.UnbindRequest{
+				BindingID: "foo",
+				ServiceID: "test-service-id",				
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusGone, "", "The service binding foo was not found."),
+		},
+		{
+			name: "success",
+			request: &osb.UnbindRequest{
+				BindingID: "exists",
+				ServiceID: "test-service-id",
+			},
+		},
+		{
+			name: "error_getting_instance",
+			request: &osb.UnbindRequest{
+				BindingID: "err-instance",
+				ServiceID: "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service instance err: test failure"),
+		},
+		{
+			name: "instance_not_found",
+			request: &osb.UnbindRequest{
+				BindingID: "foo-instance",
+				ServiceID: "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service instance foo was not found."),
+		},
+		{
+			name: "error_detaching_role_policy",
+			request: &osb.UnbindRequest{
+				BindingID: "err-role-name",
+				ServiceID: "test-service-id",
+			},
+			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to detach the policy exists from role err: test failure"),
+		},
+		{
+			name: "detach_role_policy",
+			request: &osb.UnbindRequest{
+				BindingID: "exists-role-name",
+				ServiceID: "test-service-id",
+			},
+		},
+		{
+			name: "role_not_found",
+			request: &osb.UnbindRequest{
+				BindingID: "foo-role-name",
+				ServiceID: "test-service-id",				
+			},
+		},
+		{
+			name: "unbind_via_lambda",
+			request: &osb.UnbindRequest{
+				BindingID: "foo-role-name",
+				ServiceID: "test-lambda-service-id",				
+			},
+			bindViaLambda: true,
+			lambdas: map[string]mockLambdaFunc{"MyLambdaFunction": func(payload []byte) ([]byte, error) {
+				callCount++
+				var params map[string]string
+				err := json.Unmarshal(payload, &params)
+				if err != nil {
+					return nil, err
+				}
+				assert.Equal(t, params["RequestType"], "unbind")
+				assert.Equal(t, params["INSTANCE_ID"], "exists")
+				assert.Equal(t, params["BINDING_ID"], "foo-role-name")
+				return nil, nil
+			}},
+			cfnOutputs: map[string]string{
+				"SecretText": "this-is-secret",
+				"BindLambda": "MyLambdaFunction",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			callCount = 0
 			clients := AwsClients{
 				NewCfn: func(sess *session.Session) CfnClient {
 					return CfnClient{
@@ -679,100 +868,28 @@ func TestBind(t *testing.T) {
 				},
 				NewDdb: mockAwsDdbClientGetter,
 				NewIam: mockAwsIamClientGetter,
-				NewS3:  mockAwsS3ClientGetter,
-				NewSsm: func(sess *session.Session) ssmiface.SSMAPI {
-					return &mockSSM{
-						params: tt.ssmParams,
+				NewLambda: func(sess *session.Session) lambdaiface.LambdaAPI {
+					return &mockLambda{
+						lambdas: tt.lambdas,
 					}
 				},
+				NewS3: mockAwsS3ClientGetter,
+				NewSsm: mockAwsSsmClientGetter,
 				NewSts: mockAwsStsClientGetter,
 			}
-
+			
 			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 			b.db.DataStorePort = mockDataStoreProvision{}
-
-			resp, err := b.Bind(tt.request, &broker.RequestContext{})
-			if tt.expectedErr != nil {
-				assert.EqualError(t, err, tt.expectedErr.Error())
-			} else if assert.NoError(t, err) {
-				assert.Equal(t, tt.expectedExists, resp.Exists)
-				assert.Equal(t, tt.expectedCreds, resp.Credentials)
-			}
-		})
-	}
-}
-
-func TestUnbind(t *testing.T) {
-	tests := []struct {
-		name        string
-		request     *osb.UnbindRequest
-		expectedErr error
-	}{
-		{
-			name: "error_getting_binding",
-			request: &osb.UnbindRequest{
-				BindingID: "err",
-			},
-			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service binding err: test failure"),
-		},
-		{
-			name: "binding_not_found",
-			request: &osb.UnbindRequest{
-				BindingID: "foo",
-			},
-			expectedErr: newHTTPStatusCodeError(http.StatusGone, "", "The service binding foo was not found."),
-		},
-		{
-			name: "success",
-			request: &osb.UnbindRequest{
-				BindingID: "exists",
-			},
-		},
-		{
-			name: "error_getting_instance",
-			request: &osb.UnbindRequest{
-				BindingID: "err-instance",
-			},
-			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service instance err: test failure"),
-		},
-		{
-			name: "instance_not_found",
-			request: &osb.UnbindRequest{
-				BindingID: "foo-instance",
-			},
-			expectedErr: newHTTPStatusCodeError(http.StatusBadRequest, "", "The service instance foo was not found."),
-		},
-		{
-			name: "error_detaching_role_policy",
-			request: &osb.UnbindRequest{
-				BindingID: "err-role-name",
-			},
-			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to detach the policy exists from role err: test failure"),
-		},
-		{
-			name: "detach_role_policy",
-			request: &osb.UnbindRequest{
-				BindingID: "exists-role-name",
-			},
-		},
-		{
-			name: "role_not_found",
-			request: &osb.UnbindRequest{
-				BindingID: "foo-role-name",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
-			b.db.DataStorePort = mockDataStoreProvision{}
-
 			_, err := b.Unbind(tt.request, &broker.RequestContext{})
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
 			} else {
 				assert.NoError(t, err)
+			}
+			if tt.bindViaLambda {
+				assert.Equal(t, 1, callCount)
+			} else {
+				assert.Equal(t, 0, callCount)
 			}
 		})
 	}
