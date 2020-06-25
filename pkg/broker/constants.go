@@ -78,7 +78,7 @@ const (
 	cfnOutputSSMValuePrefix  = "ssm:"
 	cfnOutputUserKeyID       = "UserKeyId"
 	cfnOutputUserSecretKey   = "UserSecretKey"
-	cfnOutputBindLambda      = "BIND_LAMBDA"
+	cfnOutputBindLambda      = "BindLambda"
 )
 
 const (

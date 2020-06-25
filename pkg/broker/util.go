@@ -2,6 +2,7 @@ package broker
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -626,22 +627,32 @@ func getCfnError(stackName string, cfnSvc CfnClient) *string {
 }
 
 func invokeLambdaBindFunc(sess *session.Session, newLambda GetLambdaClient, credentials map[string]interface{}, requestType string) (map[string]interface{}, error) {
-	bindLambda, ok := credentials[cfnOutputBindLambda].(string)
+	bindLambdaVal, ok := credentials[cfnOutputBindLambda]
 	if !ok {
-		return nil, fmt.Errorf("Non string value for BindLambda")
+		// Depending on the OutputsAsIs value derived from the
+		// templated, we might also need to check the
+		// screaming-snake case version of the key:
+		bindLambdaVal, ok = credentials[toScreamingSnakeCase(cfnOutputBindLambda)]
+		if !ok {
+			return nil, errors.New("the template metadata has BindViaLambda set to true, but no BindLambda is defined in template output")
+		}
+	}
+	bindLambda, ok := bindLambdaVal.(string)
+	if !ok {
+		return nil, fmt.Errorf("non string value for BindLambda in the cloudformation template")
 	}
 	if bindLambda == "" {
-		return nil, fmt.Errorf("BindViaLambda is set to true, but no BindLambda is defined in template output")
+		return nil, errors.New("the template metadata has BindViaLambda set to true, but the BindLambda output from cloudformation is an empty string")
 	}
 	lmbd := newLambda(sess)
 	if lmbd == nil {
-		return nil, fmt.Errorf("Lambda is Nil")
+		return nil, errors.New("attempt to establish Lambda session return a nil client")
 	}
 	f := aws.String(bindLambda)
 	credentials["RequestType"] = requestType
 	payload, err := json.Marshal(credentials)
 	if err != nil {
-		return nil, fmt.Errorf("Error marsheling outputs from cloud formation for use in lambda function")
+		return nil, fmt.Errorf("error marsheling outputs from cloud formation for use in lambda function")
 	}
 	ii := &lambda.InvokeInput{FunctionName: f, Payload: payload}
 	out, err := lmbd.Invoke(ii)
@@ -652,9 +663,18 @@ func invokeLambdaBindFunc(sess *session.Session, newLambda GetLambdaClient, cred
 	if len(out.Payload) > 0 {
 		err = json.Unmarshal(out.Payload, &output)
 		if err != nil {
-			return nil, fmt.Errorf(fmt.Sprintf("Error unmarshalling response from lambda function: %s", err.Error()))
+			return nil, fmt.Errorf(fmt.Sprintf("error unmarshalling response from lambda function: %s", err.Error()))
 		}
 	}
+	if msg, ok := output["errorMessage"]; ok {
+		// Lambda functions return a 200 response, even when
+		// there's an error in the script (because the request
+		// you sent was correct) Thus we have to check
+		// explcitly for the error output.
+		//
+		// We could include the stacktrace here also, but
+		// that's too much noise for end users.
+		return nil, fmt.Errorf("error in lambda function building binding: %v %v", output["errorType"], msg)
+	}
 	return output, nil
-
 }

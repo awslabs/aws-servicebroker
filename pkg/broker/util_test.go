@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
@@ -426,4 +427,90 @@ func TestBindViaLambda(t *testing.T) {
 				"bindViaLambda": false,
 			},
 		}))
+}
+
+func TestInvokeLambdaBindFunc(t *testing.T) {
+	tests := []struct {
+		name                string
+		inputCredentials    map[string]interface{}
+		newLambdaF          GetLambdaClient
+		expectedErr         string
+		expectedCredentials map[string]interface{}
+	}{
+		{
+			name:             "No BindLambda",
+			inputCredentials: map[string]interface{}{},
+			expectedErr:      "the template metadata has BindViaLambda set to true, but no BindLambda is defined in template output",
+		},
+		{
+			name: "Non-string BindLambda",
+			inputCredentials: map[string]interface{}{
+				"BindLambda": 1,
+			},
+			expectedErr: "non string value for BindLambda in the cloudformation template",
+		},
+		{
+			name: "Empty-string BindLambda",
+			inputCredentials: map[string]interface{}{
+				"BindLambda": "",
+			},
+			expectedErr: "the template metadata has BindViaLambda set to true, but the BindLambda output from cloudformation is an empty string",
+		},
+		{
+			name: "lambda session is nil",
+			inputCredentials: map[string]interface{}{
+				"BindLambda": "MyLambdaFunc",
+			},
+			newLambdaF: func(s *session.Session) lambdaiface.LambdaAPI {
+				return nil
+			},
+			expectedErr: "attempt to establish Lambda session return a nil client",
+		},
+		{
+			name: "error in lambda script",
+			inputCredentials: map[string]interface{}{
+				"BindLambda": "MyLambdaFunc",
+			},
+			newLambdaF: func(s *session.Session) lambdaiface.LambdaAPI {
+				return &mockLambda{
+					lambdas: map[string]mockLambdaFunc{
+						"MyLambdaFunc": func(payload []byte) ([]byte, error) {
+							return []byte(`{"errorType":"SomeError","errorMessage":"there was an error"}`), nil
+						},
+					},
+				}
+			},
+			expectedErr: "error in lambda function building binding: SomeError there was an error",
+		},
+		{
+			name: "succesful bind",
+			inputCredentials: map[string]interface{}{
+				"BindLambda": "MyLambdaFunc",
+			},
+			newLambdaF: func(s *session.Session) lambdaiface.LambdaAPI {
+				return &mockLambda{
+					lambdas: map[string]mockLambdaFunc{
+						"MyLambdaFunc": func(payload []byte) ([]byte, error) {
+
+							return []byte(`{"MyKey":"MyVal"}`), nil
+						},
+					},
+				}
+			},
+			expectedCredentials: map[string]interface{}{"MyKey": "MyVal"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			credentials, err := invokeLambdaBindFunc(nil, tc.newLambdaF, tc.inputCredentials, "bind")
+			if tc.expectedErr != "" {
+				assert.EqualError(t, err, tc.expectedErr)
+				assert.Nil(t, credentials)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, credentials, tc.expectedCredentials)
+		})
+	}
 }
