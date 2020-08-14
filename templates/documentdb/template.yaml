@@ -41,7 +41,7 @@ Metadata:
         Cost: https://aws.amazon.com/documentdb/pricing/
         ParameterValues:        
           AvailabilityZones: Auto
-          BackupRetentionPeriod: 0
+          BackupRetentionPeriod: 1
           CidrBlocks: Auto
           CidrSize: 27
           DBPort: 27017
@@ -171,7 +171,7 @@ Parameters:
     Description: The number of days during which automatic DB snapshots are retained. Min is 1 and Max value is 35.
     Type: Number
     Default: 35
-    MinValue: 0
+    MinValue: 1
     MaxValue: 35
     
   CidrBlocks:
