@@ -41,7 +41,7 @@ Metadata:
         Cost: https://aws.amazon.com/documentdb/pricing/
         ParameterValues:        
           AvailabilityZones: Auto
-          BackupRetentionPeriod: 0
+          BackupRetentionPeriod: 1
           CidrBlocks: Auto
           CidrSize: 27
           DBPort: 27017
