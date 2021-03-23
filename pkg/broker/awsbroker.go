@@ -261,6 +261,7 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			Bindable:    aws.Bool(true),
 			Metadata: map[string]interface{}{
 				"cost":            p.Cost,
+				"costs":           p.Costs,
 				"displayName":     p.DisplayName,
 				"longDescription": p.LongDescription,
 			},

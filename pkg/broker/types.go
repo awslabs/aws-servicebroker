@@ -183,6 +183,10 @@ type CfnTemplate struct {
 				Description       string            `yaml:"Description,omitempty"`
 				LongDescription   string            `yaml:"LongDescription,omitempty"`
 				Cost              string            `yaml:"Cost,omitempty"`
+				Costs             []struct {
+					Amount map[string]float64 `yaml:"Amount,omitempty"`
+					Unit string `yaml:"Unit,omitempty"`
+				} `yaml:"Costs,omitempty"`
 				ParameterValues   map[string]string `yaml:"ParameterValues,omitempty"`
 				ParameterDefaults map[string]string `yaml:"ParameterDefaults,omitempty"`
 			} `yaml:"ServicePlans,omitempty"`
