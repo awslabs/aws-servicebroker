@@ -253,120 +253,125 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 	params := cfnParamsToOsb(sd)
 	for k, p := range sd.Metadata.Spec.ServicePlans {
 		planid := uuid.NewV5(db.Accountuuid, "service__"+sd.Metadata.Spec.Name+"__plan__"+k).String()
-		plan := osb.Plan{
-			ID:          planid,
-			Name:        k,
-			Description: p.Description,
-			Free:        aws.Bool(false),
-			Bindable:    aws.Bool(true),
-			Metadata: map[string]interface{}{
-				"cost":            p.Cost,
-				"costs":           p.Costs,
-				"displayName":     p.DisplayName,
-				"longDescription": p.LongDescription,
-			},
-			Schemas: &osb.Schemas{ServiceInstance: &osb.ServiceInstanceSchema{}},
-		}
-		propsForCreate := make(map[string]interface{})
-		var openshiftFormCreate []OpenshiftFormDefinition
-		for nk, nv := range nonCfnParamDefs {
-			openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, nk, nv.(map[string]interface{}))
-			nonCfnParam := make(map[string]interface{})
-			for nnk, nnv := range nv.(map[string]interface{}) {
-				if nnk != "display_group" {
-					nonCfnParam[nnk] = nnv
-				}
-			}
-			propsForCreate[nk] = nonCfnParam
-		}
-		propsForUpdate := make(map[string]interface{})
-		requiredForCreate := make([]string, 0)
-		requiredForUpdate := make([]string, 0)
-		prescribed := make(map[string]string)
-		var openshiftFormUpdate []OpenshiftFormDefinition
-		for paramName, paramValue := range params {
-			include := true
-			for planParam, planValue := range p.ParameterValues {
-				if planParam == paramName {
-					include = false
-					prescribed[planParam] = planValue
-				}
-			}
-			required := false
-			if paramValue.(map[string]interface{})["required"] != nil {
-				required = paramValue.(map[string]interface{})["required"].(bool)
-			}
-			if include {
-				openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, paramName, paramValue.(map[string]interface{}))
-				createParam := map[string]interface{}{}
-				for nk, nv := range paramValue.(map[string]interface{}) {
-					createParam[nk] = nv
-				}
-				for planDefaultParam, planDefaultValue := range p.ParameterDefaults {
-					if planDefaultParam == paramName {
-						glog.V(10).Infof("Updating default with plan default for plan %q param %q\n", k, paramName)
-						createParam["default"] = planDefaultValue
-					}
-				}
-				for _, v := range []string{"required", "display_group"} {
-					delete(createParam, v)
-				}
-				propsForCreate[paramName] = createParam
-				if required {
-					requiredForCreate = append(requiredForCreate, paramName)
-				}
-				if stringInSlice(paramName, sd.Metadata.Spec.UpdatableParameters) {
-					openshiftFormUpdate = openshiftFormAppend(openshiftFormUpdate, paramName, paramValue.(map[string]interface{}))
-					updateParam := make(map[string]interface{})
-					for nnk, nnv := range paramValue.(map[string]interface{}) {
-						if nnk != "required" && nnk != "display_group" && nnk != "default" {
-							updateParam[nnk] = nnv
-						}
-					}
-					propsForUpdate[paramName] = updateParam
-					if required {
-						requiredForUpdate = append(requiredForUpdate, paramName)
-					}
-				}
-			}
-		}
-		plan.Schemas.ServiceInstance.Create = &osb.InputParametersSchema{
-			Parameters: map[string]interface{}{
-				"type":       "object",
-				"properties": propsForCreate,
-				"$schema":    "http://json-schema.org/draft-06/schema#",
-				"prescribed": prescribed,
-			},
-		}
-		if len(openshiftFormCreate) > 0 {
-			plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["openshift_form_definition"] = openshiftFormCreate
-		}
-		if len(requiredForCreate) > 0 {
-			// Cloud Foundry does not allow "required" to be an empty slice
-			plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"] = requiredForCreate
-		}
-		if len(propsForUpdate) > 0 {
-			plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
-				Parameters: map[string]interface{}{
-					"type":       "object",
-					"properties": propsForUpdate,
-					"$schema":    "http://json-schema.org/draft-06/schema#",
-					"prescribed": prescribed,
-				},
-			}
-			if len(openshiftFormUpdate) > 0 {
-				plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["openshift_form_definition"] = openshiftFormCreate
-			}
-			if len(requiredForUpdate) > 0 {
-				// Cloud Foundry does not allow "required" to be an empty slice
-				plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["required"] = requiredForUpdate
-			}
-		}
+		plan := db.servicePlanToOSBPlan(planid, k, p, sd.Metadata.Spec.UpdatableParameters, params)
 		plans = append(plans, plan)
 	}
 	outp.Plans = plans
 	glog.Infof("done converting service definition %q ", sd.Metadata.Spec.Name)
 	return outp
+}
+
+func (db Db) servicePlanToOSBPlan(planId, name string, servicePlan CfnServicePlan, updatableParameters []string, params map[string]interface{}) osb.Plan {
+	plan := osb.Plan{
+		ID:          planId,
+		Name:        name,
+		Description: servicePlan.Description,
+		Free:        aws.Bool(false),  // AWS Services aren't free of charge, usually.
+		Bindable:    aws.Bool(true),
+		Metadata: map[string]interface{}{
+			"cost":            servicePlan.Cost,  // Cost is a simple string, usually a URL that points to a document detailing the currents costs.
+			"costs":           servicePlan.Costs, // Optionally the template might also contain costs definined in the OpenServiceBrokerAPIs conventional format, described here: https://github.com/openservicebrokerapi/servicebroker/blob/master/profile.md#cost-object
+			"displayName":     servicePlan.DisplayName,
+			"longDescription": servicePlan.LongDescription,
+		},
+		Schemas: &osb.Schemas{ServiceInstance: &osb.ServiceInstanceSchema{}},
+	}
+	propsForCreate := make(map[string]interface{})
+	var openshiftFormCreate []OpenshiftFormDefinition
+	for nk, nv := range nonCfnParamDefs {
+		openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, nk, nv.(map[string]interface{}))
+		nonCfnParam := make(map[string]interface{})
+		for nnk, nnv := range nv.(map[string]interface{}) {
+			if nnk != "display_group" {
+				nonCfnParam[nnk] = nnv
+			}
+		}
+		propsForCreate[nk] = nonCfnParam
+	}
+	propsForUpdate := make(map[string]interface{})
+	requiredForCreate := make([]string, 0)
+	requiredForUpdate := make([]string, 0)
+	prescribed := make(map[string]string)
+	var openshiftFormUpdate []OpenshiftFormDefinition
+	for paramName, paramValue := range params {
+		include := true
+		for planParam, planValue := range servicePlan.ParameterValues {
+			if planParam == paramName {
+				include = false
+				prescribed[planParam] = planValue
+			}
+		}
+		required := false
+		if paramValue.(map[string]interface{})["required"] != nil {
+			required = paramValue.(map[string]interface{})["required"].(bool)
+		}
+		if include {
+			openshiftFormCreate = openshiftFormAppend(openshiftFormCreate, paramName, paramValue.(map[string]interface{}))
+			createParam := map[string]interface{}{}
+			for nk, nv := range paramValue.(map[string]interface{}) {
+				createParam[nk] = nv
+			}
+			for planDefaultParam, planDefaultValue := range servicePlan.ParameterDefaults {
+				if planDefaultParam == paramName {
+					glog.V(10).Infof("Updating default with plan default for plan %q param %q\n", name, paramName)
+					createParam["default"] = planDefaultValue
+				}
+			}
+			for _, v := range []string{"required", "display_group"} {
+				delete(createParam, v)
+			}
+			propsForCreate[paramName] = createParam
+			if required {
+				requiredForCreate = append(requiredForCreate, paramName)
+			}
+			if stringInSlice(paramName, updatableParameters) {
+				openshiftFormUpdate = openshiftFormAppend(openshiftFormUpdate, paramName, paramValue.(map[string]interface{}))
+				updateParam := make(map[string]interface{})
+				for nnk, nnv := range paramValue.(map[string]interface{}) {
+					if nnk != "required" && nnk != "display_group" && nnk != "default" {
+						updateParam[nnk] = nnv
+					}
+				}
+				propsForUpdate[paramName] = updateParam
+				if required {
+					requiredForUpdate = append(requiredForUpdate, paramName)
+				}
+			}
+		}
+	}
+	plan.Schemas.ServiceInstance.Create = &osb.InputParametersSchema{
+		Parameters: map[string]interface{}{
+			"type":       "object",
+			"properties": propsForCreate,
+			"$schema":    "http://json-schema.org/draft-06/schema#",
+			"prescribed": prescribed,
+		},
+	}
+	if len(openshiftFormCreate) > 0 {
+		plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["openshift_form_definition"] = openshiftFormCreate
+	}
+	if len(requiredForCreate) > 0 {
+		// Cloud Foundry does not allow "required" to be an empty slice
+		plan.Schemas.ServiceInstance.Create.Parameters.(map[string]interface{})["required"] = requiredForCreate
+	}
+	if len(propsForUpdate) > 0 {
+		plan.Schemas.ServiceInstance.Update = &osb.InputParametersSchema{
+			Parameters: map[string]interface{}{
+				"type":       "object",
+				"properties": propsForUpdate,
+				"$schema":    "http://json-schema.org/draft-06/schema#",
+				"prescribed": prescribed,
+			},
+		}
+		if len(openshiftFormUpdate) > 0 {
+			plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["openshift_form_definition"] = openshiftFormCreate
+		}
+		if len(requiredForUpdate) > 0 {
+			// Cloud Foundry does not allow "required" to be an empty slice
+			plan.Schemas.ServiceInstance.Update.Parameters.(map[string]interface{})["required"] = requiredForUpdate
+		}
+	}
+	return plan
 }
 
 func (b *AwsBroker) generateS3HTTPUrl(serviceDefName string) *string {
