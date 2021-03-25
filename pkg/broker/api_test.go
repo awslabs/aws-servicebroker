@@ -43,8 +43,20 @@ func TestGetCatalog(t *testing.T) {
 		Description: "blah",
 		Plans: []osb.Plan{
 			{
-				ID:      "planid",
-				Name:    "planname",
+				ID:          "planid",
+				Name:        "planname",
+				Description: "",
+				Free:        aws.Bool(false),
+				Bindable:    aws.Bool(true),
+				Metadata: map[string]interface{}{
+					"Costs": []CfnCost{{
+						Amount: map[string]float64{
+							"EUR": 29.91,
+						},
+						Unit: "Monthly",
+					},
+					},
+				},
 				Schemas: &osb.Schemas{},
 			},
 		},
@@ -718,40 +730,40 @@ func TestBind(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		clients := AwsClients{
-			NewCfn: func(sess *session.Session) CfnClient {
-				return CfnClient{
-					Client: mockCfn{
-						DescribeStacksResponse: toDescribeStacksOutput(tt.cfnOutputs),
-					},
-				}
-			},
-			NewDdb: mockAwsDdbClientGetter,
-			NewIam: mockAwsIamClientGetter,
-			NewLambda: func(sess *session.Session) lambdaiface.LambdaAPI {
-				return &mockLambda{
-					lambdas: tt.lambdas,
-				}
-			},
-			NewS3: mockAwsS3ClientGetter,
-			NewSsm: func(sess *session.Session) ssmiface.SSMAPI {
-				return &mockSSM{
-					params: tt.ssmParams,
-				}
-			},
-			NewSts: mockAwsStsClientGetter,
-		}
+			clients := AwsClients{
+				NewCfn: func(sess *session.Session) CfnClient {
+					return CfnClient{
+						Client: mockCfn{
+							DescribeStacksResponse: toDescribeStacksOutput(tt.cfnOutputs),
+						},
+					}
+				},
+				NewDdb: mockAwsDdbClientGetter,
+				NewIam: mockAwsIamClientGetter,
+				NewLambda: func(sess *session.Session) lambdaiface.LambdaAPI {
+					return &mockLambda{
+						lambdas: tt.lambdas,
+					}
+				},
+				NewS3: mockAwsS3ClientGetter,
+				NewSsm: func(sess *session.Session) ssmiface.SSMAPI {
+					return &mockSSM{
+						params: tt.ssmParams,
+					}
+				},
+				NewSts: mockAwsStsClientGetter,
+			}
 
-		b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
-		b.db.DataStorePort = mockDataStoreProvision{}
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b.db.DataStorePort = mockDataStoreProvision{}
 
-		resp, err := b.Bind(tt.request, &broker.RequestContext{})
-		if tt.expectedErr != nil {
-			assert.EqualError(t, err, tt.expectedErr.Error())
-		} else if assert.NoError(t, err) {
-			assert.Equal(t, tt.expectedExists, resp.Exists)
-			assert.Equal(t, tt.expectedCreds, resp.Credentials)
-		}
+			resp, err := b.Bind(tt.request, &broker.RequestContext{})
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+			} else if assert.NoError(t, err) {
+				assert.Equal(t, tt.expectedExists, resp.Exists)
+				assert.Equal(t, tt.expectedCreds, resp.Credentials)
+			}
 		})
 	}
 }
@@ -760,19 +772,18 @@ func TestUnbind(t *testing.T) {
 
 	var callCount int
 	tests := []struct {
-		name        string
-		request     *osb.UnbindRequest
-		expectedErr error
-		bindViaLambda  bool
-		lambdas        map[string]mockLambdaFunc
-		cfnOutputs map[string]string
-
+		name          string
+		request       *osb.UnbindRequest
+		expectedErr   error
+		bindViaLambda bool
+		lambdas       map[string]mockLambdaFunc
+		cfnOutputs    map[string]string
 	}{
 		{
 			name: "error_getting_binding",
 			request: &osb.UnbindRequest{
 				BindingID: "err",
-				ServiceID: "test-service-id",				
+				ServiceID: "test-service-id",
 			},
 			expectedErr: newHTTPStatusCodeError(http.StatusInternalServerError, "", "Failed to get the service binding err: test failure"),
 		},
@@ -780,7 +791,7 @@ func TestUnbind(t *testing.T) {
 			name: "binding_not_found",
 			request: &osb.UnbindRequest{
 				BindingID: "foo",
-				ServiceID: "test-service-id",				
+				ServiceID: "test-service-id",
 			},
 			expectedErr: newHTTPStatusCodeError(http.StatusGone, "", "The service binding foo was not found."),
 		},
@@ -826,14 +837,14 @@ func TestUnbind(t *testing.T) {
 			name: "role_not_found",
 			request: &osb.UnbindRequest{
 				BindingID: "foo-role-name",
-				ServiceID: "test-service-id",				
+				ServiceID: "test-service-id",
 			},
 		},
 		{
 			name: "unbind_via_lambda",
 			request: &osb.UnbindRequest{
 				BindingID: "foo-role-name",
-				ServiceID: "test-lambda-service-id",				
+				ServiceID: "test-lambda-service-id",
 			},
 			bindViaLambda: true,
 			lambdas: map[string]mockLambdaFunc{"MyLambdaFunction": func(payload []byte) ([]byte, error) {
@@ -873,11 +884,11 @@ func TestUnbind(t *testing.T) {
 						lambdas: tt.lambdas,
 					}
 				},
-				NewS3: mockAwsS3ClientGetter,
+				NewS3:  mockAwsS3ClientGetter,
 				NewSsm: mockAwsSsmClientGetter,
 				NewSts: mockAwsStsClientGetter,
 			}
-			
+
 			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
 			b.db.DataStorePort = mockDataStoreProvision{}
 			_, err := b.Unbind(tt.request, &broker.RequestContext{})
