@@ -7,7 +7,7 @@ ARG SOURCE_DIR="./"
 
 COPY $SOURCE_DIR .
 
-RUN dep ensure && make test && make linux
+RUN GOPROXY=direct go mod download && make test && make linux
 
 FROM alpine:latest
 
