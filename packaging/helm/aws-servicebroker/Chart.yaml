@@ -1,9 +1,8 @@
 apiVersion: v2
 name: aws-servicebroker
 description: Deploys the AWS Service Broker
-version: 1.0.2
-appVersion: 1.0.2
-description: Implementation of the Open Service Broker API for AWS. Deploy Cloudformation templates using k8s resources. 
+version: 1.0.3
+appVersion: 1.0.3
 keywords:
   - osbapi
   - aws
