@@ -178,15 +178,8 @@ type CfnTemplate struct {
 				} `yaml:"IAM,omitempty"`
 				CFNOutputs []string `yaml:"CFNOutputs,omitempty"`
 			} `yaml:"Bindings,omitempty"`
-			ServicePlans map[string]struct {
-				DisplayName       string            `yaml:"DisplayName,omitempty"`
-				Description       string            `yaml:"Description,omitempty"`
-				LongDescription   string            `yaml:"LongDescription,omitempty"`
-				Cost              string            `yaml:"Cost,omitempty"`
-				ParameterValues   map[string]string `yaml:"ParameterValues,omitempty"`
-				ParameterDefaults map[string]string `yaml:"ParameterDefaults,omitempty"`
-			} `yaml:"ServicePlans,omitempty"`
-			UpdatableParameters []string `yaml:"UpdatableParameters,omitempty"`
+			ServicePlans        map[string]CfnServicePlan `yaml:"ServicePlans,omitempty"`
+			UpdatableParameters []string               `yaml:"UpdatableParameters,omitempty"`
 		} `yaml:"AWS::ServiceBroker::Specification,omitempty"`
 		Interface struct {
 			ParameterGroups []struct {
@@ -200,6 +193,21 @@ type CfnTemplate struct {
 			} `yaml:"ParameterLabels,omitempty"`
 		} `yaml:"AWS::CloudFormation::Interface,omitempty"`
 	} `yaml:"Metadata,omitempty"`
+}
+
+type CfnServicePlan struct {
+	DisplayName     string `yaml:"DisplayName,omitempty"`
+	Description     string `yaml:"Description,omitempty"`
+	LongDescription string `yaml:"LongDescription,omitempty"`
+	Cost            string `yaml:"Cost,omitempty"`
+	Costs           []CfnCost `yaml:"Costs,omitempty"`
+	ParameterValues   map[string]string `yaml:"ParameterValues,omitempty"`
+	ParameterDefaults map[string]string `yaml:"ParameterDefaults,omitempty"`
+}
+
+type CfnCost struct {
+	Amount map[string]float64 `yaml:"Amount,omitempty"`
+	Unit   string             `yaml:"Unit,omitempty"`
 }
 
 type OpenshiftFormDefinition struct {

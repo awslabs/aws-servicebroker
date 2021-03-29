@@ -445,3 +445,63 @@ func TestAssumeArnGenerationChinaPartition(t *testing.T) {
 	params["target_account_id"] = "000000000000"
 	assert.Equal(t, generateRoleArn(params, accountID, partition), "arn:aws-cn:iam::000000000000:role/worker", "Validate role arn")
 }
+
+func TestServicePlanToOSBPlan(t *testing.T) {
+	t.Run("Baseline", func(t *testing.T) {
+		sp := CfnServicePlan{
+			Description:     "This is a test service plan",
+			Cost:            "https://this.is.a.test/url",
+			DisplayName:     "Test service",
+			LongDescription: "This is the test service plan.",
+		}
+		db := Db{}
+		plan := db.servicePlanToOSBPlan("test-plan-id", "test-plan", sp, nil, nil)
+		assert.NotZero(t, plan)
+		assert.Equal(t, "test-plan-id", plan.ID)
+		assert.Equal(t, "test-plan-id", plan.ID)
+		assert.Equal(t, "test-plan", plan.Name)
+		assert.Equal(t, "This is a test service plan", plan.Description)
+		assert.Equal(t, aws.Bool(false), plan.Free)
+		assert.Equal(t, aws.Bool(true), plan.Bindable)
+		assert.NotNil(t, plan.Metadata)
+		assert.EqualValues(t, map[string]interface{}{
+			"cost":            "https://this.is.a.test/url",
+			"costs":           []CfnCost(nil),
+			"displayName":     "Test service",
+			"longDescription": "This is the test service plan.",
+		}, plan.Metadata)
+	})
+
+	t.Run("OSB Costs Convention", func(t *testing.T) {
+		sp := CfnServicePlan{
+			Description: "This is a test service plan",
+			Costs: []CfnCost{{
+				Amount: map[string]float64{
+					"EUR": 29.91,
+				},
+				Unit: "Monthly",
+			},
+			},
+			DisplayName:     "Test service",
+			LongDescription: "This is the test service plan.",
+		}
+		db := Db{}
+		plan := db.servicePlanToOSBPlan("test-plan-id", "test-plan", sp, nil, nil)
+		assert.NotZero(t, plan)
+		assert.EqualValues(t, map[string]interface{}{
+			"cost": "",
+			"costs": []CfnCost{
+				{
+					Amount: map[string]float64{
+						"EUR": 29.91,
+					},
+					Unit: "Monthly",
+				},
+			},
+			"displayName":     "Test service",
+			"longDescription": "This is the test service plan.",
+		}, plan.Metadata)
+
+	})
+
+}

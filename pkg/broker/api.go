@@ -387,7 +387,7 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		// provide them.
 		credentials["INSTANCE_ID"] = binding.InstanceID
 		credentials["BINDING_ID"] = binding.ID
-		
+
 		// Replace credentials with a derived set calculated by a lambda function
 		credentials, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials, "bind")
 		if err != nil {
