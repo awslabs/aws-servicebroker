@@ -17,6 +17,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// type MockCounter struct{}
+
+// func (mc *MockCounter) Inc() {
+// 	// Do nothing
+// }
+
+// type MockVec struct{}
+
+// func (mv *MockVec) With(labels *prom.Labels) *MockCounter {
+// 	return &MockCounter{}
+// }
+
+// func NewMockMetricCollector() *MetricsCollector {
+// 	return &MetricsCollector{
+// 		Actions: &MockVec{},
+// 	}
+// }
+
 func TestGetCatalog(t *testing.T) {
 	assertor := assert.New(t)
 
@@ -29,7 +47,7 @@ func TestGetCatalog(t *testing.T) {
 		BrokerID:           "awsservicebroker",
 		PrescribeOverrides: false,
 	}
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 	bl.listingcache.Set("__LISTINGS__", []ServiceNeedsUpdate{{Name: "test", Update: false}})
 
 	expected := &broker.CatalogResponse{CatalogResponse: osb.CatalogResponse{}}
@@ -211,7 +229,7 @@ func TestProvision(t *testing.T) {
 		BrokerID:           "awsservicebroker",
 		PrescribeOverrides: true,
 	}
-	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+	bl, _ := NewAWSBroker(opts, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 	bl.db.DataStorePort = mockDataStoreProvision{}
 	bl.globalOverrides = map[string]string{"override_param": "some_value"}
 	provReq := &osb.ProvisionRequest{
@@ -338,7 +356,7 @@ func TestDeprovision(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 			b.db.DataStorePort = mockDataStoreProvision{}
 
 			resp, err := b.Deprovision(tt.request, &broker.RequestContext{})
@@ -461,7 +479,7 @@ func TestLastOperation(t *testing.T) {
 				NewSts: mockAwsStsClientGetter,
 			}
 
-			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 			b.db.DataStorePort = mockDataStoreProvision{}
 
 			resp, err := b.LastOperation(tt.request, &broker.RequestContext{Request: &http.Request{Header: http.Header{}}})
@@ -754,7 +772,7 @@ func TestBind(t *testing.T) {
 				NewSts: mockAwsStsClientGetter,
 			}
 
-			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 			b.db.DataStorePort = mockDataStoreProvision{}
 
 			resp, err := b.Bind(tt.request, &broker.RequestContext{})
@@ -889,7 +907,7 @@ func TestUnbind(t *testing.T) {
 				NewSts: mockAwsStsClientGetter,
 			}
 
-			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, clients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 			b.db.DataStorePort = mockDataStoreProvision{}
 			_, err := b.Unbind(tt.request, &broker.RequestContext{})
 			if tt.expectedErr != nil {
@@ -1031,7 +1049,7 @@ func TestUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+			b, _ := NewAWSBroker(Options{}, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 			b.db.DataStorePort = mockDataStoreProvision{}
 
 			resp, err := b.Update(tt.request, &broker.RequestContext{})

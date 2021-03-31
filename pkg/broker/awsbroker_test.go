@@ -234,7 +234,7 @@ func TestNewAwsBroker(t *testing.T) {
 
 	for _, v := range *options {
 		// Shouldn't error
-		bl, err := NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+		bl, err := NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 		assert.Nil(err)
 
 		// check values are as expected
@@ -254,11 +254,11 @@ func TestNewAwsBroker(t *testing.T) {
 		assert.Equal(v.BrokerID, bl.db.Brokerid)
 
 		// Should error
-		_, err = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountIDFail, mockUpdateCatalog, mockPollUpdate)
+		_, err = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountIDFail, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 		assert.Error(err)
 
 		// Should error
-		_, err = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalogFail, mockPollUpdate)
+		_, err = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalogFail, mockPollUpdate, NewMetricsCollector())
 		assert.Error(err)
 	}
 }
@@ -298,7 +298,7 @@ func TestUpdateCatalog(t *testing.T) {
 	var bl *AwsBroker
 	var bd *BucketDetailsRequest
 	for _, v := range *options {
-		bl, _ = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+		bl, _ = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 		bd = &BucketDetailsRequest{
 			v.S3Bucket,
 			v.S3Key,
@@ -385,7 +385,7 @@ func TestMetadataUpdate(t *testing.T) {
 	var bl *AwsBroker
 	var bd *BucketDetailsRequest
 	for _, v := range *options {
-		bl, _ = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate)
+		bl, _ = NewAWSBroker(v, mockGetAwsSession, mockClients, mockGetAccountID, mockUpdateCatalog, mockPollUpdate, NewMetricsCollector())
 		bd = &BucketDetailsRequest{
 			v.S3Bucket,
 			v.S3Key,

@@ -69,6 +69,7 @@ type AwsBroker struct {
 	Clients            AwsClients
 	prescribeOverrides bool
 	globalOverrides    map[string]string
+	metrics            *MetricsCollector
 }
 
 // ServiceNeedsUpdate if Update == true the metadata should be refreshed from s3
@@ -179,7 +180,7 @@ type CfnTemplate struct {
 				CFNOutputs []string `yaml:"CFNOutputs,omitempty"`
 			} `yaml:"Bindings,omitempty"`
 			ServicePlans        map[string]CfnServicePlan `yaml:"ServicePlans,omitempty"`
-			UpdatableParameters []string               `yaml:"UpdatableParameters,omitempty"`
+			UpdatableParameters []string                  `yaml:"UpdatableParameters,omitempty"`
 		} `yaml:"AWS::ServiceBroker::Specification,omitempty"`
 		Interface struct {
 			ParameterGroups []struct {
@@ -196,11 +197,11 @@ type CfnTemplate struct {
 }
 
 type CfnServicePlan struct {
-	DisplayName     string `yaml:"DisplayName,omitempty"`
-	Description     string `yaml:"Description,omitempty"`
-	LongDescription string `yaml:"LongDescription,omitempty"`
-	Cost            string `yaml:"Cost,omitempty"`
-	Costs           []CfnCost `yaml:"Costs,omitempty"`
+	DisplayName       string            `yaml:"DisplayName,omitempty"`
+	Description       string            `yaml:"Description,omitempty"`
+	LongDescription   string            `yaml:"LongDescription,omitempty"`
+	Cost              string            `yaml:"Cost,omitempty"`
+	Costs             []CfnCost         `yaml:"Costs,omitempty"`
 	ParameterValues   map[string]string `yaml:"ParameterValues,omitempty"`
 	ParameterDefaults map[string]string `yaml:"ParameterDefaults,omitempty"`
 }
