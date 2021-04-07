@@ -46,9 +46,9 @@ func (b *AwsBroker) GetCatalog(c *broker.RequestContext) (*broker.CatalogRespons
 
 	response.CatalogResponse = *osbResponse
 	b.metrics.Actions.With(prom.Labels{
-		"action": "get_catalog",
-		"service": "",
-		"plan": "",
+		"action":  "get_catalog",
+		"service": "", // We have to provide the labels, even when blank.
+		"plan":    "", // Prometheus will omit blank labels.
 	}).Inc()
 	return response, nil
 }
@@ -227,9 +227,9 @@ func (b *AwsBroker) Deprovision(request *osb.DeprovisionRequest, c *broker.Reque
 	}
 
 	labels := prom.Labels{
-		"action": "deprovision",
-		"service": "",
-		"plan": "",
+		"action":  "deprovision",
+		"service": "", // We have to provide the labels, even when blank.
+		"plan":    "", // Prometheus will omit blank labels.
 	}
 
 	// Try to get the service name
@@ -310,9 +310,9 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 		}
 	}
 	b.metrics.Actions.With(prom.Labels{
-		"action": "last_operation",
-		"service": "",
-		"plan": "",
+		"action":  "last_operation",
+		"service": "", // We have to provide the labels, even when blank.
+		"plan":    "", // Prometheus will omit blank labels.
 	}).Inc()
 	return &response, nil
 }
@@ -444,7 +444,7 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		prom.Labels{
 			"action":  "bind",
 			"service": service.Name,
-			"plan": "",
+			"plan":    "",
 		}).Inc()
 
 	return &broker.BindResponse{
@@ -548,7 +548,7 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 		prom.Labels{
 			"action":  "unbind",
 			"service": service.Name,
-			"plan": "",
+			"plan":    "",
 		}).Inc()
 
 	return &broker.UnbindResponse{}, nil
