@@ -9,7 +9,7 @@ This guide uses helm, for documentation on installing the helm and tiller see [h
 # Adds the chart repository for the service catalog
 helm repo add svc-cat https://svc-catalog-charts.storage.googleapis.com
 # Installs the service catalog
-helm install svc-cat/catalog --name catalog --namespace catalog
+helm install catalog svc-cat/catalog --namespace catalog
 ```
 
 ### Optional - reduce service catalog max polling interval
