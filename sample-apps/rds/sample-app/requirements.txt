@@ -1,2 +1,2 @@
-bottle==0.12.13
+bottle==0.12.19
 pymysql==0.7.11

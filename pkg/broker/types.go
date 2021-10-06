@@ -207,8 +207,8 @@ type CfnServicePlan struct {
 }
 
 type CfnCost struct {
-	Amount map[string]float64 `yaml:"Amount,omitempty"`
-	Unit   string             `yaml:"Unit,omitempty"`
+	Amount map[string]float64 `yaml:"Amount,omitempty" json:"amount,omitempty"`
+	Unit   string             `yaml:"Unit,omitempty" json:"unit,omitempty"`
 }
 
 type OpenshiftFormDefinition struct {
