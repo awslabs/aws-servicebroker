@@ -21,7 +21,7 @@ import (
 )
 
 // Runs at startup and bootstraps the broker
-func NewAWSBroker(o Options, awssess GetAwsSession, clients AwsClients, getCallerId GetCallerIder, updateCatalog UpdateCataloger, pollUpdate PollUpdater) (*AwsBroker, error) {
+func NewAWSBroker(o Options, awssess GetAwsSession, clients AwsClients, getCallerId GetCallerIder, updateCatalog UpdateCataloger, pollUpdate PollUpdater, mc *MetricsCollector) (*AwsBroker, error) {
 
 	sess := awssess(o.KeyID, o.SecretKey, o.Region, "", o.Profile, map[string]string{})
 	s3sess := awssess(o.KeyID, o.SecretKey, o.S3Region, "", o.Profile, map[string]string{})
@@ -91,6 +91,7 @@ func NewAWSBroker(o Options, awssess GetAwsSession, clients AwsClients, getCalle
 		Clients:            clients,
 		prescribeOverrides: o.PrescribeOverrides,
 		globalOverrides:    getGlobalOverrides(o.BrokerID),
+		metrics: mc,
 	}
 
 	// get catalog and setup periodic updates from S3

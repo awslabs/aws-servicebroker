@@ -90,15 +90,22 @@ func runWithContext(ctx context.Context) error {
 		NewLambda: broker.AwsLambdaClientGetter,
 	}
 
-	awsBroker, err := broker.NewAWSBroker(options.Options, broker.AwsSessionGetter, clients, broker.GetCallerId, broker.UpdateCatalog, broker.PollUpdate)
-	if err != nil {
-		glog.Fatalln(err)
-	}
-
 	// Prom. metrics
 	reg := prom.NewRegistry()
 	osbMetrics := metrics.New()
 	reg.MustRegister(osbMetrics)
+
+	// Technically the MetricsCollector could be used to gather
+	// the same summary data as the osbMetrics but, as they
+	// necessarily have different names, the osbMetrics are
+	// retained for backwards compatibility
+	awssbMetrics := broker.NewMetricsCollector()
+	reg.MustRegister(awssbMetrics)
+
+	awsBroker, err := broker.NewAWSBroker(options.Options, broker.AwsSessionGetter, clients, broker.GetCallerId, broker.UpdateCatalog, broker.PollUpdate, awssbMetrics)
+	if err != nil {
+		glog.Fatalln(err)
+	}
 
 	api, err := rest.NewAPISurface(awsBroker, osbMetrics)
 	if err != nil {

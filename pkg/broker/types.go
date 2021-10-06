@@ -69,6 +69,7 @@ type AwsBroker struct {
 	Clients            AwsClients
 	prescribeOverrides bool
 	globalOverrides    map[string]string
+	metrics            *MetricsCollector
 }
 
 // ServiceNeedsUpdate if Update == true the metadata should be refreshed from s3

@@ -14,6 +14,7 @@ import (
 	"github.com/golang/glog"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
+	prom "github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -50,7 +51,11 @@ func (b *AwsBroker) GetCatalog(c *broker.RequestContext) (*broker.CatalogRespons
 	//glog.Infof("catalog response: %#+v", osbResponse)
 
 	response.CatalogResponse = *osbResponse
-
+	b.metrics.Actions.With(prom.Labels{
+		"action":  "get_catalog",
+		"service": "", // We have to provide the labels, even when blank.
+		"plan":    "", // Prometheus will omit blank labels.
+	}).Inc()
 	return response, nil
 }
 
@@ -203,6 +208,13 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
 
+	b.metrics.Actions.With(
+		prom.Labels{
+			"action":  "provision",
+			"service": service.Name,
+			"plan":    plan.Name,
+		}).Inc()
+
 	response := broker.ProvisionResponse{}
 	response.Async = true
 	return &response, nil
@@ -233,6 +245,27 @@ func (b *AwsBroker) Deprovision(request *osb.DeprovisionRequest, c *broker.Reque
 		desc := fmt.Sprintf("Failed to delete the CloudFormation stack %s: %v", instance.StackID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
+
+	labels := prom.Labels{
+		"action":  "deprovision",
+		"service": "", // We have to provide the labels, even when blank.
+		"plan":    "", // Prometheus will omit blank labels.
+	}
+
+	// Try to get the service name
+	service, err := b.db.DataStorePort.GetServiceDefinition(instance.ServiceID)
+
+	if err == nil && service != nil {
+		// We basically don't care if we can't find it
+		labels["service"] = service.Name
+
+		// Try to get the plan name
+		plan := getPlan(service, instance.PlanID)
+		if plan != nil {
+			labels["plan"] = plan.Name
+		}
+	}
+	b.metrics.Actions.With(labels).Inc()
 
 	response := broker.DeprovisionResponse{}
 	response.Async = true
@@ -291,6 +324,11 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 			return &response, newHTTPStatusCodeError(http.StatusBadRequest, "CloudFormationError", *response.Description)
 		}
 	}
+	b.metrics.Actions.With(prom.Labels{
+		"action":  "last_operation",
+		"service": "", // We have to provide the labels, even when blank.
+		"plan":    "", // Prometheus will omit blank labels.
+	}).Inc()
 	return &response, nil
 }
 
@@ -417,18 +455,25 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		return nil, err
 	}
 
-	// Store the binding
-	err = b.db.DataStorePort.PutServiceBinding(*binding)
-	if err != nil {
-		desc := fmt.Sprintf("Failed to store the service binding %s: %v", binding.ID, err)
-		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
-	}
+        // Store the binding
+        err = b.db.DataStorePort.PutServiceBinding(*binding)
+        if err != nil {
+                desc := fmt.Sprintf("Failed to store the service binding %s: %v", binding.ID, err)
+                return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+        }
 
-	return &broker.BindResponse{
-		BindResponse: osb.BindResponse{
-			Credentials: credentials,
-		},
-	}, nil
+        b.metrics.Actions.With(
+                prom.Labels{
+                        "action":  "bind",
+                        "service": service.Name,
+                        "plan":    "",
+                }).Inc()
+
+        return &broker.BindResponse{
+                BindResponse: osb.BindResponse{
+                        Credentials: credentials,
+                },
+        }, nil
 }
 
 func createBindResponse(
@@ -485,6 +530,7 @@ func getBindingCredentials(
 			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", err.Error())
 		}
 	}
+
 	return credentials, nil
 }
 
@@ -577,6 +623,13 @@ func (b *AwsBroker) Unbind(request *osb.UnbindRequest, c *broker.RequestContext)
 		desc := fmt.Sprintf("Failed to delete the service binding %s: %v", binding.ID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
+
+	b.metrics.Actions.With(
+		prom.Labels{
+			"action":  "unbind",
+			"service": service.Name,
+			"plan":    "",
+		}).Inc()
 
 	return &broker.UnbindResponse{}, nil
 }
@@ -674,6 +727,13 @@ func (b *AwsBroker) Update(request *osb.UpdateInstanceRequest, c *broker.Request
 		desc := fmt.Sprintf("Failed to update the service instance %q: %v", instance.ID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
+
+	b.metrics.Actions.With(
+		prom.Labels{
+			"action":  "update",
+			"service": service.Name,
+			"plan":    plan.Name,
+		}).Inc()
 
 	response := broker.UpdateInstanceResponse{}
 	response.Async = true
