@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,7 @@ func TestCosts(t *testing.T) {
 	err := yaml.Unmarshal(ydoc, &costs)
 	assert.Nil(t, err)
 	assert.Len(t, costs, 2)
+
 	cost := costs[0]
 	assert.EqualValues(t, CfnCost{
 		Amount: map[string]float64{
@@ -36,5 +38,12 @@ func TestCosts(t *testing.T) {
 		},
 		Unit: "Year",
 	}, cost)
+
+	t.Run("JSON Marshall", func(t *testing.T) {
+		b, err := json.Marshal(costs)
+		assert.Nil(t, err)
+
+		assert.Equal(t, `[{"amount":{"EUR":29.91,"USD":30},"unit":"Monthly"},{"amount":{"EUR":14},"unit":"Year"}]`, string(b))
+	})
 
 }
