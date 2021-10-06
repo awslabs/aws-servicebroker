@@ -2,6 +2,7 @@ package broker
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"net/http"
 	"strings"
 
@@ -13,6 +14,11 @@ import (
 	"github.com/golang/glog"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
+)
+
+const (
+	instanceId = "INSTANCE_ID"
+	bindingId = "BINDING_ID"
 )
 
 // GetCatalog is executed on a /v2/catalog/ osb api call
@@ -120,17 +126,31 @@ func (b *AwsBroker) Provision(request *osb.ProvisionRequest, c *broker.RequestCo
 		desc := fmt.Sprintf("Failed to get the service instance %s: %v", instance.ID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	} else if i != nil {
-		// TODO: This logic could use some love. The docs state that 200 OK MUST be
-		// returned if the service instance already exists, is fully provisioned,
-		// and the requested parameters are identical to the existing service
-		// instance. Right now, this doesn't check whether the instance is fully
-		// provisioned, and the reflect.DeepEqual check in Match will return false
-		// if the parameter order is different.
 		if i.Match(instance) {
 			glog.Infof("Service instance %s already exists.", instance.ID)
+
+			glog.Infof("Checking if service instance %s is fully provisioned.", instance.ID)
+			cfnSvc := getCfn(b, instance.Params)
+
 			response := broker.ProvisionResponse{}
-			response.Exists = true
-			return &response, nil
+			status, _, err := getStackStatusAndReason(cfnSvc, i.StackID)
+
+			switch {
+			case err != nil:
+				desc := fmt.Sprintf("Failed to get the stack %s: %v", i.StackID, err)
+				return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+			case instanceIsFullyProvisioned(status):
+				glog.Infof("Service instance %s is fully provisioned.", instance.ID)
+				response.Exists = true
+				return &response, nil
+			case instanceProvisioningIsInProgress(status):
+				glog.Infof("Service instance %s provisioning is in progress.", instance.ID)
+				response.Async = true
+				return &response, nil
+			default:
+				glog.Infof("Service instance %s provisioning failed.", instance.ID)
+				return &response, newHTTPStatusCodeError(http.StatusBadRequest, "CloudFormationError", *getCfnError(i.StackID, cfnSvc))
+			}
 		}
 		glog.V(10).Infof("i=%+v instance=%+v", *i, *instance)
 		desc := fmt.Sprintf("Service instance %s already exists but with different attributes.", instance.ID)
@@ -238,22 +258,15 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 	}
 
 	// Get the CFN stack status
-	cfnSvc := b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instance.Params))
-	resp, err := cfnSvc.Client.DescribeStacks(&cloudformation.DescribeStacksInput{
-		StackName: aws.String(instance.StackID),
-	})
+	cfnSvc := getCfn(b, instance.Params)
+
+	status, reason, err := getStackStatusAndReason(cfnSvc, instance.StackID)
 	if err != nil {
-		desc := fmt.Sprintf("Failed to describe the CloudFormation stack %s: %v", instance.StackID, err)
-		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+		return nil, err
 	}
-	status := aws.StringValue(resp.Stacks[0].StackStatus)
-	reason := aws.StringValue(resp.Stacks[0].StackStatusReason)
-	glog.V(10).Infof("stack=%s status=%s reason=%s", instance.StackID, status, reason)
 
 	response := broker.LastOperationResponse{}
-	if status == cloudformation.StackStatusCreateComplete ||
-		status == cloudformation.StackStatusDeleteComplete ||
-		status == cloudformation.StackStatusUpdateComplete {
+	if instanceIsFullyProvisioned(status) {
 		response.State = osb.StateSucceeded
 		if status == cloudformation.StackStatusDeleteComplete {
 			// If the resources were successfully deleted, try to delete the instance
@@ -261,15 +274,17 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 				glog.Errorf("Failed to delete the service instance %s: %v", instance.ID, err)
 			}
 		}
-	} else if strings.HasSuffix(status, "_IN_PROGRESS") && !strings.Contains(status, "ROLLBACK") {
+	} else if instanceProvisioningIsInProgress(status) {
 		response.State = osb.StateInProgress
 	} else {
 		glog.Errorf("CloudFormation stack %s failed with status %s: %s", instance.StackID, status, reason)
+		response := broker.LastOperationResponse{}
 		response.State = osb.StateFailed
 		response.Description = getCfnError(instance.StackID, cfnSvc)
 		if *response.Description == "" {
 			response.Description = &reason
 		}
+
 		// workaround for https://github.com/kubernetes-incubator/service-catalog/issues/2505
 		originatingIdentity := strings.Split(c.Request.Header.Get("X-Broker-Api-Originating-Identity"), " ")[0]
 		if originatingIdentity == "kubernetes" {
@@ -277,6 +292,35 @@ func (b *AwsBroker) LastOperation(request *osb.LastOperationRequest, c *broker.R
 		}
 	}
 	return &response, nil
+}
+
+func getCfn(b *AwsBroker, instanceParams map[string]string) CfnClient {
+	return b.Clients.NewCfn(b.GetSession(b.keyid, b.secretkey, b.region, b.accountId, b.profile, instanceParams))
+}
+
+func getStackStatusAndReason(cfnSvc CfnClient, stackId string) (status string, reason string, err error) {
+	resp, err := cfnSvc.Client.DescribeStacks(&cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackId),
+	})
+	if err != nil {
+		desc := fmt.Sprintf("Failed to describe the CloudFormation stack %s: %v", stackId, err)
+		return "", "", newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+	status = aws.StringValue(resp.Stacks[0].StackStatus)
+	reason = aws.StringValue(resp.Stacks[0].StackStatusReason)
+	glog.V(10).Infof("stack=%s status=%s reason=%s", stackId, status, reason)
+
+	return
+}
+
+func instanceIsFullyProvisioned(status string) bool {
+	return status == cloudformation.StackStatusCreateComplete ||
+		status == cloudformation.StackStatusDeleteComplete ||
+		status == cloudformation.StackStatusUpdateComplete
+}
+
+func instanceProvisioningIsInProgress(status string) bool {
+	return strings.HasSuffix(status, "_IN_PROGRESS") && !strings.Contains(status, "ROLLBACK")
 }
 
 // Bind is executed when the OSB API receives `PUT /v2/service_instances/:instance_id/service_bindings/:binding_id`
@@ -299,22 +343,6 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 			desc := fmt.Sprintf("The parameter %s is not supported.", k)
 			return nil, newHTTPStatusCodeError(http.StatusBadRequest, "", desc)
 		}
-	}
-
-	// Verify that the binding doesn't already exist
-	sb, err := b.db.DataStorePort.GetServiceBinding(binding.ID)
-	if err != nil {
-		desc := fmt.Sprintf("Failed to get the service binding %s: %v", binding.ID, err)
-		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
-	} else if sb != nil {
-		if sb.Match(binding) {
-			glog.Infof("Service binding %s already exists.", binding.ID)
-			response := broker.BindResponse{}
-			response.Exists = true
-			return &response, nil
-		}
-		desc := fmt.Sprintf("Service binding %s already exists but with different attributes.", binding.ID)
-		return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 	}
 
 	// Get the service (this is only required because the USER_KEY_ID and
@@ -350,11 +378,18 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
 	}
 
-	// Get the credentials from the CFN stack outputs
-	credentials, err := getCredentials(service, resp.Stacks[0].Outputs, b.Clients.NewSsm(sess))
+	// Verify that the binding doesn't already exist
+	sb, err := b.db.DataStorePort.GetServiceBinding(binding.ID)
 	if err != nil {
-		desc := fmt.Sprintf("Failed to get the credentials from CloudFormation stack %s: %v", instance.StackID, err)
+		desc := fmt.Sprintf("Failed to get the service binding %s: %v", binding.ID, err)
 		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	} else if sb != nil {
+		if sb.Match(binding) {
+			glog.Infof("Service binding %s already exists.", binding.ID)
+			return createBindResponse(service, resp, b, sess, instance, binding)
+		}
+		desc := fmt.Sprintf("Service binding %s already exists but with different attributes.", binding.ID)
+		return nil, newHTTPStatusCodeError(http.StatusConflict, "", desc)
 	}
 
 	if binding.RoleName != "" {
@@ -377,22 +412,9 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 		binding.PolicyArn = policyArn
 	}
 
-	if bindViaLambda(service) {
-		// Copy instance and binding IDs into credentials to
-		// be used as identifiers for resources we create in
-		// lambda so that we can reference them when we unbind
-		// (for example, you can build a unique path for an
-		// IAM User with this information, and avoid the need
-		// to have persist extra identifiers, or have users
-		// provide them.
-		credentials["INSTANCE_ID"] = binding.InstanceID
-		credentials["BINDING_ID"] = binding.ID
-
-		// Replace credentials with a derived set calculated by a lambda function
-		credentials, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials, "bind")
-		if err != nil {
-			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", err.Error())
-		}
+	credentials, err := getBindingCredentials(service, resp, b, sess, instance, binding)
+	if err != nil {
+		return nil, err
 	}
 
 	// Store the binding
@@ -407,6 +429,63 @@ func (b *AwsBroker) Bind(request *osb.BindRequest, c *broker.RequestContext) (*b
 			Credentials: credentials,
 		},
 	}, nil
+}
+
+func createBindResponse(
+	service *osb.Service,
+	resp *cloudformation.DescribeStacksOutput,
+	b *AwsBroker,
+	sess *session.Session,
+	instance *serviceinstance.ServiceInstance,
+	binding *serviceinstance.ServiceBinding) (*broker.BindResponse, error) {
+
+	response := broker.BindResponse{}
+	response.Exists = true
+
+	credentials, err := getBindingCredentials(service, resp, b, sess, instance, binding)
+	if err != nil {
+		return nil, err
+	}
+
+	response.Credentials = credentials
+	return &response, nil
+}
+
+func getBindingCredentials(
+	service *osb.Service,
+	resp *cloudformation.DescribeStacksOutput,
+	b *AwsBroker,
+	sess *session.Session,
+	instance *serviceinstance.ServiceInstance,
+	binding *serviceinstance.ServiceBinding) (map[string]interface{}, error) {
+
+	// Get the credentials from the CFN stack outputs
+	credentials, err := getCredentials(service, resp.Stacks[0].Outputs, b.Clients.NewSsm(sess))
+	if err != nil {
+		desc := fmt.Sprintf("Failed to get the credentials from CloudFormation stack %s: %v", instance.StackID, err)
+		glog.Error(desc)
+		return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", desc)
+	}
+
+	if bindViaLambda(service) {
+		// Copy instance and binding IDs into credentials to
+		// be used as identifiers for resources we create in
+		// lambda so that we can reference them when we unbind
+		// (for example, you can build a unique path for an
+		// IAM User with this information, and avoid the need
+		// to have persist extra identifiers, or have users
+		// provide them.
+		credentials[instanceId] = binding.InstanceID
+		credentials[bindingId] = binding.ID
+
+		// Replace credentials with a derived set calculated by a lambda function
+		credentials, err = invokeLambdaBindFunc(sess, b.Clients.NewLambda, credentials, "bind")
+		if err != nil {
+			glog.Error(err)
+			return nil, newHTTPStatusCodeError(http.StatusInternalServerError, "", err.Error())
+		}
+	}
+	return credentials, nil
 }
 
 // Unbind is executed when the OSB API receives `DELETE /v2/service_instances/:instance_id/service_bindings/:binding_id`
