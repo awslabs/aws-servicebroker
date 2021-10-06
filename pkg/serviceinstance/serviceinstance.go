@@ -11,13 +11,8 @@ type ServiceInstance struct {
 	StackID   string
 }
 
-// Match returns true if the other service instance has the same attributes.
-// StackID is ignored for correct comparing ServiceInstance got from database and ServiceInstance got from API request
 func (i *ServiceInstance) Match(other *ServiceInstance) bool {
-	return i.ID == other.ID &&
-		i.ServiceID == other.ServiceID &&
-		i.PlanID == other.PlanID &&
-		reflect.DeepEqual(i.Params, other.Params)
+	return reflect.DeepEqual(i, other)
 }
 
 // ServiceBinding represents a service binding.
