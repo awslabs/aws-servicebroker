@@ -184,7 +184,7 @@ Resources:
                   cfnresponse.send(event, context, status, response_data, physical_id)
       Handler: index.lambda_handler
       Role: !GetAtt CreateTableRole.Arn
-      Runtime: python2.7
+      Runtime: python3.9
       Timeout: 300
   CreateTableRole:
     Type: AWS::IAM::Role
@@ -306,7 +306,7 @@ Resources:
                   print(str(e))
                   traceback.print_exc()
                   cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
-      Runtime: python2.7
+      Runtime: python3.9
       Timeout: '60'
   AWSSBInjectedIAMUser:
     Type: AWS::IAM::User

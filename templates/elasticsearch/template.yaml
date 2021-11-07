@@ -682,7 +682,7 @@ Resources:
     Properties:
       Description: Copies objects from a source S3 bucket to a destination
       Handler: index.handler
-      Runtime: python2.7
+      Runtime: python3.9
       Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
       Timeout: 240
       Code:
@@ -780,7 +780,7 @@ Resources:
       Code:
         S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
         S3Key: functions/get_cidrs/lambda_function.zip
-      Runtime: python2.7
+      Runtime: python3.9
       Timeout: '60'
   AWSSBInjectedGetCidrs:
     Condition: AutoCidrs
@@ -829,7 +829,7 @@ Resources:
       Code:
         S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
         S3Key: functions/get_azs/lambda_function.zip
-      Runtime: python2.7
+      Runtime: python3.9
       Timeout: '60'
   AWSSBInjectedGetAzs:
     Condition: AutoAzs
