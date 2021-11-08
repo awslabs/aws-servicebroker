@@ -333,7 +333,7 @@ Resources:
                   print(str(e))
                   traceback.print_exc()
                   cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
-      Runtime: python2.7
+      Runtime: python3.9
       Timeout: '60'
   AWSSBInjectedIAMUser:
     Type: AWS::IAM::User

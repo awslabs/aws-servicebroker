@@ -161,7 +161,7 @@ Resources:
   GetIgwFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Runtime: python2.7
+      Runtime: python3.9
       Role: !GetAtt GetIgwRole.Arn
       Handler: index.handler
       Timeout: 300
@@ -363,7 +363,7 @@ Resources:
     Properties:
       Description: Copies objects from a source S3 bucket to a destination
       Handler: index.handler
-      Runtime: python2.7
+      Runtime: python3.9
       Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
       Timeout: 240
       Code:
@@ -504,7 +504,7 @@ Resources:
       Code:
         S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
         S3Key: functions/get_emrcidrs/lambda_function.zip
-      Runtime: python2.7
+      Runtime: python3.9
       Timeout: '60'
   AWSSBInjectedGetEMRCidr:
     Condition: AutoEMRCidr

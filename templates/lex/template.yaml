@@ -119,7 +119,7 @@ Resources:
     Properties:
       Description: Creates Amazon Lex Intents
       Handler: lambda_function.handler
-      Runtime: python2.7
+      Runtime: python3.9
       Role: !GetAtt LexIntentsRole.Arn
       Timeout: 240
       Code:
@@ -156,7 +156,7 @@ Resources:
     Properties:
       Description: Creates Amazon Lex Custom Slot Types
       Handler: lambda_function.handler
-      Runtime: python2.7
+      Runtime: python3.9
       Role: !GetAtt LexCustomSlotTypesRole.Arn
       Timeout: 240
       Code:
@@ -193,7 +193,7 @@ Resources:
     Properties:
       Description: Creates Amazon Lex Bot
       Handler: lambda_function.handler
-      Runtime: python2.7
+      Runtime: python3.9
       Role: !GetAtt LexBotRole.Arn
       Timeout: 240
       Code:
@@ -230,7 +230,7 @@ Resources:
     Properties:
       Description: Creates IAM service linked role
       Handler: lambda_function.handler
-      Runtime: python2.7
+      Runtime: python3.9
       Role: !GetAtt IamServiceLinkedRoleRole.Arn
       Timeout: 240
       Code:
@@ -349,7 +349,7 @@ Resources:
                   print(str(e))
                   traceback.print_exc()
                   cfnresponse.send(event, context, cfnresponse.FAILED, response_data, phys_id)
-      Runtime: python2.7
+      Runtime: python3.9
       Timeout: '60'
   AWSSBInjectedIAMUser:
     Type: AWS::IAM::User
@@ -422,7 +422,7 @@ Resources:
     Properties:
       Description: Copies objects from a source S3 bucket to a destination
       Handler: index.handler
-      Runtime: python2.7
+      Runtime: python3.9
       Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
       Timeout: 240
       Code:
