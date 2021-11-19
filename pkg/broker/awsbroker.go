@@ -244,6 +244,7 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			"imageUrl":            sd.Metadata.Spec.ImageUrl,
 			"longDescription":     sd.Metadata.Spec.LongDescription,
 			"outputsAsIs":         sd.Metadata.Spec.OutputsAsIs,
+			"shareable":           sd.Metadata.Spec.Shareable,
 			"cloudFoundry":        sd.Metadata.Spec.CloudFoundry,
 			"bindViaLambda":       sd.Metadata.Spec.BindViaLambda,
 		},
