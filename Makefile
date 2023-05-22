@@ -1,6 +1,6 @@
 IMAGE ?= my-docker-org/aws-servicebroker
 TAG  ?= latest
-BUCKET_NAME ?= my-helm-repo-bucket
+BUCKET_NAME ?= <MY-BUCKET-NAME>
 BUCKET_PREFIX ?= /charts
 TEMPLATE_PREFIX ?= /templates/latest
 HELM_URL ?= https://$(BUCKET_NAME).s3.amazonaws.com$(BUCKET_PREFIX)
