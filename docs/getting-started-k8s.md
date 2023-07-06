@@ -7,7 +7,7 @@ This guide uses helm, for documentation on installing the helm and tiller see [h
 
 ```bash
 # Adds the chart repository for the service catalog
-helm repo add svc-cat https://svc-catalog-charts.storage.googleapis.com
+helm repo add svc-cat https://kubernetes-sigs.github.io/service-catalog
 # Installs the service catalog
 helm install catalog svc-cat/catalog --namespace catalog
 ```
