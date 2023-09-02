@@ -5,10 +5,8 @@ go 1.15
 require (
 	github.com/abbot/go-http-auth v0.4.0 // indirect
 	github.com/aws/aws-sdk-go v1.40.57
-	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/go-errors/errors v1.4.1
-	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/golang/glog v1.0.0
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -16,7 +14,7 @@ require (
 	github.com/koding/cache v0.0.0-20161222233015-e8a81b0b3f20
 	github.com/pmorie/go-open-service-broker-client v0.0.0-20180928143052-79b374a2302f
 	github.com/pmorie/osb-broker-lib v0.0.0-20180516212803-87d71cfbf342
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/common v0.31.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/satori/go.uuid v1.2.0
