@@ -245,6 +245,7 @@ func (db Db) ServiceDefinitionToOsb(sd CfnTemplate) osb.Service {
 			"longDescription":     sd.Metadata.Spec.LongDescription,
 			"outputsAsIs":         sd.Metadata.Spec.OutputsAsIs,
 			"cloudFoundry":        sd.Metadata.Spec.CloudFoundry,
+			"shareable":           sd.Metadata.Spec.Shareable,
 			"bindViaLambda":       sd.Metadata.Spec.BindViaLambda,
 		},
 		PlanUpdatable: aws.Bool(false),

@@ -169,6 +169,7 @@ type CfnTemplate struct {
 			ProviderDisplayName string   `yaml:"ProviderDisplayName,omitempty"`
 			OutputsAsIs         bool     `yaml:"OutputsAsIs,omitempty"`
 			CloudFoundry        bool     `yaml:"CloudFoundry,omitempty"`
+			Shareable           bool     `yaml:"shareable,omitempty"`
 			BindViaLambda       bool     `yaml:"BindViaLambda"`
 			Bindings            struct {
 				IAM struct {
